@@ -1,0 +1,25 @@
+node_modules/
+dist/
+release/
+*.local
+*.tsbuildinfo
+*.log
+.DS_Store
+Thumbs.db
+
+# Tauri / Rust build output
+src-tauri/target/
+
+# Generated Android build output and local machine files
+src-tauri/gen/android/.gradle/
+src-tauri/gen/android/**/build/
+src-tauri/gen/android/**/.cxx/
+src-tauri/gen/android/**/.externalNativeBuild/
+src-tauri/gen/android/**/local.properties
+src-tauri/gen/android/**/key.properties
+src-tauri/gen/android/**/keystore.properties
+src-tauri/gen/android/app/src/main/jniLibs/**/*.so
+src-tauri/gen/android/app/src/main/assets/tauri.conf.json
+src-tauri/gen/android/app/tauri.properties
+src-tauri/gen/android/app/tauri.build.gradle.kts
+src-tauri/gen/android/app/proguard-tauri.pro

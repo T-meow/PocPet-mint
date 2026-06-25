@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "official.furo",
+  "name": "Furo Default Pack",
+  "author": "FrostForge Studio",
+  "version": "1.0.0",
+  "defaultPetName": "Furo",
+  "description": "The built-in Furo assets packaged as a PocPet v1 mod example.",
+  "favoriteFoodIds": [
+    "pig_trotter",
+    "strawberry_cake",
+    "ad_milk"
+  ],
+  "texts": {
+    "recentEvent": "Furo 来到你身边了，背包里有一块苏打饼干。",
+    "favoriteFood": "这是 Furo 喜欢的味道，心情额外 +{amount}。",
+    "status": {
+      "content": "状态不错",
+      "hungry": "饿了",
+      "sad": "有点低落",
+      "dirty": "需要清洁",
+      "tired": "累了",
+      "sick": "不舒服",
+      "sleeping": "睡觉中"
+    },
+    "items": {
+      "pig_trotter": {
+        "name": "猪蹄",
+        "summary": "Furo 喜欢，饱腹 +42，心情 +8"
+      },
+      "strawberry_cake": {
+        "name": "草莓蛋糕",
+        "summary": "Furo 喜欢，饱腹 +24，心情 +14"
+      },
+      "ad_milk": {
+        "name": "AD钙奶",
+        "summary": "Furo 喜欢，饱腹 +16，健康 +3"
+      }
+    }
+  }
+}

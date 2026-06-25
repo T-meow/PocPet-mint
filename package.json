@@ -1,0 +1,35 @@
+{
+  "name": "pocpet",
+  "version": "1.0.1",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "serve:local": "node scripts/serve-dev.mjs --port 5173",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/clean-tauri-release.ps1 && tauri build --no-bundle",
+    "package:win:portable": "npm.cmd run tauri:build && powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-portable-win.ps1",
+    "tauri:android:init": "tauri android init",
+    "tauri:android:build": "tauri android build",
+    "package:android:arm64": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-android-arm64-debugsigned.ps1"
+  },
+  "dependencies": {
+    "@vitejs/plugin-react": "^4.3.4",
+    "jszip": "^3.10.1",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  },
+  "devDependencies": {
+    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/cli": "^2.11.3",
+    "@types/react": "^18.3.17",
+    "@types/react-dom": "^18.3.5"
+  },
+  "author": "FrostForge Studio"
+}

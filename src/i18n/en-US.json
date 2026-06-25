@@ -1,0 +1,474 @@
+{
+  "common": {
+    "comma": ", "
+  },
+  "ui": {
+    "brand": {
+      "eyebrow": "Pocket Pet"
+    },
+    "time": {
+      "lessThanMinute": "less than 1 minute",
+      "hoursMinutes": "{hours}h {minutes}m",
+      "minutes": "{minutes} minutes"
+    },
+    "stats": {
+      "hunger": "Hunger",
+      "mood": "Mood",
+      "cleanliness": "Clean",
+      "energy": "Energy",
+      "health": "Health"
+    },
+    "top": {
+      "openShop": "Open shop",
+      "heartsTitle": "Hearts",
+      "heartsAria": "{hearts} hearts",
+      "audioOn": "Turn sound off",
+      "audioOff": "Turn sound on",
+      "settings": "Settings",
+      "openSettings": "Open settings"
+    },
+    "dashboard": {
+      "aria": "Pet stats",
+      "event": "Event",
+      "metaAria": "Companion info",
+      "sharedTime": "Together: {time}",
+      "weather": "Weather: {weather}",
+      "resting": "Resting",
+      "active": "Active"
+    },
+    "inventory": {
+      "aria": "Inventory",
+      "kicker": "Inventory",
+      "title": "Food and Items",
+      "shop": "Shop",
+      "empty": "Inventory is empty. You can claim 3 soda biscuits from the shop each day."
+    },
+    "shop": {
+      "eyebrow": "Shop",
+      "title": "Shop",
+      "close": "Close",
+      "wallet": "{coins} coins",
+      "tabsAria": "Shop categories",
+      "claimedOut": "Claimed out",
+      "freeClaim": "Claim free {claimed}/{limit}",
+      "price": "{price} coins",
+      "discountToday": "Today only",
+      "discountUsed": "Used",
+      "priceNote": "Original {originalPrice} coins, {label} today"
+    },
+    "settings": {
+      "title": "Settings",
+      "close": "Close",
+      "petName": "Pet name",
+      "language": "Language",
+      "languageHint": "Changing language reloads the interface. Your save is kept.",
+      "saveName": "Save name",
+      "resetSave": "Reset save",
+      "resetConfirm": "Reset the current pet? This clears the local save.",
+      "mod": {
+        "sectionAria": "Pet mod",
+        "title": "Pet Mod",
+        "current": "Current: {name} v{version}",
+        "currentDefault": "Using the default pet",
+        "active": "Active mod: {name} v{version}",
+        "import": "Import mod",
+        "restoreDefault": "Restore default",
+        "imported": "Imported {name}.",
+        "importedWithFallback": "Imported {name}. {count} assets are using default images.",
+        "importFailed": "Failed to import mod.",
+        "loadFailed": "Failed to load mod.",
+        "restored": "Restored the default pet.",
+        "restoreFailed": "Failed to restore default.",
+        "switched": "Switched to {name}."
+      },
+      "save": {
+        "sectionAria": "Save management",
+        "title": "Save",
+        "summary": "Export the current pet save. Saves that reference a mod still need that mod installed separately.",
+        "exportText": "Export text",
+        "download": "Download save",
+        "importFile": "Import file",
+        "exportedAria": "Exported save text",
+        "pasteText": "Paste save text",
+        "importPasted": "Import pasted save",
+        "generated": "Save text generated.",
+        "imported": "Save imported.",
+        "importedMissingMod": "Save imported, but it references {name} v{version}. Import the matching mod zip for the same appearance.",
+        "importFailed": "Failed to import save.",
+        "readFailed": "Failed to read save file.",
+        "readFileFailed": "Could not read file."
+      },
+      "freeNotice": "This app is free software and should not be obtained through paid access.",
+      "help": {
+        "open": "Open gameplay help",
+        "title": "Gameplay Help",
+        "close": "Close",
+        "statsTitle": "Stats",
+        "actionsTitle": "Actions",
+        "otherTitle": "Other systems",
+        "stats": [
+          "Hunger affects the hungry state. Feed your pet when it gets too low.",
+          "Mood affects sleep quality and interaction rewards. A good mood can earn hearts.",
+          "Low cleanliness adds stress, so use cleaning actions or care items to recover it.",
+          "Energy limits play, work, and interaction. Sleep or items can restore energy.",
+          "Low health blocks Pomodoro. Use care actions or medicine before focusing."
+        ],
+        "actions": [
+          "Play raises mood, but spends energy and hunger.",
+          "Clean raises cleanliness and a little health, while spending a little hunger.",
+          "Work earns coins, but spends energy and may affect mood or health.",
+          "Sleep restores energy faster and may settle sleep or dream events after waking."
+        ],
+        "other": [
+          "The shop sells food, gifts, and care items. Free soda biscuits have a daily limit.",
+          "Pomodoro can run while idle or sleeping, and completed focus phases grant a small amount of mood and coins.",
+          "Frequent interaction triggers a short cooldown to prevent too much stat loss at once."
+        ]
+      }
+    },
+    "pomodoro": {
+      "panelAria": "Pomodoro",
+      "kicker": "Pomodoro",
+      "title": "Pomodoro",
+      "running": "Running",
+      "paused": "Not started",
+      "remaining": "Remaining",
+      "roundPrefix": "Round",
+      "roundSuffix": "",
+      "today": "Today",
+      "total": "Total",
+      "start": "Start",
+      "pause": "Pause",
+      "reset": "Reset",
+      "resetTitle": "Reset pomodoro",
+      "settings": "Duration settings",
+      "minutes": "min",
+      "focus": "Focus",
+      "shortBreak": "Short",
+      "longBreak": "Long",
+      "sleepingTitle": "Pomodoro can run while sleeping",
+      "lowEnergyTitle": "Energy is too low. Rest first.",
+      "lowHealthTitle": "Health is too low. Care first.",
+      "statsAria": "Pomodoro stats"
+    },
+    "petDisplay": {
+      "activityAlt": "{name}'s activity",
+      "statusAlt": "{name} {status}",
+      "sceneAria": "Pet status",
+      "interactAria": "Interact with pet"
+    },
+    "actionDock": {
+      "dock": "Care actions",
+      "lowEnergy": "Energy is too low. Rest first.",
+      "pomodoroSleeping": "Pomodoro can run while sleeping",
+      "pomodoroBlocked": "Energy or health is too low. Care first.",
+      "play": "Play",
+      "clean": "Clean",
+      "work": "Work",
+      "pomodoro": "Pomodoro",
+      "wake": "Wake",
+      "sleep": "Sleep",
+      "shop": "Shop"
+    },
+    "energy": {
+      "next": "{time}",
+      "full": ""
+    },
+    "features": {
+      "aria": "Features",
+      "upgrade": "Upgrade",
+      "upgradeTitle": "Spend {cost} hearts to upgrade",
+      "level": "Lv.{level}",
+      "cost": "{cost} hearts",
+      "maxLevel": "Max level",
+      "pomodoro": "Pomodoro",
+      "weatherAria": "Today's weather: {weather}"
+    }
+  },
+  "pet": {
+    "shop": {
+      "items": {
+        "emergency_biscuit": {
+          "name": "Soda biscuit",
+          "summary": "Daily fallback food, hunger +14, mood -1"
+        },
+        "bento": {
+          "name": "Homestyle bento",
+          "summary": "Hunger +34, mood +5"
+        },
+        "nutri_meal": {
+          "name": "Nutri meal",
+          "summary": "Hunger +26, health +12"
+        },
+        "pig_trotter": {
+          "name": "Pig trotter",
+          "summary": "Furo's favorite, hunger +42, mood +8"
+        },
+        "strawberry_cake": {
+          "name": "Strawberry cake",
+          "summary": "Furo's favorite, hunger +24, mood +14"
+        },
+        "ad_milk": {
+          "name": "AD calcium milk",
+          "summary": "Furo's favorite, hunger +16, health +3"
+        },
+        "small_bouquet": {
+          "name": "Small bouquet",
+          "summary": "Gift, mood +18"
+        },
+        "shiny_sticker": {
+          "name": "Shiny sticker",
+          "summary": "Gift, mood +12, small chance to gain a heart"
+        },
+        "soft_cloud_doll": {
+          "name": "Soft cloud doll",
+          "summary": "Premium gift, mood +30, energy +3"
+        },
+        "ribbon_bell": {
+          "name": "Ribbon bell",
+          "summary": "Gift, mood +20"
+        },
+        "toy_ball": {
+          "name": "Toy ball",
+          "summary": "Mood +25, energy -4"
+        },
+        "shampoo": {
+          "name": "Bubble shampoo",
+          "summary": "Cleanliness +35, health +3"
+        },
+        "medicine": {
+          "name": "Tiny medicine",
+          "summary": "Health +30, mood -2"
+        },
+        "blanket": {
+          "name": "Warm blanket",
+          "summary": "Energy +20, mood +2"
+        }
+      },
+      "categories": {
+        "food": "Food",
+        "item": "Items",
+        "care": "Care"
+      },
+      "discount": {
+        "label": "30% off"
+      }
+    },
+    "weather": {
+      "sunny": {
+        "label": "Sunny",
+        "summary": "Good sunlight slows mood decay a little, and play gives mood +2."
+      },
+      "cloudy": {
+        "label": "Cloudy",
+        "summary": "Stable weather with no extra effect."
+      },
+      "rainy": {
+        "label": "Rainy",
+        "summary": "Rain makes messes easier; cleaning gets +5, work earns -4 coins."
+      },
+      "breezy": {
+        "label": "Breezy",
+        "summary": "Fresh air restores awake energy every 4 minutes and work costs 2 less energy."
+      },
+      "effect": {
+        "sunnyPlay": " The sunny day made it even happier.",
+        "rainyClean": " The rain helped wash more thoroughly.",
+        "rainyWork": " Rain slowed the work a little.",
+        "breezyWork": " The breeze made work less tiring."
+      }
+    },
+    "pomodoro": {
+      "phase": {
+        "focus": "Focus",
+        "short_break": "Short break",
+        "long_break": "Long break"
+      },
+      "phaseCount": {
+        "focus": "{count} focus",
+        "short_break": "{count} short break",
+        "long_break": "{count} long break"
+      },
+      "completePrefix": "Pomodoro phase complete: ",
+      "offlineSettlePrefix": "Pomodoro offline settlement: ",
+      "settlementEvent": "{prefix}{parts}, mood +{mood}, coins +{coins}.",
+      "start": {
+        "sleeping": "Pomodoro can start while sleeping.",
+        "lowEnergy": "{name}'s energy is too low. Rest before starting pomodoro.",
+        "lowHealth": "{name}'s health is too low. Care before starting pomodoro.",
+        "started": "{name} started a {phase} pomodoro."
+      },
+      "pause": {
+        "sleeping": "{name} is resting. Pomodoro keeps running.",
+        "lowEnergy": "{name}'s energy is too low. Pomodoro paused.",
+        "lowHealth": "{name}'s health is too low. Pomodoro paused.",
+        "manual": "{name}'s pomodoro paused.",
+        "sleepActionPrepare": "{name} is getting ready to rest. Pomodoro keeps running.",
+        "sleepActionStarted": "{name} started resting. Pomodoro keeps running."
+      },
+      "reset": "{name}'s pomodoro was reset."
+    },
+    "status": {
+      "content": "Doing well",
+      "hungry": "Hungry",
+      "sad": "A bit low",
+      "dirty": "Needs cleaning",
+      "tired": "Tired",
+      "sick": "Unwell",
+      "sleeping": "Sleeping"
+    },
+    "default": {
+      "recentEvent": "Furo came to stay with you. There is a soda biscuit in the bag.",
+      "welcomeBack": "Welcome back."
+    },
+    "prefix": {
+      "dailyEncounter": "Daily encounter: ",
+      "sleepSettlement": "Wake-up settlement: ",
+      "offlineEvent": "Offline event: ",
+      "offlineDiary": "Offline diary: ",
+      "dreamTalk": "Dream talk: ",
+      "dreamEvent": "Dream: "
+    },
+    "interaction": {
+      "cost": [
+        "{name} played hard and got a little hungry.",
+        "{name} happily rubbed around and got a little messy.",
+        "{name} rolled on the floor and got a bit dirty.",
+        "{name} cuddled for a while and got a little tired."
+      ],
+      "cooldown": "{name} is still responding. Wait a moment before interacting again.",
+      "overuseCooldown": "{name} needs a breather. Wait a bit before interacting again.",
+      "sleeping": "{name} is sleeping soundly. Better not wake it.",
+      "lowEnergy": "{name}'s energy is too low. Rest before interacting.",
+      "heart": "{name} is in a great mood and gives you a heart.",
+      "touch": "You pet {name}, and it relaxes a little."
+    },
+    "incident": {
+      "play": [
+        "Played too hard and got a small scrape, health -{amount}.",
+        "Ran after the toy too fast and bumped into something, health -{amount}.",
+        "Jumped around excitedly and landed awkwardly, health -{amount}."
+      ],
+      "work": [
+        "Got a little rushed while working, health -{amount}.",
+        "Carried too much and got worn out, health -{amount}.",
+        "Today's small job was not smooth, health -{amount}."
+      ]
+    },
+    "dailyEncounter": {
+      "coins": "{name} found shiny coins near the window, coins +18.",
+      "biscuit": "A neighbor brought a soda biscuit, inventory +1.",
+      "sun": "{name} basked in the sun, mood +8, cleanliness -2.",
+      "rest": "{name} woke up refreshed, energy +10.",
+      "snack": "{name} secretly found a snack, hunger +10, cleanliness -3.",
+      "nightmare": "{name} had a tiny bad dream, mood -5.",
+      "heart": "{name} received a small sticker, heart +1."
+    },
+    "offlineDiary": {
+      "sunny": [
+        "{name} napped in the sun and looked for you with sleepy eyes.",
+        "{name} took the warm window spot and carefully fixed the small cushion."
+      ],
+      "cloudy": [
+        "{name} waited quietly for a while, as if expecting you back.",
+        "{name} watched the clouds for a long time, then softly nudged you when you returned."
+      ],
+      "rainy": [
+        "{name} listened to the rain and dragged the blanket to a cozier spot.",
+        "{name} spaced out a little today and noticed you only after the rain stopped."
+      ],
+      "breezy": [
+        "{name} rested in the breeze and looked more relaxed than before.",
+        "{name} noticed scents in the wind and seriously patrolled the room."
+      ]
+    },
+    "offlineEvent": {
+      "coins": "{name} found a coin that rolled beside the mat, coins +12.",
+      "biscuit": "A neighbor passed by and left a soda biscuit, inventory +1.",
+      "heart": "{name} hid a small sticker for your return, heart +1.",
+      "sunnyPlay": "{name} secretly basked in the sun, mood +6, cleanliness -2.",
+      "play": "{name} played alone for a while, mood +6, cleanliness -2.",
+      "hungryHappy": "{name} got a little hungry waiting, but was happy to see you, hunger -4, mood +4.",
+      "rest": "{name} rested calmly for a while, energy +8.",
+      "mess": "{name} turned the corner into a mess, cleanliness -5."
+    },
+    "sleepSettlement": {
+      "tooShort": "{name} woke soon after lying down, a little groggy, mood -1.",
+      "bad": "{name} slept poorly and seemed to have a small bad dream, mood -3, health -1.",
+      "good": "{name} slept deeply and nuzzled the blanket after waking, mood +4, energy +5.",
+      "normal": "{name} woke up feeling steadier, mood +2."
+    },
+    "streak": {
+      "play": "{name} played several times in a row and slowed down, energy -2, hunger -2.",
+      "clean": "{name} was washed too often and shook off water in protest, mood -4, hunger -1.",
+      "work": "{name} struggled with too much work in a row, mood -2, health -2.",
+      "feed": "{name} got a little too full and dirtied its mouth, mood -3, cleanliness -1.",
+      "gift": "{name} received too many gifts and did not know which one to hug first, mood -2.",
+      "touch": "{name} got shy from too much interaction and rested by your hand, mood -3, energy -1."
+    },
+    "advance": {
+      "wokeUp": "{name} woke up feeling great.",
+      "autoSleep": "It is late, so {name} fell asleep.",
+      "hungerCritical": "{name} is very hungry. The shop has 3 free soda biscuits each day.",
+      "needsCare": "{name} needs some care."
+    },
+    "action": {
+      "woke": "{name} was woken up.",
+      "lowEnergyPlay": "{name}'s energy is too low. Sleep or use an item to recover first.",
+      "play": "{name} had a great time playing.",
+      "clean": "{name} got clean and relaxed a little. Hunger -3, mood +1, energy +2.",
+      "lowEnergyWork": "Not enough energy. Sleep or use an item before working.",
+      "work": "{name} worked with you and earned 24 coins.",
+      "sleep": {
+        "pomodoroPaused": "{name} started resting. Pomodoro keeps running.",
+        "lowMood": "{name}'s mood is low and sleep may be uneasy.",
+        "normal": "{name} started resting. Energy will recover faster."
+      }
+    },
+    "buy": {
+      "missing": "This shop item does not exist.",
+      "biscuitClaimedOut": "Today's soda biscuits are all claimed. Come back tomorrow.",
+      "freeClaim": "Got a free {item} ({claimed}/{limit}).",
+      "notEnoughCoins": "Not enough coins. {item} costs {price} coins.",
+      "discount": "Bought {item} at today's discount for {price} coins.",
+      "free": "Got a free {item}.",
+      "paid": "Bought {item}."
+    },
+    "item": {
+      "missing": "This item does not exist.",
+      "empty": "No {item} in the bag.",
+      "use": {
+        "food": "{name} enjoyed {item}.",
+        "foodWoke": "{name} woke up and enjoyed {item}.",
+        "gift": "You gave {name} {item}.",
+        "care": "{name} used {item}.",
+        "careWoke": "{name} woke up and used {item}.",
+        "favorite": "This is Furo's favorite flavor, mood +{amount} extra.",
+        "stickerHeart": "The sticker sparkled, heart +1.",
+        "stickerSaved": "The sticker was carefully saved."
+      }
+    },
+    "rename": {
+      "updated": "Name updated to {name}."
+    },
+    "upgrade": {
+      "success": "Upgraded to Lv.{level}, spent {cost} hearts, stat cap increased to {max}.",
+      "notEnoughHearts": "Lv.{level} requires {cost} hearts.",
+      "maxLevel": "Already Lv.{level}; no higher level for now."
+    },
+    "dreamTalk": [
+      "{name} whispers about hiding a cloud in the bag.",
+      "{name} turns over and mumbles about counting one more coin.",
+      "{name} seems to be chasing shiny stickers in a dream.",
+      "{name} sleepily says your name.",
+      "{name} hugs the small blanket and hums softly."
+    ],
+    "dreamEvent": {
+      "cloudNap": "{name} dreamed of lying on soft clouds, mood +3 after waking.",
+      "coinPath": "{name} dreamed of collecting coins on a star path, coins +10.",
+      "sticker": "{name} dreamed of receiving a glowing sticker, heart +1.",
+      "biscuit": "The dream snack basket left a soda biscuit, inventory +1.",
+      "puddleRun": "{name} dreamed of running through puddles, energy +4, cleanliness -1."
+    }
+  }
+}

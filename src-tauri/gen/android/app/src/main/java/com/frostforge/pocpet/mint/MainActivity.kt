@@ -3,7 +3,9 @@ package com.frostforge.pocpet.mint
 import android.os.Bundle
 import android.webkit.WebView
 
-class MainActivity : TauriActivity() {
+class MainActivity : WryActivity() {
+  override val handleBackNavigation: Boolean = false
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
   }

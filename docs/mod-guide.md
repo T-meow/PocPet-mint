@@ -1,10 +1,10 @@
-# PocPet Mod Guide
+# Pocpet-Mint Mod Guide
 
-PocPet mods are imported as zip files. `schemaVersion: 1` can replace pet images, built-in item images, display text, the default pet name, favorite foods, and the pet's default birthday. `schemaVersion: 2` keeps those capabilities and can also override built-in item names, summaries, and images, plus register safe custom items for the shop and inventory.
+Pocpet-Mint mods are imported as zip files. `schemaVersion: 1` can replace pet images, built-in item images, display text, the default pet name, favorite foods, and the pet's default birthday. `schemaVersion: 2` keeps those capabilities and can also override built-in item names, summaries, and images, plus register safe custom items for the shop and inventory.
 
 ## Open Source and Asset Licensing
 
-PocPet built-in image assets are AI-generated or AI-assisted, then selected and integrated by FrostForge Studio. They are distributed with the main project under GPL-3.0-or-later unless a specific file or later notice says otherwise. You can fork the project for your own pet app, or distribute a standalone Mod zip.
+Pocpet-Mint built-in image assets are AI-generated or AI-assisted, then selected and integrated by FrostForge Studio. They are distributed with the main project under GPL-3.0-or-later unless a specific file or later notice says otherwise. You can fork the project for your own pet app, or distribute a standalone Mod zip.
 
 When publishing a Mod, only include images, text, audio, fonts, or other assets that you are allowed to distribute under your chosen license. Do not include unauthorized third-party characters, trademarks, game screenshots, film screenshots, music, fonts, sound effects, or other restricted material.
 
@@ -43,7 +43,7 @@ Supported pet image files are the status images `content.png`, `hungry.png`, `sa
 
 Supported item image files are `emergency_biscuit.png`, `bento.png`, `orange.png`, `apple.png`, `banana.png`, `watermelon.png`, `nutri_meal.png`, `pig_trotter.png`, `strawberry_cake.png`, `ad_milk.png`, `strawberry_milk.png`, `small_bouquet.png`, `shiny_sticker.png`, `soft_cloud_doll.png`, `ribbon_bell.png`, `toy_ball.png`, `picture_book.png`, `shampoo.png`, `wet_wipes.png`, `medicine.png`, `vitamin_tablet.png`, `blanket.png`, `energy_drink.png`, `golden_apple.png`, `fruit_tree_sapling.png`, `care_tree_sapling.png`, `gift_tree_sapling.png`, `money_tree_sapling.png`, `golden_apple_tree_sapling.png`, `normal_fertilizer.png`, `heart_fertilizer.png`, and `harvest_nutrient.png`. The built-in special item `birthday_cake` is birthday-only and is not mod-customizable in v1.
 
-The optional CG replacement path is `cg/good_ending_year_1.png`. It replaces the memorial image shown for the hidden “Good Ending” achievement. If it is missing, PocPet uses the built-in good ending CG.
+The optional CG replacement path is `cg/good_ending_year_1.png`. It replaces the memorial image shown for the hidden “Good Ending” achievement. If it is missing, Pocpet-Mint uses the built-in good ending CG.
 
 Missing images are allowed and fall back to built-in assets. Unknown files are rejected.
 
@@ -57,7 +57,7 @@ Missing images are allowed and fall back to built-in assets. Unknown files are r
   "author": "Creator",
   "version": "1.0.0",
   "defaultPetName": "Momo",
-  "description": "A custom pet for PocPet.",
+  "description": "A custom pet for Pocpet-Mint.",
   "favoriteFoodIds": ["strawberry_cake", "ad_milk"],
   "birthday": { "month": 4, "day": 23 },
   "texts": {
@@ -159,14 +159,14 @@ Custom item limits:
 
 1. Prepare `manifest.json`, `pet/`, `items/`, and optional `cg/` at the zip root.
 2. Zip those files directly; do not wrap them in an extra folder.
-3. Open PocPet settings and choose Import Pet Mod.
+3. Open Pocpet-Mint settings and choose Import Pet Mod.
 4. If the app reports missing images, those slots use built-in assets.
 
 ## Forking Guidance
 
-If your changes need new gameplay rules, save schema changes, large built-in asset replacements, or a different item economy, fork PocPet and maintain your own source branch instead of forcing those rules into a Mod. Mods are best for appearance, text, character packs, and safe item extensions.
+If your changes need new gameplay rules, save schema changes, large built-in asset replacements, or a different item economy, fork Pocpet-Mint and maintain your own source branch instead of forcing those rules into a Mod. Mods are best for appearance, text, character packs, and safe item extensions.
 
-For public forks, update the project name, app icon, package identifier, license notes, and asset statement so users do not confuse your version with the upstream PocPet project.
+For public forks, update the project name, app icon, package identifier, license notes, and asset statement so users do not confuse your version with the upstream Pocpet-Mint project.
 
 ## Compatibility
 

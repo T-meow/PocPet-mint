@@ -47,7 +47,7 @@
       "kicker": "背包",
       "title": "食物和道具",
       "shop": "商店",
-      "empty": "背包是空的，商店里每天可以领取免费饼干。"
+      "empty": "背包是空的，商店里每天可以领取免费咕比脆。"
     },
     "shop": {
       "eyebrow": "Shop",
@@ -148,7 +148,7 @@
           "背包道具可用于喂食、送礼、护理，也可在花园里种植或强化。"
         ],
         "other": [
-          "商店出售食物、礼物、护理和花园道具，每日可领免费苏打饼干，也能用金币兑换小心心。",
+          "商店出售食物、礼物、护理和花园道具，每日可领免费咕比脆，也能用金币兑换小心心。",
           "每日愿望和回归任务完成后可领奖，离线时也可能留下日记或事件。",
           "番茄钟按专注和休息循环计时，完成专注可获得金币和心情，状态太差会暂停。",
           "花园可解锁地块、种树、浇水、施肥和收获，枯树清理后可重新种植。",
@@ -484,9 +484,9 @@
     "rolePicker": {
       "aria": "选择宠物角色",
       "title": "选择你的伙伴",
-      "description": "选择内置 Furo，继续使用已安装 Mod，或导入新的 Mod。确认前不会创建存档。",
+      "description": "选择内置 mint，继续使用已安装 Mod，或导入新的 Mod。确认前不会创建存档。",
       "loading": "正在读取本地 Mod...",
-      "builtinTitle": "内置 Furo",
+      "builtinTitle": "内置 mint",
       "builtinSummary": "不使用 Mod，直接创建默认伙伴。",
       "installedTitle": "使用 {name}",
       "installedSummary": "创建默认名字为 {pet} 的 Mod 伙伴。",
@@ -498,8 +498,8 @@
     "shop": {
       "items": {
         "emergency_biscuit": {
-          "name": "苏打饼干",
-          "summary": "味道平淡的饼干"
+          "name": "咕比脆",
+          "summary": "香脆轻巧的小点心"
         },
         "bento": {
           "name": "家常便当",
@@ -706,7 +706,7 @@
       "sleeping": "睡觉中"
     },
     "default": {
-      "recentEvent": "Furo 来到你身边了，背包里有一块苏打饼干。",
+      "recentEvent": "mint 来到你身边了，背包里有一块咕比脆。",
       "welcomeBack": "欢迎回来。"
     },
     "prefix": {
@@ -746,7 +746,7 @@
     },
     "dailyEncounter": {
       "coins": "{name} 在窗边捡到亮晶晶的小硬币，金币 +18。",
-      "biscuit": "邻居送来一块苏打饼干，背包 +1。",
+      "biscuit": "邻居送来一块咕比脆，背包 +1。",
       "sun": "{name} 晒了会儿太阳，心情 +8，清洁 -2。",
       "rest": "{name} 睡醒后精神很好，体力 +10。",
       "snack": "{name} 偷偷翻了点零食，饱腹 +10，清洁 -3。",
@@ -773,7 +773,7 @@
     },
     "offlineEvent": {
       "coins": "{name} 在垫子旁边发现一枚滚过去的小硬币，金币 +12。",
-      "biscuit": "邻居路过时留下一块苏打饼干，背包 +1。",
+      "biscuit": "邻居路过时留下一块咕比脆，背包 +1。",
       "heart": "{name} 把一张小贴纸藏好等你回来，小心心 +{hearts}。",
       "sunnyPlay": "{name} 偷偷晒了会儿太阳，心情 +6，清洁 -2。",
       "play": "{name} 自己玩了一会儿，心情 +6，清洁 -2。",
@@ -798,7 +798,7 @@
     "advance": {
       "wokeUp": "{name} 睡醒了，精神很好。",
       "autoSleep": "夜深了，{name} 自己睡着了。",
-      "hungerCritical": "{name} 很饿，商店里的苏打饼干每天可以免费领 3 次。",
+      "hungerCritical": "{name} 很饿，商店里的咕比脆每天可以免费领 3 次。",
       "needsCare": "{name} 需要你照顾一下。"
     },
     "action": {
@@ -821,7 +821,7 @@
     },
     "buy": {
       "missing": "这个商品不存在。",
-      "biscuitClaimedOut": "今天的苏打饼干已经领完了，明天再来吧。",
+      "biscuitClaimedOut": "今天的咕比脆已经领完了，明天再来吧。",
       "freeClaim": "拿到一份免费的{item}（{claimed}/{limit}）。",
       "notEnoughCoins": "金币不够，{item} 需要 {price} 金币。",
       "discount": "今日特价购买了{item}，花费 {price} 金币。",
@@ -837,7 +837,7 @@
         "gift": "你送给 {name} {item}。",
         "care": "{name} 使用了{item}。",
         "careWoke": "{name} 醒来使用了{item}。",
-        "favorite": "这是 Furo 喜欢的味道，心情额外 +{amount}。",
+        "favorite": "这是喜欢的味道，心情变得更好了",
         "giftHeart": "礼物带来了 {hearts} 个小心心。",
         "birthdayCake": "{name} 吃下了{item}，全属性回满。",
         "birthdayCakeWoke": "{name} 醒来吃下了{item}，全属性回满。",
@@ -871,7 +871,7 @@
       "cloudNap": "{name} 梦见躺在软云上，醒来心情 +3。",
       "coinPath": "{name} 梦见沿着星星小路捡硬币，金币 +10。",
       "sticker": "{name} 梦见收到一张会发光的贴纸，小心心 +{hearts}。",
-      "biscuit": "梦里的点心篮留下了一块苏打饼干，背包 +1。",
+      "biscuit": "梦里的点心篮留下了一块咕比脆，背包 +1。",
       "puddleRun": "{name} 梦见踩着水洼跑步，体力 +4，清洁 -1。"
     },
     "reward": {

@@ -9,7 +9,7 @@ import iconPigTotters from './assets/icon/icon_pigtotters.png';
 import iconShinyStickers from './assets/icon/icon_shiny_stickers.png';
 import itemBento from './assets/icon/item_bento.png';
 import itemBlanket from './assets/icon/item_blanket.png';
-import itemEmergencyBiscuit from './assets/icon/item_emergency_biscuit.png';
+import itemEmergencyBiscuit from './gubi crisp.png';
 import itemEnergyDrink from './assets/icon/item_energy_drink.png';
 import itemGiftBox from './assets/icon/item_gift_box1.png';
 import itemGoldenApple from './assets/icon/item_golden_apple.png';
@@ -47,6 +47,7 @@ import petLevelUp from './assets/pet/pet_levelUp.png';
 import petReadingBooks from './assets/pet/pet_reading_books.png';
 import petSick from './assets/pet/pet_sick1.png';
 import petSleep from './assets/pet/pet_sleep.png';
+import petTired from './assets/pet/pet_tired.png';
 import petWorkout from './assets/pet/pet_workout.png';
 import petWorkMakingFood from './assets/pet/pet_work_making_food.png';
 import petWorkWateringPlants from './assets/pet/pet_work_watering_plants.png';
@@ -105,7 +106,7 @@ export const petStatusImages: Record<PetStatus, string> = {
   hungry: petHungry,
   sad: petDirtySad,
   dirty: petLittleDirty,
-  tired: petReadingBooks,
+  tired: petTired,
   sick: petSick,
   sleeping: petSleep,
 };

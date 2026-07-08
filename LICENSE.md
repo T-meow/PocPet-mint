@@ -1,8 +1,8 @@
-# PocPet License
+# Pocpet-Mint License
 
 Copyright (c) FrostForge Studio.
 
-PocPet is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later).
+Pocpet-Mint is licensed under the GNU General Public License v3.0 or later (GPL-3.0-or-later).
 
 The full GPLv3 license text follows.
 

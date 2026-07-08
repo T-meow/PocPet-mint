@@ -11,7 +11,7 @@ export const lowCleanlinessSleepConfirmClicks = 3;
 
 export const lowCleanlinessSleepMoodPenalty = 12;
 
-export const defaultPetName = 'Furo';
+export const defaultPetName = 'mint';
 
 export const maxPetLevel = 99;
 

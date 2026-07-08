@@ -2,7 +2,7 @@ import { advancePet, createDefaultPet, normalizePet, type PetState } from './pet
 import type { PetModManifest } from './mod';
 
 export const saveFileSchemaVersion = 1;
-const appId = 'PocPet';
+const appId = 'Pocpet-Mint';
 const protectedSavePrefix = 'POCPET-SAVE-v2:';
 const protectedSaveKey = `${appId}:save-file:v2`;
 const textEncoder = new TextEncoder();
@@ -170,7 +170,7 @@ export const parseSaveFileText = (text: string, now = Date.now()): PocPetImporte
   try {
     parsed = JSON.parse(unprotectSaveFileText(text));
   } catch {
-    throw new Error('Save text is not valid PocPet save data.');
+    throw new Error('Save text is not valid Pocpet-Mint save data.');
   }
 
   if (!isObject(parsed)) {
@@ -178,10 +178,10 @@ export const parseSaveFileText = (text: string, now = Date.now()): PocPetImporte
   }
 
   if (parsed.app === appId || parsed.schemaVersion !== undefined) {
-    if (parsed.app !== appId) throw new Error('This is not a PocPet save file.');
+    if (parsed.app !== appId) throw new Error('This is not a Pocpet-Mint save file.');
     if (parsed.schemaVersion !== saveFileSchemaVersion) {
       if (typeof parsed.schemaVersion === 'number' && parsed.schemaVersion > saveFileSchemaVersion) {
-        throw new Error('This save file comes from a newer PocPet version. Please upgrade the app.');
+        throw new Error('This save file comes from a newer Pocpet-Mint version. Please upgrade the app.');
       }
       throw new Error('Unsupported save file version.');
     }

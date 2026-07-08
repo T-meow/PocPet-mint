@@ -10,8 +10,8 @@ import {
   type PetModManifest,
 } from './mod';
 
-const activeManifestStorageKey = 'pocpet.mod.active.v1';
-const databaseName = 'pocpet-mods';
+const activeManifestStorageKey = 'pocpet-mint.mod.active.v1';
+const databaseName = 'pocpet-mint-mods';
 const imageStoreName = 'images';
 const databaseVersion = 1;
 

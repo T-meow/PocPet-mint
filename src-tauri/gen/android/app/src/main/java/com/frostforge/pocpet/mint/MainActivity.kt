@@ -1,4 +1,4 @@
-package com.frostforge.pocpet
+package com.frostforge.pocpet.mint
 
 import android.os.Bundle
 import android.webkit.WebView

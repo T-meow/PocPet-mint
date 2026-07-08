@@ -5,7 +5,7 @@ import { clampCoins } from './petStats';
 import type { ItemId, PetBirthday, PetState } from './petTypes';
 import { getLocalDateKey, hashString } from './utils';
 
-export const defaultPetBirthday: PetBirthday = { month: 4, day: 23 };
+export const defaultPetBirthday: PetBirthday = { month: 6, day: 1 };
 export const birthdayRewardCoins = 100;
 export const birthdayRewardHearts = 10;
 export const anniversaryRewardCoins = 50;

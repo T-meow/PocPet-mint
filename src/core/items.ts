@@ -11,7 +11,7 @@ export const dailyHeartExchangeLimit = 3;
 
 export const heartExchangeCooldownMs = 200;
 
-export const favoriteFoodIds: readonly ItemId[] = ['pig_trotter', 'strawberry_cake', 'ad_milk'];
+export const favoriteFoodIds: readonly ItemId[] = ['emergency_biscuit', 'strawberry_cake'];
 
 export const favoriteFoodIdSet = new Set<ItemId>(favoriteFoodIds);
 

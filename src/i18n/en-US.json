@@ -47,7 +47,7 @@
       "kicker": "Inventory",
       "title": "Food and Items",
       "shop": "Shop",
-      "empty": "Inventory is empty. You can claim 3 soda biscuits from the shop each day."
+      "empty": "Inventory is empty. You can claim 3 Gubi Crisps from the shop each day."
     },
     "shop": {
       "eyebrow": "Shop",
@@ -148,7 +148,7 @@
           "Inventory items can feed, gift, care for your pet, or plant and boost things in the garden."
         ],
         "other": [
-          "The shop sells food, gifts, care, and garden items. You can claim free soda biscuits daily and exchange coins for hearts.",
+          "The shop sells food, gifts, care, and garden items. You can claim free Gubi Crisps daily and exchange coins for hearts.",
           "Daily wishes and return tasks grant rewards after completion. Offline time may also leave diaries or events.",
           "Pomodoro cycles focus and breaks. Completed focus grants coins and mood, while poor status pauses the timer.",
           "The garden lets you unlock slots, plant trees, water, fertilize, and harvest. Clear withered trees to plant again.",
@@ -484,9 +484,9 @@
     "rolePicker": {
       "aria": "Choose pet character",
       "title": "Choose your companion",
-      "description": "Use built-in Furo, continue with the installed mod, or import a new mod. No save is created until you choose.",
+      "description": "Use built-in mint, continue with the installed mod, or import a new mod. No save is created until you choose.",
       "loading": "Loading local mod...",
-      "builtinTitle": "Built-in Furo",
+      "builtinTitle": "Built-in mint",
       "builtinSummary": "Create the default companion without a mod.",
       "installedTitle": "Use {name}",
       "installedSummary": "Create the mod companion named {pet}.",
@@ -498,8 +498,8 @@
     "shop": {
       "items": {
         "emergency_biscuit": {
-          "name": "Soda biscuit",
-          "summary": "A plain-tasting cracker."
+          "name": "Gubi Crisp",
+          "summary": "A light, crunchy little snack."
         },
         "bento": {
           "name": "Homestyle bento",
@@ -706,7 +706,7 @@
       "sleeping": "Sleeping"
     },
     "default": {
-      "recentEvent": "Furo came to stay with you. There is a soda biscuit in the bag.",
+      "recentEvent": "mint came to stay with you. There is a Gubi Crisp in the bag.",
       "welcomeBack": "Welcome back."
     },
     "prefix": {
@@ -746,7 +746,7 @@
     },
     "dailyEncounter": {
       "coins": "{name} found shiny coins near the window, coins +18.",
-      "biscuit": "A neighbor brought a soda biscuit, inventory +1.",
+      "biscuit": "A neighbor brought a Gubi Crisp, inventory +1.",
       "sun": "{name} basked in the sun, mood +8, cleanliness -2.",
       "rest": "{name} woke up refreshed, energy +10.",
       "snack": "{name} secretly found a snack, hunger +10, cleanliness -3.",
@@ -773,7 +773,7 @@
     },
     "offlineEvent": {
       "coins": "{name} found a coin that rolled beside the mat, coins +12.",
-      "biscuit": "A neighbor passed by and left a soda biscuit, inventory +1.",
+      "biscuit": "A neighbor passed by and left a Gubi Crisp, inventory +1.",
       "heart": "{name} hid a small sticker for your return, hearts +{hearts}.",
       "sunnyPlay": "{name} secretly basked in the sun, mood +6, cleanliness -2.",
       "play": "{name} played alone for a while, mood +6, cleanliness -2.",
@@ -798,7 +798,7 @@
     "advance": {
       "wokeUp": "{name} woke up feeling great.",
       "autoSleep": "It is late, so {name} fell asleep.",
-      "hungerCritical": "{name} is very hungry. The shop has 3 free soda biscuits each day.",
+      "hungerCritical": "{name} is very hungry. The shop has 3 free Gubi Crisps each day.",
       "needsCare": "{name} needs some care."
     },
     "action": {
@@ -821,7 +821,7 @@
     },
     "buy": {
       "missing": "This shop item does not exist.",
-      "biscuitClaimedOut": "Today's soda biscuits are all claimed. Come back tomorrow.",
+      "biscuitClaimedOut": "Today's Gubi Crisps are all claimed. Come back tomorrow.",
       "freeClaim": "Got a free {item} ({claimed}/{limit}).",
       "notEnoughCoins": "Not enough coins. {item} costs {price} coins.",
       "discount": "Bought {item} at today's discount for {price} coins.",
@@ -837,7 +837,7 @@
         "gift": "You gave {name} {item}.",
         "care": "{name} used {item}.",
         "careWoke": "{name} woke up and used {item}.",
-        "favorite": "This is Furo's favorite flavor, mood +{amount} extra.",
+        "favorite": "This is a favorite flavor. Mood feels better.",
         "giftHeart": "The gift brought {hearts} heart(s).",
         "birthdayCake": "{name} enjoyed {item}. All stats are full.",
         "birthdayCakeWoke": "{name} woke up and enjoyed {item}. All stats are full.",
@@ -871,7 +871,7 @@
       "cloudNap": "{name} dreamed of lying on soft clouds, mood +3 after waking.",
       "coinPath": "{name} dreamed of collecting coins on a star path, coins +10.",
       "sticker": "{name} dreamed of receiving a glowing sticker, hearts +{hearts}.",
-      "biscuit": "The dream snack basket left a soda biscuit, inventory +1.",
+      "biscuit": "The dream snack basket left a Gubi Crisp, inventory +1.",
       "puddleRun": "{name} dreamed of running through puddles, energy +4, cleanliness -1."
     },
     "reward": {

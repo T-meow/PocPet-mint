@@ -976,7 +976,7 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
   const handleDownloadSave = () => {
     const text = createSaveFileText(petRef.current, activeMod?.manifest);
     setSaveText(text);
-    downloadTextFile(`pocpet-save-${new Date().toISOString().slice(0, 10)}.pocpet`, text);
+    downloadTextFile(`pocpet-mint-save-${new Date().toISOString().slice(0, 10)}.pocpet`, text);
   };
 
   const importSaveFromText = (text: string) => {

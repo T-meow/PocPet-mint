@@ -1,4 +1,4 @@
-# PocPet Agent Rules
+# Pocpet-Mint Agent Rules
 
 ## 打包规则
 

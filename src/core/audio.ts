@@ -36,7 +36,7 @@ export type SfxId =
   | 'action_blanket'
   | 'action_work_play_medicine';
 
-const audioEnabledStorageKey = 'pocpet.audio.enabled';
+const audioEnabledStorageKey = 'pocpet-mint.audio.enabled';
 const bgmVolume = 0.18;
 const sfxVolume = 0.48;
 

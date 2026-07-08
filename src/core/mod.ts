@@ -358,7 +358,7 @@ export const validatePetModManifest = (value: unknown): PetModManifest => {
 
   if (value.schemaVersion !== 1 && value.schemaVersion !== 2) {
     if (typeof value.schemaVersion === 'number' && value.schemaVersion > modSchemaVersion) {
-      throw new Error('This mod uses a newer schema version. Please upgrade PocPet.');
+      throw new Error('This mod uses a newer schema version. Please upgrade Pocpet-Mint.');
     }
     throw new Error('manifest.json schemaVersion must be 1 or 2.');
   }

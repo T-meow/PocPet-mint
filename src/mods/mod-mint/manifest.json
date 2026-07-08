@@ -7,6 +7,7 @@
   "defaultPetName": "mint",
   "description": "Mint pet pack.",
   "favoriteFoodIds": [
+    "emergency_biscuit",
     "strawberry_cake"
   ],
   "birthday": {
@@ -15,7 +16,7 @@
   },
   "texts": {
     "recentEvent": "mint 来到你身边了。",
-    "favoriteFood": "这是 mint 喜欢的草莓蛋糕，心情额外 +{amount}。",
+    "favoriteFood": "这是喜欢的味道，心情变得更好了",
     "status": {
       "content": "状态不错",
       "hungry": "饿了",

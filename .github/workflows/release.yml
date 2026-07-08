@@ -1,4 +1,4 @@
-name: PocPet CI and Release
+name: Pocpet-Mint CI and Release
 
 on:
   pull_request:
@@ -121,7 +121,7 @@ jobs:
       - name: Upload Windows x64 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-windows-x64-${{ needs.metadata.outputs.version }}
+          name: pocpet-mint-windows-x64-${{ needs.metadata.outputs.version }}
           path: release/pocket${{ needs.metadata.outputs.version }}.exe
           if-no-files-found: error
 
@@ -155,7 +155,7 @@ jobs:
       - name: Upload Windows 32-bit artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-windows-x86-${{ needs.metadata.outputs.version }}
+          name: pocpet-mint-windows-x86-${{ needs.metadata.outputs.version }}
           path: release/pocket${{ needs.metadata.outputs.version }}-win32.exe
           if-no-files-found: error
 
@@ -206,7 +206,7 @@ jobs:
       - name: Upload Android arm64 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-android-arm64-${{ needs.metadata.outputs.version }}
+          name: pocpet-mint-android-arm64-${{ needs.metadata.outputs.version }}
           path: release/pocket${{ needs.metadata.outputs.version }}.apk
           if-no-files-found: error
 
@@ -257,7 +257,7 @@ jobs:
       - name: Upload Android 32-bit artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-android-armv7-${{ needs.metadata.outputs.version }}
+          name: pocpet-mint-android-armv7-${{ needs.metadata.outputs.version }}
           path: release/pocket${{ needs.metadata.outputs.version }}-32bit.apk
           if-no-files-found: error
 
@@ -286,7 +286,7 @@ jobs:
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-web-${{ needs.metadata.outputs.version }}
+          name: pocpet-mint-web-${{ needs.metadata.outputs.version }}
           path: release/pocket${{ needs.metadata.outputs.version }}-web.zip
           if-no-files-found: error
 
@@ -339,7 +339,7 @@ jobs:
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-linux-${{ needs.metadata.outputs.version }}
+          name: pocpet-mint-linux-${{ needs.metadata.outputs.version }}
           path: artifacts/*
           if-no-files-found: error
 
@@ -382,7 +382,7 @@ jobs:
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-macos-${{ needs.metadata.outputs.version }}
+          name: pocpet-mint-macos-${{ needs.metadata.outputs.version }}
           path: artifacts/pocket${{ needs.metadata.outputs.version }}-mac.dmg
           if-no-files-found: error
 
@@ -427,6 +427,6 @@ jobs:
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
-          name: PocPet ${{ github.ref_name }}
+          name: Pocpet-Mint ${{ github.ref_name }}
           files: dist-release/*
           fail_on_unmatched_files: true

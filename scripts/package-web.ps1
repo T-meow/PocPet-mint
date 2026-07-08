@@ -15,7 +15,7 @@ if ([string]::IsNullOrWhiteSpace($version)) {
 $distDir = Join-Path $root 'dist'
 $distIndex = Join-Path $distDir 'index.html'
 $releaseDir = Join-Path $root 'release'
-$target = Join-Path $releaseDir "pocket$version-web.zip"
+$target = Join-Path $releaseDir "pp-Mint$version-web.zip"
 
 if (-not (Test-Path -LiteralPath $distIndex)) {
   throw "Vite index.html not found: $distIndex"

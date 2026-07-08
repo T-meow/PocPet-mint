@@ -90,7 +90,7 @@ Android arm64 APK:
 npm.cmd run package:android:arm64
 ```
 
-By default, the Android packaging script rebuilds the Tauri Android arm64 native library and embedded frontend resources, then generates, aligns, debug-signs, and verifies the APK. The web deployment package compresses the current `dist/` directory into `release/pocket<version>-web.zip`.
+By default, the Android packaging script rebuilds the Tauri Android arm64 native library and embedded frontend resources, then generates, aligns, debug-signs, and verifies the APK. The web deployment package compresses the current `dist/` directory into `release/pp-Mint<version>-web.zip`.
 
 macOS and Linux must be built on their corresponding systems:
 
@@ -111,14 +111,14 @@ The repository includes `.github/workflows/release.yml`. Default behavior:
 
 Daily test packages:
 
-- Windows x64: `pocket<version>.exe`
-- Android arm64 debug-signed APK: `pocket<version>.apk`
+- Windows x64: `pp-Mint<version>.exe`
+- Android arm64 debug-signed APK: `pp-Mint<version>.apk`
 
 Full builds additionally produce:
 
-- Web deployment package: `pocket<version>-web.zip`
-- macOS: `pocket<version>-mac.dmg`
-- Ubuntu/Linux: `pocket<version>-ubuntu.AppImage`; if the runner also generates a deb package, `pocket<version>-ubuntu.deb` is kept as well.
+- Web deployment package: `pp-Mint<version>-web.zip`
+- macOS: `pp-Mint<version>-mac.dmg`
+- Ubuntu/Linux: `pp-Mint<version>-ubuntu.AppImage`; if the runner also generates a deb package, `pp-Mint<version>-ubuntu.deb` is kept as well.
 
 Android packages use a temporary debug keystore generated on the CI runner by default and are only suitable for test distribution. Official store signing requires separate signing keys and a release process.
 

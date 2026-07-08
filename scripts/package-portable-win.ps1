@@ -27,7 +27,7 @@ $outputSuffix = [string]$targetConfig['Suffix']
 $source = Join-Path $root $sourceRelative
 $distIndex = Join-Path $root 'dist\index.html'
 $releaseDir = Join-Path $root 'release'
-$targetPath = Join-Path $releaseDir "pocket$version$outputSuffix.exe"
+$targetPath = Join-Path $releaseDir "pp-Mint$version$outputSuffix.exe"
 
 if (-not (Test-Path -LiteralPath $distIndex)) {
   throw "Vite index.html not found: $distIndex"

@@ -121,8 +121,8 @@ jobs:
       - name: Upload Windows x64 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-mint-windows-x64-${{ needs.metadata.outputs.version }}
-          path: release/pocket${{ needs.metadata.outputs.version }}.exe
+          name: pp-Mint-windows-x64-${{ needs.metadata.outputs.version }}
+          path: release/pp-Mint${{ needs.metadata.outputs.version }}.exe
           if-no-files-found: error
 
   windows_x86:
@@ -155,8 +155,8 @@ jobs:
       - name: Upload Windows 32-bit artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-mint-windows-x86-${{ needs.metadata.outputs.version }}
-          path: release/pocket${{ needs.metadata.outputs.version }}-win32.exe
+          name: pp-Mint-windows-x86-${{ needs.metadata.outputs.version }}
+          path: release/pp-Mint${{ needs.metadata.outputs.version }}-win32.exe
           if-no-files-found: error
 
   android:
@@ -206,8 +206,8 @@ jobs:
       - name: Upload Android arm64 artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-mint-android-arm64-${{ needs.metadata.outputs.version }}
-          path: release/pocket${{ needs.metadata.outputs.version }}.apk
+          name: pp-Mint-android-arm64-${{ needs.metadata.outputs.version }}
+          path: release/pp-Mint${{ needs.metadata.outputs.version }}.apk
           if-no-files-found: error
 
   android_armv7:
@@ -257,8 +257,8 @@ jobs:
       - name: Upload Android 32-bit artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-mint-android-armv7-${{ needs.metadata.outputs.version }}
-          path: release/pocket${{ needs.metadata.outputs.version }}-32bit.apk
+          name: pp-Mint-android-armv7-${{ needs.metadata.outputs.version }}
+          path: release/pp-Mint${{ needs.metadata.outputs.version }}-32bit.apk
           if-no-files-found: error
 
   web:
@@ -286,8 +286,8 @@ jobs:
       - name: Upload web artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-mint-web-${{ needs.metadata.outputs.version }}
-          path: release/pocket${{ needs.metadata.outputs.version }}-web.zip
+          name: pp-Mint-web-${{ needs.metadata.outputs.version }}
+          path: release/pp-Mint${{ needs.metadata.outputs.version }}-web.zip
           if-no-files-found: error
 
   linux:
@@ -329,17 +329,17 @@ jobs:
             echo "No AppImage found."
             exit 1
           fi
-          cp "$appimage" "artifacts/pocket${version}-ubuntu.AppImage"
+          cp "$appimage" "artifacts/pp-Mint${version}-ubuntu.AppImage"
 
           deb=$(find src-tauri/target/release/bundle -type f -name '*.deb' | head -n 1 || true)
           if [[ -n "$deb" ]]; then
-            cp "$deb" "artifacts/pocket${version}-ubuntu.deb"
+            cp "$deb" "artifacts/pp-Mint${version}-ubuntu.deb"
           fi
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-mint-linux-${{ needs.metadata.outputs.version }}
+          name: pp-Mint-linux-${{ needs.metadata.outputs.version }}
           path: artifacts/*
           if-no-files-found: error
 
@@ -377,13 +377,13 @@ jobs:
             echo "No dmg found."
             exit 1
           fi
-          cp "$dmg" "artifacts/pocket${version}-mac.dmg"
+          cp "$dmg" "artifacts/pp-Mint${version}-mac.dmg"
 
       - name: Upload macOS artifact
         uses: actions/upload-artifact@v4
         with:
-          name: pocpet-mint-macos-${{ needs.metadata.outputs.version }}
-          path: artifacts/pocket${{ needs.metadata.outputs.version }}-mac.dmg
+          name: pp-Mint-macos-${{ needs.metadata.outputs.version }}
+          path: artifacts/pp-Mint${{ needs.metadata.outputs.version }}-mac.dmg
           if-no-files-found: error
 
   release:

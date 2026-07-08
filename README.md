@@ -90,7 +90,7 @@ Android arm64 APK：
 npm.cmd run package:android:arm64
 ```
 
-说明：默认 Android 打包脚本会重建 Tauri Android arm64 原生库和内嵌前端资源，再生成、对齐、debug 签名并校验 APK。网页版部署包会把当前 `dist/` 压缩为 `release/pocket<version>-web.zip`。
+说明：默认 Android 打包脚本会重建 Tauri Android arm64 原生库和内嵌前端资源，再生成、对齐、debug 签名并校验 APK。网页版部署包会把当前 `dist/` 压缩为 `release/pp-Mint<version>-web.zip`。
 
 macOS 与 Linux 需要在对应系统上构建：
 
@@ -111,14 +111,14 @@ macOS 目标产物以 `.dmg` / `.app` 为主。Linux 目标产物以 `.AppImage`
 
 日常测试包：
 
-- Windows x64：`pocket<version>.exe`
-- Android arm64 debug-signed APK：`pocket<version>.apk`
+- Windows x64：`pp-Mint<version>.exe`
+- Android arm64 debug-signed APK：`pp-Mint<version>.apk`
 
 全量构建会额外产出：
 
-- Web 部署包：`pocket<version>-web.zip`
-- macOS：`pocket<version>-mac.dmg`
-- Ubuntu/Linux：`pocket<version>-ubuntu.AppImage`，如 runner 生成 deb，也会保留 `pocket<version>-ubuntu.deb`
+- Web 部署包：`pp-Mint<version>-web.zip`
+- macOS：`pp-Mint<version>-mac.dmg`
+- Ubuntu/Linux：`pp-Mint<version>-ubuntu.AppImage`，如 runner 生成 deb，也会保留 `pp-Mint<version>-ubuntu.deb`
 
 Android 包默认使用 CI runner 上临时生成的 debug keystore 签名，只适合测试分发；正式商店签名需要另行配置签名密钥和发布流程。
 

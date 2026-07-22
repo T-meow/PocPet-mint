@@ -1,11 +1,15 @@
 import { pick, t } from '../i18n';
 import { applyHeartGain, recordEarnedCoins, recordEarnedHearts } from './achievements';
+import { getDailyResetDateKey } from './dailyReset';
 import { addInventoryItem } from './items';
+import { createNeighborGift, getNeighborEventRandom, pickNeighborEventValue, pickNeighborName } from './neighborGifts';
 import { clampCoins, clampCount, clampPetHealth, clampPetStat } from './petStats';
-import type { ItemEffect, ItemId, PetState, WeatherType } from './petTypes';
+import type { ItemEffect, ItemId, NeighborEventContext, PetState, WeatherType } from './petTypes';
 import { hashString, pickRandom } from './utils';
+import { neighborGiftDailyLimit } from './neighbors';
 
 export interface DailyEncounter {
+  kind?: 'neighbor_gift';
   coins?: number;
   hearts?: number;
   itemId?: ItemId;
@@ -15,6 +19,7 @@ export interface DailyEncounter {
 }
 
 export interface TimedEvent {
+  kind?: 'neighbor_gift';
   coins?: number;
   hearts?: number;
   itemId?: ItemId;
@@ -29,73 +34,100 @@ export const dreamTalkStartDelayMs = 8 * 60 * 1000;
 
 export const dreamTalkCooldownMs = 15 * 60 * 1000;
 
-export const getRandomDailyEncounter = (name: string): DailyEncounter =>
-  pickRandom([
-    {
+const getNeighborGiftEvent = (context: NeighborEventContext | undefined, key: 'dailyEncounter' | 'offlineEvent'): TimedEvent => {
+  const { neighborName, gift } = createNeighborGift(context);
+  return {
+    kind: 'neighbor_gift',
+    itemId: gift.itemId,
+    itemAmount: 1,
+    text: t(`pet.${key}.${neighborName ? 'neighborGiftNamed' : 'neighborGiftGeneric'}`, {
+      neighbor: neighborName ?? '',
+      item: gift.displayName,
+    }),
+  };
+};
+
+export const getRandomDailyEncounter = (
+  name: string,
+  context?: NeighborEventContext,
+  allowNeighborGift = true,
+): DailyEncounter => {
+  const random = getNeighborEventRandom(context);
+  const options: Array<() => DailyEncounter> = [
+    () => ({
       coins: 18,
       text: t('pet.dailyEncounter.coins', { name }),
-    },
-    {
-      itemId: 'emergency_biscuit',
-      itemAmount: 1,
-      text: t('pet.dailyEncounter.biscuit'),
-    },
-    {
+    }),
+    () => ({
       effect: { mood: 8, cleanliness: -2 },
       text: t('pet.dailyEncounter.sun', { name }),
-    },
-    {
+    }),
+    () => ({
       effect: { energy: 10 },
       text: t('pet.dailyEncounter.rest', { name }),
-    },
-    {
+    }),
+    () => ({
       effect: { hunger: 10, cleanliness: -3 },
       text: t('pet.dailyEncounter.snack', { name }),
-    },
-    {
+    }),
+    () => ({
       effect: { mood: -5 },
       text: t('pet.dailyEncounter.nightmare', { name }),
-    },
-    {
+    }),
+    () => ({
       hearts: 1,
       text: t('pet.dailyEncounter.heart', { name, hearts: '{hearts}' }),
-    },
-  ]);
+    }),
+  ];
+  if (allowNeighborGift) options.splice(1, 0, () => getNeighborGiftEvent(context, 'dailyEncounter'));
+  return pickNeighborEventValue(options, random)();
+};
 
 export const getRandomOfflineDiary = (name: string, weather: WeatherType) => pick(`pet.offlineDiary.${weather}`, { name });
 
-export const getRandomOfflineEvent = (name: string, weather: WeatherType): TimedEvent =>
-  pickRandom([
-    {
+export const getRandomOfflineEvent = (
+  name: string,
+  weather: WeatherType,
+  context?: NeighborEventContext,
+  allowNeighborGift = true,
+): TimedEvent => {
+  const random = getNeighborEventRandom(context);
+  const neighborPlay = () => {
+    const neighbor = pickNeighborName(context, random);
+    return {
+      effect: { mood: 6, cleanliness: -2 },
+      text: t(`pet.offlineEvent.${weather === 'sunny' ? 'sunnyPlay' : 'play'}${neighbor ? 'Named' : 'Generic'}`, {
+        name,
+        neighbor: neighbor ?? '',
+      }),
+    };
+  };
+  const options: Array<() => TimedEvent> = [
+    () => ({
       coins: 12,
       text: t('pet.offlineEvent.coins', { name }),
-    },
-    {
-      itemId: 'emergency_biscuit',
-      itemAmount: 1,
-      text: t('pet.offlineEvent.biscuit'),
-    },
-    {
+    }),
+    () => ({
       hearts: 1,
       text: t('pet.offlineEvent.heart', { name, hearts: '{hearts}' }),
-    },
-    {
-      effect: { mood: 6, cleanliness: -2 },
-      text: weather === 'sunny' ? t('pet.offlineEvent.sunnyPlay', { name }) : t('pet.offlineEvent.play', { name }),
-    },
-    {
+    }),
+    neighborPlay,
+    () => ({
       effect: { hunger: -4, mood: 4 },
       text: t('pet.offlineEvent.hungryHappy', { name }),
-    },
-    {
+    }),
+    () => ({
       effect: { energy: 8 },
       text: t('pet.offlineEvent.rest', { name }),
-    },
-    {
+    }),
+    () => ({
       effect: { cleanliness: -5 },
       text: t('pet.offlineEvent.mess', { name }),
-    },
-  ]);
+    }),
+  ];
+  if (allowNeighborGift) options.splice(1, 0, () => getNeighborGiftEvent(context, 'offlineEvent'));
+  return pickNeighborEventValue(options, random)();
+};
 
 export const getRandomDreamEvent = (name: string): TimedEvent =>
   pickRandom([
@@ -125,6 +157,11 @@ export const getRandomDreamEvent = (name: string): TimedEvent =>
 export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, prefix: string): PetState => {
   const effect = event.effect ?? {};
   const heartGain = applyHeartGain(pet, event.hearts ?? 0);
+  const neighborGiftDateKey = getDailyResetDateKey(now);
+  const currentNeighborGiftCount = pet.neighborGiftDateKey === neighborGiftDateKey
+    ? Math.min(neighborGiftDailyLimit, clampCount(pet.neighborGiftCount))
+    : 0;
+  const canSettleNeighborGift = event.kind !== 'neighbor_gift' || currentNeighborGiftCount < neighborGiftDailyLimit;
   const withEvent: PetState = {
     ...pet,
     hunger: clampPetStat(pet, pet.hunger + (effect.hunger ?? 0)),
@@ -135,10 +172,17 @@ export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, p
     coins: clampCoins(pet.coins + (event.coins ?? 0)),
     hearts: heartGain.hearts,
     boostCards: heartGain.boostCards,
-    inventory: event.itemId ? addInventoryItem(pet.inventory, event.itemId, event.itemAmount ?? 1) : pet.inventory,
+    inventory: event.itemId && canSettleNeighborGift
+      ? addInventoryItem(pet.inventory, event.itemId, event.itemAmount ?? 1)
+      : pet.inventory,
     recentEvent: `${prefix}${event.text.replace(/\{hearts\}/g, String(heartGain.amount))}`,
     lastDailyRewardAt: prefix === t('pet.prefix.dailyEncounter') ? now : pet.lastDailyRewardAt,
     lastDailyEncounterAt: prefix === t('pet.prefix.dailyEncounter') ? now : pet.lastDailyEncounterAt,
+    neighborGiftDateKey,
+    neighborGiftCount: Math.min(
+      neighborGiftDailyLimit,
+      currentNeighborGiftCount + (event.kind === 'neighbor_gift' && canSettleNeighborGift ? 1 : 0),
+    ),
   };
   return recordEarnedHearts(recordEarnedCoins(withEvent, event.coins ?? 0), heartGain.amount);
 };

@@ -21,14 +21,17 @@ import {
   getPartnerScheduleProgress,
   getPartnerScheduleSkillXpNeeded,
   getPartnerScheduleStartCheck,
+  selectNeighborReference,
   partnerScheduleDailyCompletionLimit,
   partnerScheduleMaxSkillLevel,
   type ItemId,
+  type NeighborIdentity,
   type PartnerScheduleCategory,
   type PartnerScheduleRewardChoice,
   type PetState,
 } from '../core/pet';
 import { t } from '../i18n';
+import { getPartnerScheduleDisplaySummary, getPartnerScheduleDisplayTitle } from './partnerScheduleText';
 
 const categoryIcons: Record<PartnerScheduleCategory, LucideIcon> = {
   study: BookOpen,
@@ -58,6 +61,7 @@ const formatDuration = (milliseconds: number) => {
 interface PartnerSchedulePageProps {
   pet: PetState;
   itemIconMap: Partial<Record<ItemId, string>>;
+  neighbors: readonly NeighborIdentity[];
   onBack: () => void;
   onStart: (offerId: string) => void;
   onCancel: () => void;
@@ -67,6 +71,7 @@ interface PartnerSchedulePageProps {
 export const PartnerSchedulePage = ({
   pet,
   itemIconMap,
+  neighbors,
   onBack,
   onStart,
   onCancel,
@@ -172,7 +177,7 @@ export const PartnerSchedulePage = ({
           </span>
           <div className="partner-schedule-result__copy">
             <span>{t('ui.partnerSchedule.resultKicker')}</span>
-            <h3>{t(`ui.partnerSchedule.activities.${resultDefinition.id}.title`)}</h3>
+            <h3>{getPartnerScheduleDisplayTitle(resultDefinition.id, pendingResult.neighbor, neighbors)}</h3>
             <p>{t('ui.partnerSchedule.resultSummary')}</p>
             {extraRewardChancePercent > 0 ? (
               <small className="partner-schedule-result__bonus">
@@ -203,7 +208,7 @@ export const PartnerSchedulePage = ({
           </span>
           <div className="partner-schedule-active__main">
             <span>{t('ui.partnerSchedule.activeKicker')}</span>
-            <h3>{t(`ui.partnerSchedule.activities.${activeDefinition.id}.title`)}</h3>
+            <h3>{getPartnerScheduleDisplayTitle(activeDefinition.id, active.neighbor, neighbors)}</h3>
             <p>{t('ui.partnerSchedule.remaining', { time: formatDuration(activeProgress.remainingMs) })}</p>
             <div className="partner-schedule-progress" aria-label={t('ui.partnerSchedule.progress', { percent: Math.round(activeProgress.percent) })}>
               <i style={{ width: `${activeProgress.percent}%` }} />
@@ -233,14 +238,17 @@ export const PartnerSchedulePage = ({
           const startCheck = getPartnerScheduleStartCheck(pet, offer.id);
           const disabled = completed || !startCheck.canStart;
           const preview = getPartnerScheduleOfferPreview(pet, definition);
+          const neighbor = schedule.neighborOfferId === offer.id
+            ? selectNeighborReference(offer.id, neighbors)
+            : undefined;
           return (
             <article className={`partner-schedule-item partner-schedule-item--${definition.category}${completed ? ' partner-schedule-item--completed' : ''}`} key={offer.id}>
               <div className="partner-schedule-item__heading">
                 <span className={`partner-schedule-category-icon partner-schedule-category-icon--${definition.category}`}><Icon size={23} aria-hidden="true" /></span>
                 <div>
                   <span>{t(`ui.partnerSchedule.sizes.${definition.size}`)} · {t(`ui.partnerSchedule.categories.${definition.category}`)}</span>
-                  <h3>{t(`ui.partnerSchedule.activities.${definition.id}.title`)}</h3>
-                  <p>{t(`ui.partnerSchedule.activities.${definition.id}.summary`)}</p>
+                  <h3>{getPartnerScheduleDisplayTitle(definition.id, neighbor, neighbors)}</h3>
+                  <p>{getPartnerScheduleDisplaySummary(definition.id, neighbor, neighbors)}</p>
                 </div>
                 {completed ? <CheckCircle2 className="partner-schedule-item__complete" size={24} aria-label={t('ui.partnerSchedule.completed')} /> : null}
               </div>

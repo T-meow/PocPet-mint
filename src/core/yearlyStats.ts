@@ -1,5 +1,5 @@
 import type { CareActionKey, PetState, YearReview, YearlyCareActionKey, YearlyStats } from './petTypes';
-import { getLocalDateKey } from './utils';
+import { getDailyResetDate, getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
 
 const yearlyCareKeys: readonly YearlyCareActionKey[] = ['play', 'clean', 'work', 'feed', 'gift', 'touch'];
 
@@ -13,8 +13,8 @@ export const defaultYearlyCareActionCounts = (): Record<YearlyCareActionKey, num
 });
 
 export const defaultYearlyStats = (time = Date.now()): YearlyStats => ({
-  year: new Date(time).getFullYear(),
-  activeDateKeys: [getLocalDateKey(time)],
+  year: getDailyResetDate(time).getFullYear(),
+  activeDateKeys: [getDailyResetDateKey(time)],
   careActionCounts: defaultYearlyCareActionCounts(),
   itemUseCount: 0,
   pomodoroFocusCount: 0,
@@ -36,7 +36,11 @@ export const normalizeYearlyStats = (value: unknown, now = Date.now()): YearlySt
   });
 
   const activeDateKeys = Array.isArray(raw.activeDateKeys)
-    ? Array.from(new Set(raw.activeDateKeys.filter((key): key is string => typeof key === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(key))))
+    ? Array.from(new Set(
+        raw.activeDateKeys
+          .filter((key): key is string => typeof key === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(key))
+          .map((key) => normalizeLegacyDailyDateKey(key, now) || key),
+      ))
     : fallback.activeDateKeys;
 
   return {
@@ -99,8 +103,8 @@ export const createYearReview = (stats: YearlyStats, createdAt: number): YearRev
 };
 
 export const ensureYearlyStatsForDate = (pet: PetState, now = Date.now()): PetState => {
-  const currentYear = new Date(now).getFullYear();
-  const today = getLocalDateKey(now);
+  const currentYear = getDailyResetDate(now).getFullYear();
+  const today = getDailyResetDateKey(now);
   let stats = normalizeYearlyStats(pet.yearlyStats, now);
   let pendingYearReview = pet.pendingYearReview;
   let lastYearReviewYear = pet.lastYearReviewYear;

@@ -23,7 +23,7 @@ The project code is licensed under GPL-3.0-or-later. Pet image assets are genera
 - Virtual pet status: hunger, cleanliness, mood, energy, health, and other basic states.
 - Items and shop: stable core item IDs, with support for food, gifts, care items, and utility items.
 - Pomodoro timer: work and rest flows affect pet activity feedback.
-- Mods: import zip packages to replace pet images, item images, default name, default birthday, display text, and favorite food.
+- Mods and neighbors: keep multiple zip character packs in a local Mod Library, switch the active appearance and item content, and let pets from inactive mods appear as neighbors in schedules and offline events.
 - Save import and export: back up and restore current data with a versioned text format.
 - Basic multilingual support: currently includes Chinese and English text.
 

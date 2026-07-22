@@ -96,14 +96,13 @@ export interface GardenState {
 export type BoostCardId = 'friend_pass' | 'best_friend_pass';
 
 export interface BoostCardState {
-  schemaVersion: 1;
+  schemaVersion: 2;
   friendPassExpiresAt: number;
   bestFriendPassExpiresAt: number;
   bestFriendPassPurchasedDays: number;
   dailyDateKey: string;
-  dailyCoinsClaimedCardId?: BoostCardId;
+  dailyRewardClaimed: boolean;
   dailyWorkBonusCoinsUsed: number;
-  dailyExtraHeartCount: number;
   dailyGardenExtraDrops: number;
 }
 
@@ -234,6 +233,27 @@ export interface PartnerScheduleOffer {
   dateKey: string;
 }
 
+export type NeighborReference =
+  | { kind: 'generic' }
+  | { kind: 'mod'; modId: string };
+
+export interface NeighborIdentity {
+  modId: string;
+  name: string;
+}
+
+export interface NeighborGiftCandidate {
+  itemId: ItemId;
+  displayName: string;
+  price: number;
+}
+
+export interface NeighborEventContext {
+  neighbors: readonly NeighborIdentity[];
+  giftCandidates: readonly NeighborGiftCandidate[];
+  random?: () => number;
+}
+
 export interface PartnerScheduleSkill {
   level: number;
   xp: number;
@@ -250,6 +270,7 @@ export interface ActivePartnerSchedule {
   coinReward: number;
   skillXp: number;
   grantsMasterCompletion: boolean;
+  neighbor?: NeighborReference;
 }
 
 export interface PartnerScheduleResult {
@@ -261,13 +282,15 @@ export interface PartnerScheduleResult {
   coinReward: number;
   skillXp: number;
   grantsMasterCompletion: boolean;
+  neighbor?: NeighborReference;
 }
 
 export interface PartnerScheduleState {
-  schemaVersion: 3;
+  schemaVersion: 4;
   boardDateKey: string;
   boardOfferCount: number;
   offers: PartnerScheduleOffer[];
+  neighborOfferId?: string;
   completedOfferIds: string[];
   active?: ActivePartnerSchedule;
   pendingResult?: PartnerScheduleResult;
@@ -332,6 +355,8 @@ export interface PetState {
   inventory: Inventory;
   lastDailyRewardAt: number;
   lastDailyEncounterAt: number;
+  neighborGiftDateKey: string;
+  neighborGiftCount: number;
   dailyBiscuitClaimDate: string;
   dailyBiscuitClaims: number;
   dailyDiscountDate: string;

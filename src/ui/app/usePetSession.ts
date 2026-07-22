@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type Dispatch, type MutableRefObject, type SetStateAction } from 'react';
-import { advancePet, evaluateAchievementUnlocks, type AchievementView, type PetState } from '../../core/pet';
+import { advancePet, evaluateAchievementUnlocks, type AchievementView, type NeighborEventContext, type PetState } from '../../core/pet';
 import { playSfx, setAudioTemporarilyMuted } from '../../core/audio';
 import { savePet } from '../../core/storage';
 
@@ -18,7 +18,11 @@ interface PetSession {
   setAchievementToast: Dispatch<SetStateAction<AchievementToast | null>>;
 }
 
-export const usePetSession = (initialPet: PetState, isHomeRef: MutableRefObject<boolean>): PetSession => {
+export const usePetSession = (
+  initialPet: PetState,
+  isHomeRef: MutableRefObject<boolean>,
+  eventContext?: NeighborEventContext,
+): PetSession => {
   const [pet, setPet] = useState<PetState>(initialPet);
   const [achievementToast, setAchievementToast] = useState<AchievementToast | null>(null);
   const petRef = useRef(pet);
@@ -38,6 +42,8 @@ export const usePetSession = (initialPet: PetState, isHomeRef: MutableRefObject<
 
   const commitRef = useRef(commitPet);
   commitRef.current = commitPet;
+  const eventContextRef = useRef(eventContext);
+  eventContextRef.current = eventContext;
 
   useEffect(() => {
     petRef.current = pet;
@@ -46,7 +52,7 @@ export const usePetSession = (initialPet: PetState, isHomeRef: MutableRefObject<
 
   useEffect(() => {
     const timer = window.setInterval(() => {
-      setPet((current) => commitRef.current(advancePet(current)));
+      setPet((current) => commitRef.current(advancePet(current, Date.now(), eventContextRef.current)));
     }, 1000);
 
     return () => window.clearInterval(timer);
@@ -57,7 +63,7 @@ export const usePetSession = (initialPet: PetState, isHomeRef: MutableRefObject<
       const isVisible = document.visibilityState === 'visible';
       setAudioTemporarilyMuted(!isVisible);
       if (isVisible) {
-        setPet((current) => commitRef.current(advancePet(current)));
+        setPet((current) => commitRef.current(advancePet(current, Date.now(), eventContextRef.current)));
       }
     };
 

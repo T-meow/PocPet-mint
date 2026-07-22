@@ -5,6 +5,7 @@ import {
   getPetStatCap,
   getReturnWelcomeView,
   type PetAction,
+  type NeighborIdentity,
   type PetState,
   type PetStatus,
   type RecentActivity,
@@ -18,6 +19,7 @@ import { StatusBar } from './StatusBar';
 
 interface HomePageProps {
   pet: PetState;
+  neighbors: readonly NeighborIdentity[];
   inventoryKindCount: number;
   isLowEnergy: boolean;
   isCriticallyHungry: boolean;
@@ -64,6 +66,7 @@ const formatCountdownTime = (milliseconds: number) => {
 
 export const HomePage = ({
   pet,
+  neighbors,
   inventoryKindCount,
   isLowEnergy,
   isCriticallyHungry,
@@ -199,7 +202,7 @@ export const HomePage = ({
       </div>
 
       {pet.partnerSchedule.active ? (
-        <PartnerScheduleDock pet={pet} onOpen={onOpenPartnerSchedule} />
+        <PartnerScheduleDock pet={pet} neighbors={neighbors} onOpen={onOpenPartnerSchedule} />
       ) : (
         <ActionDock
           isSleeping={pet.isSleeping}

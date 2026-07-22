@@ -17,7 +17,7 @@ import {
   getGardenView,
   getGardenWaterReductionPercent,
   getSeasonInfo,
-  getSixAmResetDateKey,
+  getDailyResetDateKey,
   weatherInfo,
   type GardenFertilizerId,
   type GardenToolId,
@@ -59,7 +59,7 @@ const formatGardenCountdown = (milliseconds: number) => {
   return hours > 0 ? `${hours}h ${String(minutes).padStart(2, '0')}m` : `${minutes}m`;
 };
 
-const sameGardenDate = (time: number) => time > 0 && getSixAmResetDateKey(time) === getSixAmResetDateKey(Date.now());
+const sameGardenDate = (time: number) => time > 0 && getDailyResetDateKey(time) === getDailyResetDateKey(Date.now());
 
 const weatherIcons: Record<WeatherType, LucideIcon> = {
   sunny: Sun,

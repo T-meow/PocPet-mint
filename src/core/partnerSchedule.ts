@@ -1,6 +1,7 @@
 import { t } from '../i18n';
 import { getAchievementEffects, incrementAchievementPartnerScheduleClaim, recordEarnedCoins } from './achievements';
-import { getSixAmResetDateKey } from './dateRewards';
+import { getBoostCardEffects } from './boostCards';
+import { getDailyResetDateKey } from './dailyReset';
 import { addInventoryItem } from './items';
 import {
   getPartnerScheduleCategoryEffects,
@@ -14,6 +15,7 @@ import { getWorkSeasonCoinBonus } from './season';
 import type {
   ActivePartnerSchedule,
   BuiltinItemId,
+  NeighborReference,
   PartnerScheduleCategory,
   PartnerScheduleOffer,
   PartnerScheduleResult,
@@ -26,9 +28,10 @@ import type {
 } from './petTypes';
 import { hashString, isNumber } from './utils';
 
-export const partnerScheduleSchemaVersion = 3;
+export const partnerScheduleSchemaVersion = 4;
 export const partnerScheduleUnlockLevel = 3;
 export const partnerScheduleMaxSkillLevel = 10;
+export const partnerScheduleNeighborChancePercent = 30;
 
 const minuteMs = 60 * 1000;
 const maxScheduleDurationMs = 24 * 60 * 60 * 1000;
@@ -42,9 +45,6 @@ export interface PartnerScheduleDefinition {
   energyCost: number;
   hungerCost: number;
   moodCost: number;
-  requiredEnergy: number;
-  requiredHunger: number;
-  requiredMood: number;
   requiredHealth: number;
 }
 
@@ -62,9 +62,6 @@ const sizeRules: Record<PartnerScheduleSize, Omit<PartnerScheduleDefinition, 'id
     energyCost: 12,
     hungerCost: 4,
     moodCost: 2,
-    requiredEnergy: 30,
-    requiredHunger: 25,
-    requiredMood: 20,
     requiredHealth: 40,
   },
   standard: {
@@ -73,9 +70,6 @@ const sizeRules: Record<PartnerScheduleSize, Omit<PartnerScheduleDefinition, 'id
     energyCost: 30,
     hungerCost: 10,
     moodCost: 5,
-    requiredEnergy: 55,
-    requiredHunger: 40,
-    requiredMood: 30,
     requiredHealth: 45,
   },
   long: {
@@ -84,9 +78,6 @@ const sizeRules: Record<PartnerScheduleSize, Omit<PartnerScheduleDefinition, 'id
     energyCost: 55,
     hungerCost: 18,
     moodCost: 8,
-    requiredEnergy: 90,
-    requiredHunger: 70,
-    requiredMood: 40,
     requiredHealth: 55,
   },
 };
@@ -173,19 +164,32 @@ const generateOffers = (level: number, createdAt: number, dateKey: string, offer
   });
 };
 
+const getGeneratedNeighborOfferId = (
+  offers: readonly PartnerScheduleOffer[],
+  createdAt: number,
+  dateKey: string,
+) => {
+  if (offers.length === 0) return undefined;
+  const seed = `${dateKey}:${Math.floor(createdAt)}:neighbor-schedule`;
+  if (hashString(seed) % 100 >= partnerScheduleNeighborChancePercent) return undefined;
+  return offers[hashString(`${seed}:offer`) % offers.length]?.id;
+};
+
 type PartnerSchedulePetSnapshot = Pick<PetState, 'level' | 'createdAt'>;
 
 export const defaultPartnerScheduleState = (
   pet: PartnerSchedulePetSnapshot,
   now = Date.now(),
 ): PartnerScheduleState => {
-  const boardDateKey = getSixAmResetDateKey(now);
+  const boardDateKey = getDailyResetDateKey(now);
   const boardOfferCount = pet.level < partnerScheduleUnlockLevel ? 0 : 3;
+  const offers = generateOffers(pet.level, pet.createdAt, boardDateKey, boardOfferCount);
   return {
     schemaVersion: partnerScheduleSchemaVersion,
     boardDateKey,
     boardOfferCount,
-    offers: generateOffers(pet.level, pet.createdAt, boardDateKey, boardOfferCount),
+    offers,
+    neighborOfferId: getGeneratedNeighborOfferId(offers, pet.createdAt, boardDateKey),
     completedOfferIds: [],
     skills: defaultSkills(),
   };
@@ -215,13 +219,22 @@ const normalizeOffers = (value: unknown, dateKey: string, limit: number): Partne
   return offers.slice(0, limit);
 };
 
+const normalizeNeighborReference = (value: unknown): NeighborReference | undefined => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  if (raw.kind === 'generic') return { kind: 'generic' };
+  if (raw.kind !== 'mod' || typeof raw.modId !== 'string') return undefined;
+  const modId = raw.modId.trim();
+  return /^[a-z0-9][a-z0-9._-]{1,63}$/.test(modId) ? { kind: 'mod', modId } : undefined;
+};
+
 const getNormalizedCoinReward = (rawReward: unknown, level: number, size: PartnerScheduleSize, now: number) => {
   if (isNumber(rawReward)) return Math.min(999999, clampCount(rawReward));
   const workBase = 24 + Math.max(0, level - 1) + getWorkSeasonCoinBonus(now);
   return Math.max(1, Math.round(workBase * sizeCoinMultipliers[size] * 1.15));
 };
 
-const normalizeActive = (value: unknown, level: number, now: number): ActivePartnerSchedule | undefined => {
+const normalizeActive = (value: unknown, level: number, now: number, allowNeighbor = false): ActivePartnerSchedule | undefined => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const raw = value as Record<string, unknown>;
   const definition = typeof raw.templateId === 'string' ? definitionMap.get(raw.templateId) : undefined;
@@ -259,10 +272,11 @@ const normalizeActive = (value: unknown, level: number, now: number): ActivePart
     coinReward: getNormalizedCoinReward(raw.coinReward, level, definition.size, now),
     skillXp: Math.min(9999, clampCount(isNumber(raw.skillXp) ? raw.skillXp : sizeSkillXp[definition.size])),
     grantsMasterCompletion: raw.grantsMasterCompletion === true,
+    neighbor: allowNeighbor ? normalizeNeighborReference(raw.neighbor) : undefined,
   };
 };
 
-const normalizeResult = (value: unknown, level: number, now: number): PartnerScheduleResult | undefined => {
+const normalizeResult = (value: unknown, level: number, now: number, allowNeighbor = false): PartnerScheduleResult | undefined => {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
   const raw = value as Record<string, unknown>;
   const definition = typeof raw.templateId === 'string' ? definitionMap.get(raw.templateId) : undefined;
@@ -276,6 +290,7 @@ const normalizeResult = (value: unknown, level: number, now: number): PartnerSch
     coinReward: getNormalizedCoinReward(raw.coinReward, level, definition.size, now),
     skillXp: Math.min(9999, clampCount(isNumber(raw.skillXp) ? raw.skillXp : sizeSkillXp[definition.size])),
     grantsMasterCompletion: raw.grantsMasterCompletion === true,
+    neighbor: allowNeighbor ? normalizeNeighborReference(raw.neighbor) : undefined,
   };
 };
 
@@ -288,6 +303,7 @@ export const normalizePartnerScheduleState = (
   const fallback = defaultPartnerScheduleState(pet, now);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
   const raw = value as Record<string, unknown>;
+  const sourceSchemaVersion = isNumber(raw.schemaVersion) ? Math.floor(raw.schemaVersion) : 0;
   const rawSkills = raw.skills && typeof raw.skills === 'object' && !Array.isArray(raw.skills)
     ? raw.skills as Record<string, unknown>
     : {};
@@ -295,7 +311,7 @@ export const normalizePartnerScheduleState = (
   categories.forEach((category) => {
     skills[category] = normalizeSkill(rawSkills[category]);
   });
-  const boardDateKey = getSixAmResetDateKey(now);
+  const boardDateKey = getDailyResetDateKey(now);
   const savedDateKey = typeof raw.boardDateKey === 'string' ? raw.boardDateKey : '';
   const rawOffersLength = Array.isArray(raw.offers) ? raw.offers.length : 0;
   const savedBoardOfferCount = Math.max(3, Math.min(5, clampCount(
@@ -312,11 +328,19 @@ export const normalizePartnerScheduleState = (
     : savedOffers.length === boardOfferCount
       ? savedOffers
       : generateOffers(pet.level, pet.createdAt, boardDateKey, boardOfferCount);
+  const savedNeighborOfferId = sourceSchemaVersion >= partnerScheduleSchemaVersion
+    && typeof raw.neighborOfferId === 'string'
+    && offers.some((offer) => offer.id === raw.neighborOfferId)
+      ? raw.neighborOfferId
+      : undefined;
+  const neighborOfferId = savedDateKey === boardDateKey
+    ? savedNeighborOfferId
+    : getGeneratedNeighborOfferId(offers, pet.createdAt, boardDateKey);
   const completedOfferIds = savedDateKey === boardDateKey && Array.isArray(raw.completedOfferIds)
     ? Array.from(new Set(raw.completedOfferIds.filter((id): id is string => typeof id === 'string').map((id) => id.slice(0, 128)))).slice(0, partnerScheduleDailyCompletionLimit)
     : [];
-  let pendingResult = normalizeResult(raw.pendingResult, pet.level, now);
-  let active = pendingResult ? undefined : normalizeActive(raw.active, pet.level, now);
+  let pendingResult = normalizeResult(raw.pendingResult, pet.level, now, sourceSchemaVersion >= partnerScheduleSchemaVersion);
+  let active = pendingResult ? undefined : normalizeActive(raw.active, pet.level, now, sourceSchemaVersion >= partnerScheduleSchemaVersion);
   if (settleExpired && active && active.endsAt <= now) {
     pendingResult = {
       offerId: active.offerId,
@@ -327,6 +351,7 @@ export const normalizePartnerScheduleState = (
       coinReward: active.coinReward,
       skillXp: active.skillXp,
       grantsMasterCompletion: active.grantsMasterCompletion,
+      neighbor: active.neighbor,
     };
     active = undefined;
   }
@@ -335,6 +360,7 @@ export const normalizePartnerScheduleState = (
     boardDateKey,
     boardOfferCount,
     offers,
+    neighborOfferId,
     completedOfferIds,
     active,
     pendingResult,
@@ -343,7 +369,7 @@ export const normalizePartnerScheduleState = (
 };
 
 const refreshBoard = (pet: PetState, now: number): PetState => {
-  const dateKey = getSixAmResetDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const isCurrentBoard = pet.partnerSchedule.boardDateKey === dateKey;
   const hasValidCurrentBoard = pet.level < partnerScheduleUnlockLevel
     ? pet.partnerSchedule.boardOfferCount === 0 && pet.partnerSchedule.offers.length === 0
@@ -356,13 +382,15 @@ const refreshBoard = (pet: PetState, now: number): PetState => {
     : isCurrentBoard && pet.partnerSchedule.boardOfferCount >= 3
       ? pet.partnerSchedule.boardOfferCount
       : getPartnerScheduleUnlockedOfferCount(pet.partnerSchedule.skills);
+  const offers = generateOffers(pet.level, pet.createdAt, dateKey, boardOfferCount);
   return {
     ...pet,
     partnerSchedule: {
       ...pet.partnerSchedule,
       boardDateKey: dateKey,
       boardOfferCount,
-      offers: generateOffers(pet.level, pet.createdAt, dateKey, boardOfferCount),
+      offers,
+      neighborOfferId: getGeneratedNeighborOfferId(offers, pet.createdAt, dateKey),
       completedOfferIds: [],
     },
   };
@@ -388,6 +416,7 @@ const finishActiveSchedule = (pet: PetState, completedAt: number): PetState => {
         coinReward: active.coinReward,
         skillXp: active.skillXp,
         grantsMasterCompletion: active.grantsMasterCompletion,
+        neighbor: active.neighbor,
       },
     },
   };
@@ -402,6 +431,10 @@ export const advancePartnerSchedule = (pet: PetState, now = Date.now()): PetStat
   }
   return current;
 };
+
+export const getPartnerScheduleNeighborOfferId = (
+  pet: Pick<PetState, 'partnerSchedule'>,
+) => pet.partnerSchedule.neighborOfferId;
 
 export const getPartnerScheduleCoinReward = (
   pet: PetState,
@@ -432,13 +465,14 @@ export const getPartnerScheduleOfferPreview = (
   const skill = pet.partnerSchedule.skills[definition.category];
   const effects = getPartnerScheduleCategoryEffects(skill);
   const globalCoinBonusPercent = getPartnerScheduleGlobalCoinBonusPercent(pet.partnerSchedule.skills);
+  const boostCardCoinBonusPercent = getBoostCardEffects(pet, now).partnerScheduleCoinBonusPercent;
   const baseCoinReward = getPartnerScheduleCoinReward(pet, definition.size, now);
   return {
     durationMs: Math.max(minuteMs, Math.round(definition.durationMinutes * minuteMs * effects.durationMultiplier)),
     energyCost: Math.max(1, Math.round(definition.energyCost * effects.energyCostMultiplier)),
     hungerCost: Math.max(1, Math.round(definition.hungerCost * effects.hungerMoodCostMultiplier)),
     moodCost: Math.max(1, Math.round(definition.moodCost * effects.hungerMoodCostMultiplier)),
-    coinReward: Math.max(1, Math.round(baseCoinReward * (1 + (globalCoinBonusPercent + effects.coinBonusPercent) / 100))),
+    coinReward: Math.max(1, Math.round(baseCoinReward * (1 + (globalCoinBonusPercent + effects.coinBonusPercent + boostCardCoinBonusPercent) / 100))),
     skillXp: effects.grantsMasterCompletion
       ? 0
       : Math.max(1, Math.round(getPartnerScheduleSkillXpReward(definition.size) * effects.skillXpMultiplier)),
@@ -468,9 +502,10 @@ export const getPartnerScheduleStartCheck = (
   const offer = current.partnerSchedule.offers.find((item) => item.id === offerId);
   const definition = offer ? definitionMap.get(offer.templateId) : undefined;
   if (!offer || !definition) return { canStart: false, reason: 'missing' };
-  if (current.energy < definition.requiredEnergy) return { canStart: false, reason: 'energy' };
-  if (current.hunger < definition.requiredHunger) return { canStart: false, reason: 'hunger' };
-  if (current.mood < definition.requiredMood) return { canStart: false, reason: 'mood' };
+  const preview = getPartnerScheduleOfferPreview(current, definition, now);
+  if (current.energy < preview.energyCost) return { canStart: false, reason: 'energy' };
+  if (current.hunger < preview.hungerCost) return { canStart: false, reason: 'hunger' };
+  if (current.mood < preview.moodCost) return { canStart: false, reason: 'mood' };
   if (current.health < definition.requiredHealth) return { canStart: false, reason: 'health' };
   return { canStart: true };
 };
@@ -479,6 +514,7 @@ export const startPartnerSchedule = (
   pet: PetState,
   offerId: string,
   now = Date.now(),
+  neighbor?: NeighborReference,
 ): PetState => {
   const current = advancePartnerSchedule(pet, now);
   const check = getPartnerScheduleStartCheck(current, offerId, now);
@@ -489,6 +525,9 @@ export const startPartnerSchedule = (
   const definition = offer ? definitionMap.get(offer.templateId) : undefined;
   if (!offer || !definition) return current;
   const preview = getPartnerScheduleOfferPreview(current, definition, now);
+  const resolvedNeighbor = current.partnerSchedule.neighborOfferId === offer.id
+    ? normalizeNeighborReference(neighbor) ?? { kind: 'generic' as const }
+    : undefined;
   const active: ActivePartnerSchedule = {
     offerId: offer.id,
     templateId: definition.id,
@@ -499,6 +538,7 @@ export const startPartnerSchedule = (
     coinReward: preview.coinReward,
     skillXp: preview.skillXp,
     grantsMasterCompletion: preview.grantsMasterCompletion,
+    neighbor: resolvedNeighbor,
   };
   return {
     ...current,
@@ -601,6 +641,7 @@ export const claimPartnerScheduleResult = (
   pet: PetState,
   choice: PartnerScheduleRewardChoice,
   now = Date.now(),
+  neighborName?: string,
 ): PetState => {
   const current = advancePartnerSchedule(pet, now);
   const result = current.partnerSchedule.pendingResult;
@@ -635,6 +676,9 @@ export const claimPartnerScheduleResult = (
     mood: clampPetStat(current, current.mood + (reward.mood ?? 0) * rewardMultiplier),
     recentEvent: [
       t(`pet.partnerSchedule.claimed.${safeChoice}`, { coins: rewardCoins }),
+      result.neighbor
+        ? t(`pet.partnerSchedule.neighborClaimed.${neighborName ? 'named' : 'generic'}`, { neighbor: neighborName ?? '' })
+        : '',
       result.grantsMasterCompletion ? t('pet.partnerSchedule.masterCompletion', { count: nextSkill.masterCompletions }).trim() : '',
       extraRewardCopies > 0 ? t('pet.partnerSchedule.extraRewardTriggered', { count: extraRewardCopies }) : '',
     ].filter(Boolean).join(' '),

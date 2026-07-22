@@ -1,4 +1,5 @@
 import { t } from '../i18n';
+import { getDailyResetDateKey } from './dailyReset';
 import { addInventoryItem, dailyBiscuitClaimLimit, favoriteFoodIdSet, getDailyHeartExchangeInfo, getDailyShopDiscountInfo, getInventoryCount, getInventoryItem, getShopItem, giftItemIdSet, heartExchangeCoins, removeInventoryItem } from './items';
 import { applyBoostCardWorkBonus } from './boostCards';
 import { applyActionStreak, getRandomHealthIncident, getRandomPetInteractionCost, lowSleepMoodWarningThreshold, markInteraction, petInteractionCooldownMs, petInteractionOveruseCooldownMs, withActivity } from './petCommon';
@@ -13,7 +14,7 @@ import type { BuiltinItemId, BuyItemOptions, CareActionKey, ItemId, PetAction, P
 import { defaultPomodoroState, getDefaultPomodoroRemainingMs, getPomodoroPhaseDurationMs, normalizePomodoroSettings, pickPomodoroActivity, pomodoroMinHealthThreshold, pomodoroPhaseLabels, pomodoroResetEventMinFocusMs } from './pomodoro';
 import { settleSleep, startSleepSnapshot } from './petEvents';
 import { getPartnerScheduleCrossSystemEffects } from './partnerScheduleEffects';
-import { getLocalDateKey, randomInt } from './utils';
+import { randomInt } from './utils';
 import { isPartnerSchedulePetBusy } from './partnerSchedule';
 
 const clearLowCleanlinessSleepConfirm = (pet: PetState): PetState =>
@@ -263,7 +264,7 @@ export const buyItem = (pet: PetState, itemId: ItemId, now = Date.now(), options
     return incrementAchievementPurchase({
       ...current,
       inventory: addInventoryItem(current.inventory, itemId, 1),
-      dailyBiscuitClaimDate: getLocalDateKey(now),
+      dailyBiscuitClaimDate: getDailyResetDateKey(now),
       dailyBiscuitClaims: claimInfo.claimed + 1,
       recentEvent: t('pet.buy.freeClaim', {
         item: item.name,
@@ -574,7 +575,7 @@ export const pausePomodoro = (pet: PetState, now = Date.now()): PetState => {
 };
 export const resetPomodoro = (pet: PetState, now = Date.now()): PetState => {
   const current = clearLowCleanlinessSleepConfirm(advancePet(pet, now));
-  const today = getLocalDateKey(now);
+  const today = getDailyResetDateKey(now);
   const settings = current.pomodoro.settings;
   const dailyCompletedFocusCount =
     current.pomodoro.dailyFocusDate === today ? current.pomodoro.dailyCompletedFocusCount : 0;

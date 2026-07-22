@@ -1,23 +1,23 @@
 import { Upload, Volume2, VolumeX } from 'lucide-react';
 import type { ChangeEvent } from 'react';
 import { resolvePetStatusImages } from '../assets';
-import type { ActivePetMod } from '../core/mod';
+import type { InstalledPetModSummary } from '../core/mod';
 import { t } from '../i18n';
 
 interface RolePickerProps {
-  installedMod: ActivePetMod | null;
+  installedMods: readonly InstalledPetModSummary[];
   modMessage: string;
   isAudioEnabled: boolean;
   isLoading?: boolean;
   onUseBuiltin: () => void;
-  onUseInstalledMod: () => void;
+  onUseInstalledMod: (modId: string) => void;
   onImportMod: (event: ChangeEvent<HTMLInputElement>) => void;
   onAudioToggle: () => void;
 }
 
 const defaultRolePetImage = resolvePetStatusImages(null).content;
 
-export const RolePicker = ({ installedMod, modMessage, isAudioEnabled, isLoading = false, onUseBuiltin, onUseInstalledMod, onImportMod, onAudioToggle }: RolePickerProps) => (
+export const RolePicker = ({ installedMods, modMessage, isAudioEnabled, isLoading = false, onUseBuiltin, onUseInstalledMod, onImportMod, onAudioToggle }: RolePickerProps) => (
   <main className="app-shell app-shell--role-picker">
     <section className="role-picker" aria-label={t('ui.rolePicker.aria')}>
       <div className="role-picker__header">
@@ -31,15 +31,15 @@ export const RolePicker = ({ installedMod, modMessage, isAudioEnabled, isLoading
             <img src={defaultRolePetImage} alt="" aria-hidden="true" />
             <span><strong>{t('ui.rolePicker.builtinTitle')}</strong><small>{t('ui.rolePicker.builtinSummary')}</small></span>
           </button>
-          {installedMod && (
-            <button type="button" className="role-card" onClick={onUseInstalledMod}>
-              <img src={installedMod.petImageUrls.content ?? defaultRolePetImage} alt="" aria-hidden="true" />
+          {installedMods.map((mod) => (
+            <button type="button" className="role-card" key={mod.manifest.id} onClick={() => onUseInstalledMod(mod.manifest.id)}>
+              <img src={mod.contentImageUrl ?? defaultRolePetImage} alt="" aria-hidden="true" />
               <span>
-                <strong>{t('ui.rolePicker.installedTitle', { name: installedMod.manifest.name })}</strong>
-                <small>{t('ui.rolePicker.installedSummary', { pet: installedMod.manifest.defaultPetName })}</small>
+                <strong>{t('ui.rolePicker.installedTitle', { name: mod.manifest.name })}</strong>
+                <small>{t('ui.rolePicker.installedSummary', { pet: mod.manifest.defaultPetName })}</small>
               </span>
             </button>
-          )}
+          ))}
           <label className="role-card role-card--import">
             <Upload size={34} aria-hidden="true" />
             <span><strong>{t('ui.rolePicker.importTitle')}</strong><small>{t('ui.rolePicker.importSummary')}</small></span>

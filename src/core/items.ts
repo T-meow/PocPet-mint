@@ -1,7 +1,8 @@
 import { t } from '../i18n';
+import { getDailyResetDateKey } from './dailyReset';
 import type { ActivePetMod, PetModCustomItem, PetModItemOverride } from './mod';
 import type { BuiltinItemId, Inventory, InventoryItemDefinition, ItemDefinition, ItemId, ItemRegistry, PetState, ShopCategory, ShopItem } from './petTypes';
-import { getLocalDateKey, hashString } from './utils';
+import { hashString } from './utils';
 
 export const dailyBiscuitClaimLimit = 3;
 
@@ -447,7 +448,7 @@ const getGeneratedDailyDiscountItems = (now: number) => {
   const pool = [...getEligibleDailyDiscountItems()];
   if (pool.length === 0) return [];
 
-  const dateKey = getLocalDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const picks: ShopItem[] = [];
   for (let index = 0; index < dailyShopDiscountCount && pool.length > 0; index += 1) {
     const hashKey = index === 0 ? dateKey : dateKey + ':' + index;
@@ -459,7 +460,7 @@ const getGeneratedDailyDiscountItems = (now: number) => {
 };
 
 const getStoredDailyDiscountItems = (pet: PetState, now: number) => {
-  const dateKey = getLocalDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const eligibleItems = getEligibleDailyDiscountItems();
   const eligibleById = new Map(eligibleItems.map((item) => [item.id, item]));
   const stored = pet.dailyDiscountDate === dateKey
@@ -469,7 +470,7 @@ const getStoredDailyDiscountItems = (pet: PetState, now: number) => {
 };
 
 export const getDailyHeartExchangeInfo = (pet: PetState, now = Date.now()) => {
-  const dateKey = getLocalDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const count =
     pet.dailyHeartExchangeDate === dateKey
       ? Math.min(dailyHeartExchangeLimit, Math.max(0, Math.floor(pet.dailyHeartExchangeCount)))
@@ -485,7 +486,7 @@ export const getDailyHeartExchangeInfo = (pet: PetState, now = Date.now()) => {
 };
 
 export const getDailyShopDiscountInfo = (pet: PetState, now = Date.now()) => {
-  const dateKey = getLocalDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const items = getStoredDailyDiscountItems(pet, now);
   if (items.length === 0) return undefined;
 

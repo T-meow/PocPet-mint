@@ -24,6 +24,10 @@ export type {
   ItemEffect,
   ItemId,
   ItemRegistry,
+  NeighborEventContext,
+  NeighborGiftCandidate,
+  NeighborIdentity,
+  NeighborReference,
   PetAction,
   PetBirthday,
   PetState,
@@ -126,8 +130,8 @@ export {
   boostCardMaxDurationMs,
   boostCardSchemaVersion,
   buyBoostCard,
-  canClaimBoostCardDailyCoins,
-  claimBoostCardDailyCoins,
+  canClaimBoostCardDailyReward,
+  claimBoostCardDailyReward,
   defaultBoostCardState,
   getActiveBoostCard,
   getBoostCardEffects,
@@ -161,6 +165,7 @@ export {
 } from './petStats';
 export { getWeatherForDate, weatherInfo, weatherTypeSet, weatherTypes } from './weather';
 export { getSeasonForDate, getSeasonInfo } from './season';
+export { DAILY_RESET_HOUR, getDailyResetDateKey, isSameDailyResetDay } from './dailyReset';
 export {
   defaultPomodoroState,
   getDefaultPomodoroRemainingMs,
@@ -183,6 +188,7 @@ export {
   getPartnerScheduleDefinition,
   getPartnerScheduleExtraRewardCopies,
   getPartnerScheduleOfferPreview,
+  getPartnerScheduleNeighborOfferId,
   getPartnerScheduleProgress,
   getPartnerScheduleSkillXpNeeded,
   getPartnerScheduleSkillXpReward,
@@ -190,11 +196,14 @@ export {
   normalizePartnerScheduleState,
   partnerScheduleDefinitions,
   partnerScheduleMaxSkillLevel,
+  partnerScheduleNeighborChancePercent,
   partnerScheduleSchemaVersion,
   partnerScheduleUnlockLevel,
   isPartnerSchedulePetBusy,
   startPartnerSchedule,
 } from './partnerSchedule';
+export { selectNeighborGift } from './neighborGifts';
+export { neighborGiftDailyLimit, resolveNeighborName, selectNeighborReference } from './neighbors';
 export {
   getPartnerScheduleCategoryEffects,
   getPartnerScheduleCrossSystemEffects,
@@ -264,7 +273,6 @@ export {
   defaultPetBirthday,
   festivalConfigs,
   getPetBirthdayMaxDay,
-  getSixAmResetDateKey,
   normalizePetBirthday,
   withBackfilledBirthday,
   withPetIdentityBirthday,

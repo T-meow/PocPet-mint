@@ -1,5 +1,5 @@
 import { BadgeCheck, CalendarClock, PackageOpen, Sprout, Timer } from 'lucide-react';
-import { canClaimBoostCardDailyCoins, getActiveBoostCard, partnerScheduleUnlockLevel, type PetState } from '../core/pet';
+import { canClaimBoostCardDailyReward, getActiveBoostCard, partnerScheduleUnlockLevel, type PetState } from '../core/pet';
 import { t } from '../i18n';
 import { formatPomodoroTime } from './time';
 
@@ -31,7 +31,7 @@ export const FeatureRow = ({
   onOpenPartnerSchedule,
 }: FeatureRowProps) => {
   const activeBoostCardId = getActiveBoostCard(pet);
-  const canClaimBoostCoins = canClaimBoostCardDailyCoins(pet);
+  const canClaimBoostReward = canClaimBoostCardDailyReward(pet);
   const boostCardHint = activeBoostCardId
     ? t('ui.features.boostCardsActive', { card: t(`ui.boostCards.cards.${activeBoostCardId}.name`) })
     : t('ui.features.boostCardsHint');
@@ -76,7 +76,7 @@ export const FeatureRow = ({
 
       <button
         type="button"
-        className={canClaimBoostCoins ? 'feature-button feature-button--boost-card feature-button--active' : 'feature-button feature-button--boost-card'}
+        className={canClaimBoostReward ? 'feature-button feature-button--boost-card feature-button--active' : 'feature-button feature-button--boost-card'}
         onClick={onOpenBoostCards}
         title={t('ui.top.openBoostCards')}
       >
@@ -85,7 +85,7 @@ export const FeatureRow = ({
           {t('ui.features.boostCards')}
           <small>{boostCardHint}</small>
         </span>
-        {canClaimBoostCoins && <i aria-hidden="true" />}
+        {canClaimBoostReward && <i aria-hidden="true" />}
       </button>
 
       <button

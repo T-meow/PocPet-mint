@@ -2,16 +2,18 @@ import { t } from '../i18n';
 import { defaultBoostCardState, normalizeBoostCardState } from './boostCards';
 import { defaultAchievementState, normalizeAchievementState } from './achievements';
 import { defaultPetBirthday, normalizePetBirthday } from './dateRewards';
+import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
 import { createDailyWish, normalizeDailyWishState, normalizeReturnWelcomeState } from './dailyWishes';
 import { defaultGardenState, normalizeGardenState } from './garden';
 import { addInventoryItem } from './items';
 import { dailyBiscuitClaimLimit, dailyHeartExchangeLimit, isBuiltinItemId } from './items';
+import { neighborGiftDailyLimit } from './neighbors';
 import { clampCoins, clampCount, clampHealth, clampLevel, clampStat, defaultPetName, getPetStatCap, lowCleanlinessSleepConfirmClicks } from './petStats';
 import type { AchievementState, ActionStreak, BuiltinItemId, Inventory, PartnerScheduleCategory, PetState, PetStatus, RecentActivity, WeatherType } from './petTypes';
 import { defaultPomodoroState, normalizePomodoroState } from './pomodoro';
 import { defaultPartnerScheduleState, normalizePartnerScheduleState } from './partnerSchedule';
 import { getWeatherForDate, weatherTypeSet } from './weather';
-import { getLocalDateKey, isNumber } from './utils';
+import { isNumber } from './utils';
 import { defaultYearlyStats, normalizeYearReview, normalizeYearlyStats } from './yearlyStats';
 
 export const helpStarterGiftRewardId = 'starter_help_gift_v1';
@@ -108,15 +110,17 @@ export const createDefaultPet = (now = Date.now()): PetState => ({
   inventory: { emergency_biscuit: 1, golden_apple: 1 },
   lastDailyRewardAt: now,
   lastDailyEncounterAt: now,
-  dailyBiscuitClaimDate: getLocalDateKey(now),
+  neighborGiftDateKey: getDailyResetDateKey(now),
+  neighborGiftCount: 0,
+  dailyBiscuitClaimDate: getDailyResetDateKey(now),
   dailyBiscuitClaims: 0,
-  dailyDiscountDate: getLocalDateKey(now),
+  dailyDiscountDate: getDailyResetDateKey(now),
   dailyDiscountItemIds: [],
   dailyDiscountUsedItemIds: [],
   dailyDiscountUsed: false,
-  dailyHeartExchangeDate: getLocalDateKey(now),
+  dailyHeartExchangeDate: getDailyResetDateKey(now),
   dailyHeartExchangeCount: 0,
-  weatherDate: getLocalDateKey(now),
+  weatherDate: getDailyResetDateKey(now),
   weather: getWeatherForDate(now),
   lastEnergyRecoveryAt: now,
   sleepStartedAt: 0,
@@ -191,19 +195,18 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   if (!value || typeof value !== 'object') return fallback;
 
   const raw = value as Record<string, unknown>;
+  const currentDailyDateKey = getDailyResetDateKey(now);
   const ageSeconds = Math.max(0, isNumber(raw.ageSeconds) ? raw.ageSeconds : fallback.ageSeconds);
   const rawInventory = raw.inventory && typeof raw.inventory === 'object' ? (raw.inventory as Record<string, unknown>) : {};
   const inventory: Inventory = {};
-  const dailyDiscountDate =
-    typeof raw.dailyDiscountDate === 'string' ? raw.dailyDiscountDate : fallback.dailyDiscountDate;
-  const isDailyDiscountCurrent = dailyDiscountDate === getLocalDateKey(now);
+  const dailyDiscountDate = normalizeLegacyDailyDateKey(raw.dailyDiscountDate, now) || fallback.dailyDiscountDate;
+  const isDailyDiscountCurrent = dailyDiscountDate === currentDailyDateKey;
   const dailyDiscountItemIds = isDailyDiscountCurrent ? normalizeBuiltinItemIdList(raw.dailyDiscountItemIds, 3) : [];
   const dailyDiscountUsedItemIds = isDailyDiscountCurrent ? normalizeBuiltinItemIdList(raw.dailyDiscountUsedItemIds, 3) : [];
-  const dailyHeartExchangeDate =
-    typeof raw.dailyHeartExchangeDate === 'string' ? raw.dailyHeartExchangeDate : fallback.dailyHeartExchangeDate;
-  const weatherDate = typeof raw.weatherDate === 'string' ? raw.weatherDate : fallback.weatherDate;
+  const dailyHeartExchangeDate = normalizeLegacyDailyDateKey(raw.dailyHeartExchangeDate, now) || fallback.dailyHeartExchangeDate;
+  const weatherDate = normalizeLegacyDailyDateKey(raw.weatherDate, now) || fallback.weatherDate;
   const weather =
-    weatherDate === getLocalDateKey(now) && typeof raw.weather === 'string' && weatherTypeSet.has(raw.weather as WeatherType)
+    weatherDate === currentDailyDateKey && typeof raw.weather === 'string' && weatherTypeSet.has(raw.weather as WeatherType)
       ? (raw.weather as WeatherType)
       : getWeatherForDate(now);
   const rawActionStreak =
@@ -370,22 +373,24 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
       : isNumber(raw.lastDailyRewardAt)
         ? raw.lastDailyRewardAt
         : now,
-    dailyBiscuitClaimDate:
-      typeof raw.dailyBiscuitClaimDate === 'string' ? raw.dailyBiscuitClaimDate : fallback.dailyBiscuitClaimDate,
-    dailyBiscuitClaims: Math.min(
-      dailyBiscuitClaimLimit,
-      clampCount(isNumber(raw.dailyBiscuitClaims) ? raw.dailyBiscuitClaims : fallback.dailyBiscuitClaims),
-    ),
+    neighborGiftDateKey: currentDailyDateKey,
+    neighborGiftCount: normalizeLegacyDailyDateKey(raw.neighborGiftDateKey, now) === currentDailyDateKey
+      ? Math.min(neighborGiftDailyLimit, clampCount(isNumber(raw.neighborGiftCount) ? raw.neighborGiftCount : 0))
+      : 0,
+    dailyBiscuitClaimDate: currentDailyDateKey,
+    dailyBiscuitClaims: normalizeLegacyDailyDateKey(raw.dailyBiscuitClaimDate, now) === currentDailyDateKey
+      ? Math.min(dailyBiscuitClaimLimit, clampCount(isNumber(raw.dailyBiscuitClaims) ? raw.dailyBiscuitClaims : 0))
+      : 0,
     dailyDiscountDate,
     dailyDiscountItemIds,
     dailyDiscountUsedItemIds,
     dailyDiscountUsed: isDailyDiscountCurrent ? Boolean(raw.dailyDiscountUsed) || dailyDiscountUsedItemIds.length > 0 : false,
     dailyHeartExchangeDate,
     dailyHeartExchangeCount:
-      dailyHeartExchangeDate === getLocalDateKey(now)
+      dailyHeartExchangeDate === currentDailyDateKey
         ? Math.min(dailyHeartExchangeLimit, clampCount(isNumber(raw.dailyHeartExchangeCount) ? raw.dailyHeartExchangeCount : 0))
         : 0,
-    weatherDate: getLocalDateKey(now),
+    weatherDate: currentDailyDateKey,
     weather,
     lastEnergyRecoveryAt: isNumber(raw.lastEnergyRecoveryAt) ? raw.lastEnergyRecoveryAt : now,
     sleepStartedAt: isNumber(raw.sleepStartedAt) ? raw.sleepStartedAt : 0,
@@ -412,7 +417,7 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
     birthday,
     lastBirthdayRewardYear: isNumber(raw.lastBirthdayRewardYear) ? Math.floor(raw.lastBirthdayRewardYear) : undefined,
     lastAnniversaryRewardYear: isNumber(raw.lastAnniversaryRewardYear) ? Math.floor(raw.lastAnniversaryRewardYear) : undefined,
-    dailyLoginRewardDateKey: typeof raw.dailyLoginRewardDateKey === 'string' ? raw.dailyLoginRewardDateKey.trim().slice(0, 16) : undefined,
+    dailyLoginRewardDateKey: normalizeLegacyDailyDateKey(raw.dailyLoginRewardDateKey, now) || undefined,
     monthlyGiftDateKey: typeof raw.monthlyGiftDateKey === 'string' ? raw.monthlyGiftDateKey.trim().slice(0, 16) : undefined,
     claimedFestivalRewardKeys,
     yearlyStats,

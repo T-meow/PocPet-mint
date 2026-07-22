@@ -1,14 +1,16 @@
 ﻿import { ArrowLeft, CircleHelp, Download, FileText, RotateCcw, Upload } from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
+import { Check, Trash2 } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
 import { defaultPetBirthday, getPetBirthdayMaxDay, type PetBirthday } from '../core/pet';
-import type { ActivePetMod } from '../core/mod';
+import type { ActivePetMod, InstalledPetModSummary } from '../core/mod';
 import { giftBoxIcon } from '../assets';
 import { languages, list, t, type LanguageCode } from '../i18n';
 import { DialogShell } from './DialogShell';
 
 interface SettingsModalProps {
   activeMod: ActivePetMod | null;
+  installedMods: readonly InstalledPetModSummary[];
   modMessage: string;
   draftName: string;
   draftBirthday?: PetBirthday;
@@ -27,6 +29,8 @@ interface SettingsModalProps {
   onSaveProfile: () => void;
   onReset: () => void;
   onClearMod: () => void;
+  onActivateMod: (modId: string) => void;
+  onDeleteMod: (modId: string) => void;
   onExportSave: () => void;
   onDownloadSave: () => void;
   onImportPastedSave: () => void;
@@ -41,6 +45,7 @@ const authorUrl = 'https://space.bilibili.com/37393114';
 
 export const SettingsModal = ({
   activeMod,
+  installedMods,
   modMessage,
   draftName,
   draftBirthday,
@@ -59,6 +64,8 @@ export const SettingsModal = ({
   onSaveProfile,
   onReset,
   onClearMod,
+  onActivateMod,
+  onDeleteMod,
   onExportSave,
   onDownloadSave,
   onImportPastedSave,
@@ -216,13 +223,48 @@ export const SettingsModal = ({
               </div>
               {modMessage && <p className="settings-message">{modMessage}</p>}
               <input ref={modFileInputRef} className="file-input" type="file" accept=".zip,application/zip" onChange={onModFileChange} />
+              <div className="settings-mod-list" aria-label={t('ui.settings.mod.libraryAria')}>
+                {installedMods.map((mod) => {
+                  const isActive = activeMod?.manifest.id === mod.manifest.id;
+                  return (
+                    <div className="settings-mod-row" key={mod.manifest.id}>
+                      {mod.contentImageUrl
+                        ? <img src={mod.contentImageUrl} alt="" aria-hidden="true" />
+                        : <span className="settings-mod-row__placeholder" aria-hidden="true" />}
+                      <span>
+                        <strong>{mod.manifest.name}</strong>
+                        <small>{mod.manifest.defaultPetName} · v{mod.manifest.version}</small>
+                      </span>
+                      {isActive ? (
+                        <span className="settings-mod-row__active"><Check size={15} aria-hidden="true" />{t('ui.settings.mod.currentShort')}</span>
+                      ) : (
+                        <button type="button" className="secondary-button" onClick={() => onActivateMod(mod.manifest.id)}>
+                          {t('ui.settings.mod.activate')}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="icon-button"
+                        onClick={() => onDeleteMod(mod.manifest.id)}
+                        aria-label={t('ui.settings.mod.delete', { name: mod.manifest.name })}
+                        title={t('ui.settings.mod.delete', { name: mod.manifest.name })}
+                      >
+                        <Trash2 size={17} aria-hidden="true" />
+                      </button>
+                    </div>
+                  );
+                })}
+                {installedMods.length === 0
+                  ? <p className="settings-mod-list__empty">{t('ui.settings.mod.libraryEmpty')}</p>
+                  : null}
+              </div>
               <div className="modal-actions">
                 <button type="button" className="primary-button" onClick={() => modFileInputRef.current?.click()}>
                   <Upload size={18} aria-hidden="true" />
                   {t('ui.settings.mod.import')}
                 </button>
                 <button type="button" className="text-button settings-action" onClick={onClearMod}>
-                  {t('ui.settings.mod.restoreDefault')}
+                  {t('ui.settings.mod.useBuiltin')}
                 </button>
               </div>
             </section>

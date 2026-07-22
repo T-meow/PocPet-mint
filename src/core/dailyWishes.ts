@@ -1,5 +1,5 @@
 import { t } from '../i18n';
-import { getSixAmResetDateKey } from './dateRewards';
+import { getDailyResetDateKey } from './dailyReset';
 import { incrementDailyWishClaim, incrementReturnWelcomeClaim, recordEarnedCoins } from './achievements';
 import { addInventoryItem, allItemIds } from './items';
 import { getPartnerScheduleCrossSystemEffects } from './partnerScheduleEffects';
@@ -76,7 +76,7 @@ const getAvailableDailyWishConfigs = (pet: DailyWishSnapshot) => {
 };
 
 export const createDailyWish = (pet: DailyWishSnapshot, now = Date.now()): DailyWishState => {
-  const dateKey = getSixAmResetDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const configs = getAvailableDailyWishConfigs(pet);
   const index = hashString(dateKey + ':' + Math.floor(pet.createdAt) + ':' + pet.name) % configs.length;
   const config = configs[index];
@@ -99,7 +99,7 @@ export const normalizeDailyWishState = (value: unknown, pet: DailyWishSnapshot, 
   if (!isDailyWishId(raw.id)) return fallback;
   const config = getDailyWishConfig(raw.id);
   const dateKey = typeof raw.dateKey === 'string' ? raw.dateKey : '';
-  if (dateKey !== getSixAmResetDateKey(now)) return fallback;
+  if (dateKey !== getDailyResetDateKey(now)) return fallback;
 
   const progress = Math.min(config.target, clampCount(isNumber(raw.progress) ? raw.progress : 0));
   const completedAt = isNumber(raw.completedAt) && progress >= config.target

@@ -1,6 +1,7 @@
 import { t } from '../i18n';
 import { addInventoryItem } from './items';
 import { applyHeartGain, claimAchievementDailyStipendWithResult, getAchievementEffects, incrementAchievementDateReward, recordEarnedCoins, recordEarnedHearts } from './achievements';
+import { getDailyResetDateKey } from './dailyReset';
 import { clampCoins } from './petStats';
 import type { ItemId, PetBirthday, PetState } from './petTypes';
 import { getLocalDateKey, hashString } from './utils';
@@ -106,12 +107,6 @@ const isSameMonthDay = (time: number, birthday: PetBirthday) => {
 };
 
 const getAnnualRewardKey = (id: string, time: number) => `${id}:${getLocalYear(time)}`;
-
-export const getSixAmResetDateKey = (time: number) => {
-  const date = new Date(time);
-  if (date.getHours() < 6) date.setDate(date.getDate() - 1);
-  return getLocalDateKey(date.getTime());
-};
 
 export const getPetBirthdayMaxDay = (month: number) => (month >= 1 && month <= 12 ? new Date(2024, month, 0).getDate() : 0);
 
@@ -329,7 +324,7 @@ const claimMonthlyGiftReward = (pet: PetState, now: number): { pet: PetState; re
 };
 
 const claimDailyLoginReward = (pet: PetState, now: number): { pet: PetState; reward?: ClaimedDateReward } => {
-  const resetDateKey = getSixAmResetDateKey(now);
+  const resetDateKey = getDailyResetDateKey(now);
   if (pet.dailyLoginRewardDateKey === resetDateKey) return { pet };
 
   const picked = pickWeightedRandom(dailyLoginRewardPool);
@@ -375,7 +370,7 @@ export const claimAvailableDateRewards = (pet: PetState, now = Date.now()) => {
     });
     const dailyLoginReward = rewards.find((reward) => reward.kind === 'daily_login');
     if (dailyLoginReward) {
-      const stipend = claimAchievementDailyStipendWithResult(next, now, getSixAmResetDateKey(now));
+      const stipend = claimAchievementDailyStipendWithResult(next, now, getDailyResetDateKey(now));
       next = stipend.pet;
       if (stipend.coins > 0) {
         dailyLoginReward.coins = (dailyLoginReward.coins ?? 0) + stipend.coins;

@@ -1,9 +1,13 @@
 import { t } from '../i18n';
+import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
+import { addInventoryItem } from './items';
+import { createNeighborGift } from './neighborGifts';
+import { neighborGiftDailyLimit } from './neighbors';
 import { clampCoins, clampCount } from './petStats';
-import type { BoostCardId, BoostCardState, PetState } from './petTypes';
-import { getLocalDateKey, isNumber } from './utils';
+import type { BoostCardId, BoostCardState, ItemId, NeighborEventContext, PetState } from './petTypes';
+import { isNumber } from './utils';
 
-export const boostCardSchemaVersion = 1;
+export const boostCardSchemaVersion = 2;
 
 export const boostCardIds: readonly BoostCardId[] = ['friend_pass', 'best_friend_pass'];
 
@@ -18,7 +22,7 @@ export interface BoostCardDefinition {
   workBonusCoins: number;
   workBonusDailyLimit: number;
   extraHeartChancePercent: number;
-  extraHeartDailyLimit: number;
+  partnerScheduleCoinBonusPercent: number;
   gardenGrowTimeMultiplier: number;
   gardenExtraDropChancePercent: number;
   gardenExtraDropDailyLimit: number;
@@ -33,22 +37,22 @@ export const boostCardDefinitions: Record<BoostCardId, BoostCardDefinition> = {
     id: 'friend_pass',
     priceHearts: 10,
     dailyCoins: 15,
-    workBonusCoins: 3,
-    workBonusDailyLimit: 60,
+    workBonusCoins: 8,
+    workBonusDailyLimit: 80,
     extraHeartChancePercent: 10,
-    extraHeartDailyLimit: 10,
+    partnerScheduleCoinBonusPercent: 0,
     gardenGrowTimeMultiplier: 1,
     gardenExtraDropChancePercent: 0,
     gardenExtraDropDailyLimit: 0,
   },
   best_friend_pass: {
     id: 'best_friend_pass',
-    priceHearts: 100,
+    priceHearts: 90,
     dailyCoins: 50,
-    workBonusCoins: 8,
-    workBonusDailyLimit: 100,
+    workBonusCoins: 0,
+    workBonusDailyLimit: 0,
     extraHeartChancePercent: 30,
-    extraHeartDailyLimit: 20,
+    partnerScheduleCoinBonusPercent: 10,
     gardenGrowTimeMultiplier: 0.88,
     gardenExtraDropChancePercent: 20,
     gardenExtraDropDailyLimit: 10,
@@ -61,7 +65,7 @@ const emptyBoostCardEffects: BoostCardEffects = {
   workBonusCoins: 0,
   workBonusDailyLimit: 0,
   extraHeartChancePercent: 0,
-  extraHeartDailyLimit: 0,
+  partnerScheduleCoinBonusPercent: 0,
   gardenGrowTimeMultiplier: 1,
   gardenExtraDropChancePercent: 0,
   gardenExtraDropDailyLimit: 0,
@@ -71,12 +75,6 @@ const boostCardIdSet = new Set<BoostCardId>(boostCardIds);
 
 const isBoostCardId = (value: unknown): value is BoostCardId =>
   typeof value === 'string' && boostCardIdSet.has(value as BoostCardId);
-
-export const getSixAmResetDateKey = (time: number) => {
-  const date = new Date(time);
-  if (date.getHours() < 6) date.setDate(date.getDate() - 1);
-  return getLocalDateKey(date.getTime());
-};
 
 const clampExpiresAt = (value: unknown, now: number) =>
   isNumber(value) ? Math.max(0, Math.min(Math.floor(value), now + boostCardMaxDurationMs)) : 0;
@@ -92,9 +90,9 @@ export const defaultBoostCardState = (now = Date.now()): BoostCardState => ({
   friendPassExpiresAt: 0,
   bestFriendPassExpiresAt: 0,
   bestFriendPassPurchasedDays: 0,
-  dailyDateKey: getSixAmResetDateKey(now),
+  dailyDateKey: getDailyResetDateKey(now),
+  dailyRewardClaimed: false,
   dailyWorkBonusCoinsUsed: 0,
-  dailyExtraHeartCount: 0,
   dailyGardenExtraDrops: 0,
 });
 
@@ -103,11 +101,12 @@ export const normalizeBoostCardState = (value: unknown, now = Date.now()): Boost
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
 
   const raw = value as Record<string, unknown>;
-  const resetDateKey = getSixAmResetDateKey(now);
-  const rawDailyDateKey = typeof raw.dailyDateKey === 'string' ? raw.dailyDateKey.trim().slice(0, 16) : fallback.dailyDateKey;
+  const resetDateKey = getDailyResetDateKey(now);
+  const rawDailyDateKey = normalizeLegacyDailyDateKey(raw.dailyDateKey, now) || fallback.dailyDateKey;
   const isCurrentDailyState = rawDailyDateKey === resetDateKey;
-  const dailyCoinsClaimedCardId =
-    isCurrentDailyState && isBoostCardId(raw.dailyCoinsClaimedCardId) ? raw.dailyCoinsClaimedCardId : undefined;
+  const dailyRewardClaimed = isCurrentDailyState && (
+    raw.dailyRewardClaimed === true || isBoostCardId(raw.dailyCoinsClaimedCardId)
+  );
 
   return {
     schemaVersion: boostCardSchemaVersion,
@@ -115,11 +114,9 @@ export const normalizeBoostCardState = (value: unknown, now = Date.now()): Boost
     bestFriendPassExpiresAt: clampExpiresAt(raw.bestFriendPassExpiresAt, now),
     bestFriendPassPurchasedDays: Math.min(99999, clampCount(isNumber(raw.bestFriendPassPurchasedDays) ? raw.bestFriendPassPurchasedDays : backfillPurchasedDaysFromExpiresAt(raw.bestFriendPassExpiresAt, now))),
     dailyDateKey: resetDateKey,
-    dailyCoinsClaimedCardId,
+    dailyRewardClaimed,
     dailyWorkBonusCoinsUsed:
       isCurrentDailyState ? Math.min(999, clampCount(isNumber(raw.dailyWorkBonusCoinsUsed) ? raw.dailyWorkBonusCoinsUsed : 0)) : 0,
-    dailyExtraHeartCount:
-      isCurrentDailyState ? Math.min(99, clampCount(isNumber(raw.dailyExtraHeartCount) ? raw.dailyExtraHeartCount : 0)) : 0,
     dailyGardenExtraDrops:
       isCurrentDailyState ? Math.min(99, clampCount(isNumber(raw.dailyGardenExtraDrops) ? raw.dailyGardenExtraDrops : 0)) : 0,
   };
@@ -137,10 +134,10 @@ export const getBoostCardEffects = (pet: PetState, now = Date.now()): BoostCardE
   return activeCardId ? { ...boostCardDefinitions[activeCardId], activeCardId } : emptyBoostCardEffects;
 };
 
-export const canClaimBoostCardDailyCoins = (pet: PetState, now = Date.now()) => {
+export const canClaimBoostCardDailyReward = (pet: PetState, now = Date.now()) => {
   const boostCards = normalizeBoostCardState(pet.boostCards, now);
   const activeCardId = getActiveBoostCard({ ...pet, boostCards }, now);
-  return Boolean(activeCardId && boostCards.dailyCoinsClaimedCardId !== activeCardId);
+  return Boolean(activeCardId && !boostCards.dailyRewardClaimed);
 };
 
 const passExpiresAtKey = (cardId: BoostCardId) =>
@@ -181,30 +178,65 @@ export const buyBoostCard = (pet: PetState, cardId: BoostCardId, now = Date.now(
   };
 };
 
-export const claimBoostCardDailyCoins = (pet: PetState, now = Date.now()): { pet: PetState; coins: number } => {
+export interface BoostCardDailyRewardGift {
+  itemId: ItemId;
+  itemAmount: number;
+  displayName: string;
+  neighborName?: string;
+}
+
+export const claimBoostCardDailyReward = (
+  pet: PetState,
+  eventContext?: NeighborEventContext,
+  now = Date.now(),
+): { pet: PetState; coins: number; gift?: BoostCardDailyRewardGift } => {
   const boostCards = normalizeBoostCardState(pet.boostCards, now);
   const activeCardId = getActiveBoostCard({ ...pet, boostCards }, now);
   if (!activeCardId) {
     return { pet: { ...pet, boostCards, recentEvent: t('pet.boostCards.noActiveCard') }, coins: 0 };
   }
 
-  if (boostCards.dailyCoinsClaimedCardId === activeCardId) {
-    return { pet: { ...pet, boostCards, recentEvent: t('pet.boostCards.dailyCoinsClaimed') }, coins: 0 };
+  if (boostCards.dailyRewardClaimed) {
+    return { pet: { ...pet, boostCards, recentEvent: t('pet.boostCards.dailyRewardClaimed') }, coins: 0 };
   }
 
   const coins = boostCardDefinitions[activeCardId].dailyCoins;
+  const dailyDateKey = getDailyResetDateKey(now);
+  const storedGiftDateKey = normalizeLegacyDailyDateKey(pet.neighborGiftDateKey, now);
+  const currentGiftCount = storedGiftDateKey === dailyDateKey
+    ? Math.min(neighborGiftDailyLimit, clampCount(pet.neighborGiftCount))
+    : 0;
+  const selection = currentGiftCount < neighborGiftDailyLimit ? createNeighborGift(eventContext) : undefined;
+  const gift: BoostCardDailyRewardGift | undefined = selection
+    ? {
+        itemId: selection.gift.itemId,
+        itemAmount: 1,
+        displayName: selection.gift.displayName,
+        neighborName: selection.neighborName,
+      }
+    : undefined;
   return {
     pet: {
       ...pet,
       coins: clampCoins(pet.coins + coins),
+      inventory: gift ? addInventoryItem(pet.inventory, gift.itemId, gift.itemAmount) : pet.inventory,
       boostCards: {
         ...boostCards,
-        dailyCoinsClaimedCardId: activeCardId,
+        dailyRewardClaimed: true,
       },
-      recentEvent: t('pet.boostCards.claimDailyCoins', { coins }),
+      neighborGiftDateKey: dailyDateKey,
+      neighborGiftCount: currentGiftCount + (gift ? 1 : 0),
+      recentEvent: gift
+        ? t(`pet.boostCards.${gift.neighborName ? 'claimDailyRewardNamed' : 'claimDailyRewardGeneric'}`, {
+            coins,
+            neighbor: gift.neighborName ?? '',
+            item: gift.displayName,
+          })
+        : t('pet.boostCards.claimDailyRewardCoinsOnly', { coins }),
       lastInteractionAt: now,
     },
     coins,
+    gift,
   };
 };
 
@@ -229,9 +261,7 @@ export const applyBoostCardHeartBonus = (pet: PetState, gainedHearts: number, no
 
   return {
     extraHearts,
-    boostCards: extraHearts > 0
-      ? { ...boostCards, dailyExtraHeartCount: boostCards.dailyExtraHeartCount + extraHearts }
-      : boostCards,
+    boostCards,
   };
 };
 

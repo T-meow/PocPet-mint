@@ -2,10 +2,12 @@ import { ArrowRight, BookOpen, ChefHat, Dumbbell, Sprout, type LucideIcon } from
 import {
   getPartnerScheduleDefinition,
   getPartnerScheduleProgress,
+  type NeighborIdentity,
   type PartnerScheduleCategory,
   type PetState,
 } from '../core/pet';
 import { t } from '../i18n';
+import { getPartnerScheduleDisplayTitle } from './partnerScheduleText';
 
 const categoryIcons: Record<PartnerScheduleCategory, LucideIcon> = {
   study: BookOpen,
@@ -24,17 +26,18 @@ const formatCountdown = (milliseconds: number) => {
 
 interface PartnerScheduleDockProps {
   pet: PetState;
+  neighbors: readonly NeighborIdentity[];
   onOpen: () => void;
 }
 
-export const PartnerScheduleDock = ({ pet, onOpen }: PartnerScheduleDockProps) => {
+export const PartnerScheduleDock = ({ pet, neighbors, onOpen }: PartnerScheduleDockProps) => {
   const active = pet.partnerSchedule.active;
   if (!active) return null;
   const definition = getPartnerScheduleDefinition(active.templateId);
   if (!definition) return null;
   const Icon = categoryIcons[active.category];
   const progress = getPartnerScheduleProgress(active);
-  const title = t(`ui.partnerSchedule.activities.${definition.id}.title`);
+  const title = getPartnerScheduleDisplayTitle(definition.id, active.neighbor, neighbors);
 
   return (
     <div className={`partner-schedule-dock partner-schedule-dock--${active.category}`} aria-label={t('ui.partnerSchedule.homeDockAria')}>

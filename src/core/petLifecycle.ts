@@ -1,11 +1,14 @@
 import { t } from '../i18n';
+import { getDailyResetDateKey, isSameDailyResetDay, normalizeLegacyDailyDateKey } from './dailyReset';
 import { ensureDailyWishForDate, maybeCreateReturnWelcome, returnWelcomeMinAwayMs } from './dailyWishes';
 import { getAchievementEffects, incrementAchievementPomodoroFocus, incrementNaturalWake, recordEarnedCoins } from './achievements';
+import { canClaimBoostCardDailyReward } from './boostCards';
 import { advanceGarden } from './garden';
 import { dailyBiscuitClaimLimit } from './items';
 import { applyTimedEvent, getRandomDailyEncounter, getRandomOfflineDiary, getRandomOfflineEvent, maybeApplyDreamTalk, settleSleep, startSleepSnapshot } from './petEvents';
+import { neighborGiftDailyLimit } from './neighbors';
 import { clampCoins, clampCount, clampPetHealth, clampPetStat, criticalHungerActionThreshold, getEnergyRecoveryIntervalMs, getPetStatCap, lowEnergyThreshold } from './petStats';
-import type { PetState } from './petTypes';
+import type { NeighborEventContext, PetState } from './petTypes';
 import {
   getDefaultPomodoroRemainingMs,
   getPomodoroBonusReward,
@@ -23,7 +26,7 @@ import { advancePartnerSchedule, isPartnerSchedulePetBusy } from './partnerSched
 import { getCleanlinessDecaySeasonModifier, getMoodDecaySeasonModifier } from './season';
 import { ensureYearlyStatsForDate, recordYearlyPomodoroFocus } from './yearlyStats';
 import { getWeatherForDate } from './weather';
-import { getLocalDateKey, isNightTime, isSameLocalDay } from './utils';
+import { isNightTime } from './utils';
 
 export const getEnergyRecoveryInfo = (pet: PetState, now = Date.now()) => {
   const current = normalizePet(pet, now);
@@ -59,7 +62,7 @@ export const getEnergyRecoveryInfo = (pet: PetState, now = Date.now()) => {
 
 export const getDailyBiscuitClaimInfo = (pet: PetState, now = Date.now()) => {
   const claimed =
-    pet.dailyBiscuitClaimDate === getLocalDateKey(now)
+    pet.dailyBiscuitClaimDate === getDailyResetDateKey(now)
       ? Math.min(dailyBiscuitClaimLimit, clampCount(pet.dailyBiscuitClaims))
       : 0;
 
@@ -100,20 +103,31 @@ export const pausePomodoroForReason = (pet: PetState, now: number, recentEvent: 
 };
 
 export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
-  let next = ensureYearlyStatsForDate(normalizePet(pet, now), now);
+  const persistedDailyFocusDate = normalizeLegacyDailyDateKey(pet.pomodoro.dailyFocusDate, now);
+  const persistedDailyFocusCount = clampCount(pet.pomodoro.dailyCompletedFocusCount);
+  let next = normalizePet(pet, now);
   let pomodoro = next.pomodoro;
   if (!pomodoro.isRunning) return next;
+  if (persistedDailyFocusDate) {
+    pomodoro = {
+      ...pomodoro,
+      dailyFocusDate: persistedDailyFocusDate,
+      dailyCompletedFocusCount: persistedDailyFocusCount,
+    };
+  }
 
   let settledPhaseCount = 0;
   let settledFocusCount = 0;
   let settledShortBreakCount = 0;
+  const settledFocusTimes: number[] = [];
+  let maxSettledDailyFocusCount = pomodoro.dailyCompletedFocusCount;
   let earnedCoins = 0;
   let earnedMood = 0;
   let earnedBonusCoins = 0;
   let rewardChanged = false;
   let autoStopped = false;
   let activity = pomodoro.currentActivity;
-  const today = getLocalDateKey(now);
+  const today = getDailyResetDateKey(now);
   const maxSettlements = 1000;
 
   const settleFocusRewardsUntil = (focusUntil: number) => {
@@ -164,11 +178,12 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
 
     const phaseId = getPomodoroPhaseId(pomodoro);
     const shouldSettlePhase = pomodoro.lastSettledPhaseId !== phaseId;
+    const phaseDateKey = getDailyResetDateKey(pomodoro.phaseEndsAt);
     const completedFocusCount = pomodoro.phase === 'focus' ? pomodoro.completedFocusCount + 1 : pomodoro.completedFocusCount;
     const dailyCompletedFocusCount =
       pomodoro.phase === 'focus'
-        ? (pomodoro.dailyFocusDate === today ? pomodoro.dailyCompletedFocusCount : 0) + 1
-        : pomodoro.dailyFocusDate === today
+        ? (pomodoro.dailyFocusDate === phaseDateKey ? pomodoro.dailyCompletedFocusCount : 0) + 1
+        : pomodoro.dailyFocusDate === phaseDateKey
           ? pomodoro.dailyCompletedFocusCount
           : 0;
     const nextStartedAt = pomodoro.phaseEndsAt;
@@ -177,6 +192,10 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
       settledPhaseCount += 1;
       settledFocusCount += pomodoro.phase === 'focus' ? 1 : 0;
       settledShortBreakCount += pomodoro.phase === 'short_break' ? 1 : 0;
+      if (pomodoro.phase === 'focus') {
+        settledFocusTimes.push(pomodoro.phaseEndsAt);
+        maxSettledDailyFocusCount = Math.max(maxSettledDailyFocusCount, dailyCompletedFocusCount);
+      }
     }
 
     if (pomodoro.phase === 'short_break' && pomodoro.round >= pomodoro.settings.targetRounds) {
@@ -189,7 +208,7 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
         phaseEndsAt: 0,
         round: 1,
         completedFocusCount,
-        dailyFocusDate: today,
+        dailyFocusDate: phaseDateKey,
         dailyCompletedFocusCount,
         currentActivity: 'reading_books',
         lastSettledPhaseId: phaseId,
@@ -211,7 +230,7 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
       phaseEndsAt: nextStartedAt + getPomodoroPhaseDurationMs(nextPhase, pomodoro.settings),
       round: nextRound,
       completedFocusCount,
-      dailyFocusDate: today,
+      dailyFocusDate: phaseDateKey,
       dailyCompletedFocusCount,
       currentActivity: activity,
       lastSettledPhaseId: phaseId,
@@ -224,6 +243,10 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
     settleFocusRewardsUntil(now);
   }
 
+  if (pomodoro.dailyFocusDate !== today) {
+    pomodoro = { ...pomodoro, dailyFocusDate: today, dailyCompletedFocusCount: 0 };
+  }
+
   next = {
     ...next,
     coins: clampCoins(next.coins + earnedCoins),
@@ -234,7 +257,14 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
     lastInteractionAt: now,
   };
 
-  next = recordEarnedCoins(incrementAchievementPomodoroFocus(recordYearlyPomodoroFocus(next, settledFocusCount, now), settledFocusCount), earnedCoins);
+  settledFocusTimes.forEach((settledAt) => {
+    next = recordYearlyPomodoroFocus(next, 1, settledAt);
+  });
+  next = ensureYearlyStatsForDate(next, now);
+  next = recordEarnedCoins(
+    incrementAchievementPomodoroFocus(next, settledFocusCount, maxSettledDailyFocusCount),
+    earnedCoins,
+  );
 
   if (settledPhaseCount > 0) {
     const parts = [
@@ -268,14 +298,16 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
   return next;
 };
 
-const applyDailyEncounter = (pet: PetState, now: number): PetState => {
-  if (isSameLocalDay(pet.lastDailyEncounterAt, now)) return pet;
+const applyDailyEncounter = (pet: PetState, now: number, eventContext?: NeighborEventContext): PetState => {
+  if (isSameDailyResetDay(pet.lastDailyEncounterAt, now)) return pet;
 
-  const encounter = getRandomDailyEncounter(pet.name);
+  const giftCount = pet.neighborGiftDateKey === getDailyResetDateKey(now) ? pet.neighborGiftCount : 0;
+  const randomGiftLimit = canClaimBoostCardDailyReward(pet, now) ? neighborGiftDailyLimit - 1 : neighborGiftDailyLimit;
+  const encounter = getRandomDailyEncounter(pet.name, eventContext, giftCount < randomGiftLimit);
   return applyTimedEvent(pet, encounter, now, t('pet.prefix.dailyEncounter'));
 };
 
-export const advancePet = (pet: PetState, now = Date.now()): PetState => {
+export const advancePet = (pet: PetState, now = Date.now(), eventContext?: NeighborEventContext): PetState => {
   const prepared = advanceGarden(ensureDailyWishForDate(ensureYearlyStatsForDate(
     normalizePet(pet, now, { preserveExpiredPartnerSchedule: true }),
     now,
@@ -292,11 +324,11 @@ export const advancePet = (pet: PetState, now = Date.now()): PetState => {
   const lifecycleDeltaMs = Math.max(0, deltaMs - getProtectedScheduleMs(current.lastUpdatedAt, now));
   const elapsedSeconds = lifecycleDeltaMs / 1000;
   const weather = getWeatherForDate(now);
-  const weatherChanged = current.weatherDate !== getLocalDateKey(now) || current.weather !== weather;
+  const weatherChanged = current.weatherDate !== getDailyResetDateKey(now) || current.weather !== weather;
   const currentWithWeather = weatherChanged
     ? {
         ...current,
-        weatherDate: getLocalDateKey(now),
+        weatherDate: getDailyResetDateKey(now),
         weather,
       }
     : current;
@@ -418,13 +450,20 @@ export const advancePet = (pet: PetState, now = Date.now()): PetState => {
   }
 
   if (offlineEventDue) {
-    return applyTimedEvent(next, getRandomOfflineEvent(next.name, weather), now, t('pet.prefix.offlineEvent'));
+    const giftCount = next.neighborGiftDateKey === getDailyResetDateKey(now) ? next.neighborGiftCount : 0;
+    const randomGiftLimit = canClaimBoostCardDailyReward(next, now) ? neighborGiftDailyLimit - 1 : neighborGiftDailyLimit;
+    return applyTimedEvent(
+      next,
+      getRandomOfflineEvent(next.name, weather, eventContext, giftCount < randomGiftLimit),
+      now,
+      t('pet.prefix.offlineEvent'),
+    );
   }
 
   if (offlineDiaryDue) {
     return next;
   }
 
-  return applyDailyEncounter(next, now);
+  return applyDailyEncounter(next, now, eventContext);
 };
 

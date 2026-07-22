@@ -109,6 +109,22 @@
         "active": "Active mod: {name} v{version}",
         "import": "Import mod",
         "restoreDefault": "Restore default",
+        "useBuiltin": "Use built-in pet",
+        "libraryAria": "Installed mods",
+        "libraryEmpty": "No mods installed yet.",
+        "libraryLimit": "The mod library can hold up to {count} mods. Delete an unused mod first.",
+        "currentShort": "Current",
+        "activate": "Use this mod",
+        "delete": "Delete {name}",
+        "installed": "Installed {name}. The current pet was not changed.",
+        "deleted": "Deleted {name}.",
+        "deleteFailed": "Failed to delete mod.",
+        "deleteDialog": {
+          "title": "Delete this mod?",
+          "message": "This removes all local resources for {name}. Save progress and inventory counts remain; missing content uses compatibility placeholders.",
+          "cancel": "Keep",
+          "confirm": "Delete mod"
+        },
         "imported": "Imported {name}.",
         "importedWithFallback": "Imported {name}. {count} assets are using default images.",
         "importFailed": "Failed to import mod.",
@@ -163,6 +179,7 @@
           "Inventory items can feed, gift, care for your pet, or plant and boost things in the garden."
         ],
         "other": [
+          "Schedules, daily rewards, weather, and daily counters reset at 5:00 local time; birthdays, anniversaries, festivals, and seasons still follow the calendar date.",
           "The shop sells food, gifts, care, and garden items. You can claim free soda biscuits daily and exchange coins for hearts.",
           "Daily wishes and return tasks grant rewards after completion. Offline time may also leave diaries or events.",
           "Pomodoro cycles focus and breaks. Completed focus grants coins and mood, while poor status pauses the timer.",
@@ -358,6 +375,20 @@
         "cooking": "Keep the meal · {coins} coins",
         "garden": "Bring a sapling · {coins} coins",
         "exercise": "Recover well · {coins} coins"
+      },
+      "neighborActivity": {
+        "title": {
+          "named": "With {neighbor}: {activity}",
+          "generic": "Neighbor activity: {activity}"
+        },
+        "summary": {
+          "named": "This time, {neighbor} will join in. {summary}",
+          "generic": "A neighbor from nearby will join in. {summary}"
+        }
+      },
+      "neighborClaimed": {
+        "named": "{neighbor} made it home safely too.",
+        "generic": "The neighbor made it home safely too."
       },
       "cancelDialog": {
         "title": "End this activity early?",
@@ -649,10 +680,11 @@
       "activeCard": "Active: {card}",
       "noActive": "No active card",
       "todayWork": "Work bonus {coins}/{limit}",
+      "scheduleBonus": "Partner schedule coins +{percent}%",
       "extraHeartChance": "Extra heart chance {percent}% · unlimited",
       "todayGarden": "Garden drops {count}/{limit}",
       "claimed": "Claimed today",
-      "claimCoins": "Claim {coins} coins",
+      "claimReward": "Claim a neighbor gift and {coins} coins",
       "remaining": "{days} days left",
       "buy": "{hearts} hearts · 30 days",
       "blockedByBestFriend": "Best Friend active",
@@ -660,25 +692,25 @@
       "cards": {
         "friend_pass": {
           "name": "Friend Pass",
-          "summary": "Daily coins, work coins, and a small heart bonus."
+          "summary": "A daily neighbor gift and 15 coins, +8 work coins each time (up to 80 daily), and a 10% extra-heart chance."
         },
         "best_friend_pass": {
           "name": "Best Friend Pass",
-          "summary": "Higher daily rewards plus garden growth and drop bonuses."
+          "summary": "A daily neighbor gift and 50 coins, +10% partner schedule coins, plus the existing garden growth and drop bonuses."
         }
       }
     },
     "rolePicker": {
       "aria": "Choose pet character",
       "title": "Choose your companion",
-      "description": "Use built-in Furo, continue with the installed mod, or import a new mod. No save is created until you choose.",
+      "description": "Choose built-in Furo or any installed mod. You can also install another mod first. No save is created until you choose.",
       "loading": "Loading local mod...",
       "builtinTitle": "Built-in Furo",
       "builtinSummary": "Create the default companion without a mod.",
       "installedTitle": "Use {name}",
       "installedSummary": "Create the mod companion named {pet}.",
       "importTitle": "Import mod",
-      "importSummary": "Pick a zip file and create a companion from it."
+      "importSummary": "Install a zip into the Mod Library, then choose a companion."
     }
   },
   "pet": {
@@ -934,6 +966,8 @@
     "dailyEncounter": {
       "coins": "{name} found shiny coins near the window, coins +18.",
       "biscuit": "A neighbor brought a soda biscuit, inventory +1.",
+      "neighborGiftNamed": "Your neighbor {neighbor} visited and left {item}, inventory +1.",
+      "neighborGiftGeneric": "A neighbor visited and left {item}, inventory +1.",
       "sun": "{name} basked in the sun, mood +8, cleanliness -2.",
       "rest": "{name} woke up refreshed, energy +10.",
       "snack": "{name} secretly found a snack, hunger +10, cleanliness -3.",
@@ -961,9 +995,15 @@
     "offlineEvent": {
       "coins": "{name} found a coin that rolled beside the mat, coins +12.",
       "biscuit": "A neighbor passed by and left a soda biscuit, inventory +1.",
+      "neighborGiftNamed": "Your neighbor {neighbor} visited and left {item}, inventory +1.",
+      "neighborGiftGeneric": "A neighbor visited and left {item}, inventory +1.",
       "heart": "{name} hid a small sticker for your return, hearts +{hearts}.",
       "sunnyPlay": "{name} secretly basked in the sun, mood +6, cleanliness -2.",
       "play": "{name} played alone for a while, mood +6, cleanliness -2.",
+      "sunnyPlayNamed": "{name} played in the sun with {neighbor}, mood +6, cleanliness -2.",
+      "sunnyPlayGeneric": "{name} played in the sun with a neighbor, mood +6, cleanliness -2.",
+      "playNamed": "{name} played with {neighbor} for a while, mood +6, cleanliness -2.",
+      "playGeneric": "{name} played with a neighbor for a while, mood +6, cleanliness -2.",
       "hungryHappy": "{name} got a little hungry waiting, but was happy to see you, hunger -4, mood +4.",
       "rest": "{name} rested calmly for a while, energy +8.",
       "mess": "{name} turned the corner into a mess, cleanliness -5."
@@ -1613,8 +1653,10 @@
       "bestFriendBlocksFriend": "Friend Pass cannot be purchased while Best Friend Pass is active.",
       "buySuccess": "{card} is active or extended.",
       "noActiveCard": "No active boost card.",
-      "dailyCoinsClaimed": "Boost card coins were already claimed today.",
-      "claimDailyCoins": "Claimed {coins} daily boost-card coins.",
+      "dailyRewardClaimed": "Today's boost-card neighbor gift and coins were already claimed.",
+      "claimDailyRewardNamed": "{neighbor} brought {item}, and the boost card granted {coins} daily coins.",
+      "claimDailyRewardGeneric": "A neighbor brought {item}, and the boost card granted {coins} daily coins.",
+      "claimDailyRewardCoinsOnly": "Three neighbor gifts were already received today, so this claim granted only {coins} daily coins.",
       "workBonus": " Boost card +{coins} coins."
     }
   }

@@ -12,6 +12,7 @@ import {
   getPartnerScheduleDefinition,
   getPartnerScheduleExtraRewardCopies,
   getPartnerScheduleOfferPreview,
+  getPartnerScheduleNeighborOfferId,
   getPartnerScheduleProgress,
   getPartnerScheduleSkillXpNeeded,
   getPartnerScheduleStartCheck,
@@ -20,6 +21,9 @@ import {
   partnerScheduleDefinitions,
   startPartnerSchedule,
 } from '../src/core/partnerSchedule';
+import { neighborGiftDailyLimit, resolveNeighborName, selectNeighborReference } from '../src/core/neighbors';
+import { selectNeighborGift } from '../src/core/neighborGifts';
+import { applyTimedEvent, getRandomDailyEncounter, getRandomOfflineEvent } from '../src/core/petEvents';
 import {
   getPartnerScheduleCategoryEffects,
   getPartnerScheduleCrossSystemEffects,
@@ -30,7 +34,8 @@ import {
 import { createDefaultPet, normalizePet } from '../src/core/petState';
 import { loadStoredPetJson } from '../src/core/saveCodec';
 import { startPomodoro } from '../src/core/petActions';
-import type { PartnerScheduleCategory, PartnerScheduleResult, PartnerScheduleState, PetState } from '../src/core/petTypes';
+import { normalizePetModLibraryState, petModLibraryLimit } from '../src/core/modStorage';
+import type { NeighborEventContext, NeighborGiftCandidate, PartnerScheduleCategory, PartnerScheduleResult, PartnerScheduleState, PetState } from '../src/core/petTypes';
 
 const minuteMs = 60 * 1000;
 const now = new Date(2026, 6, 20, 12, 0, 0).getTime();
@@ -177,6 +182,37 @@ assert.equal(getPartnerScheduleCategoryEffects(skill(10, 0, 9)).energyCostMultip
 assert.equal(getPartnerScheduleCategoryEffects(skill(10, 0, 10)).energyCostMultiplier, 0.85);
 assert.equal(getPartnerScheduleCategoryEffects(skill(10, 0, 29)).coinBonusPercent, 5);
 assert.equal(getPartnerScheduleCategoryEffects(skill(10, 0, 30)).coinBonusPercent, 10);
+
+const discountedStartPet = withCategorySkill(level3, definition.category, skill(4));
+const discountedStartPreview = getPartnerScheduleOfferPreview(discountedStartPet, definition, now);
+const exactCostPet = {
+  ...discountedStartPet,
+  energy: discountedStartPreview.energyCost,
+  hunger: discountedStartPreview.hungerCost,
+  mood: discountedStartPreview.moodCost,
+};
+assert.equal(getPartnerScheduleStartCheck(exactCostPet, offer.id, now).canStart, true, 'displayed costs should be sufficient to start a schedule');
+assert.equal(getPartnerScheduleStartCheck({ ...exactCostPet, energy: exactCostPet.energy - 1 }, offer.id, now).reason, 'energy');
+assert.equal(getPartnerScheduleStartCheck({ ...exactCostPet, hunger: exactCostPet.hunger - 1 }, offer.id, now).reason, 'hunger');
+assert.equal(getPartnerScheduleStartCheck({ ...exactCostPet, mood: exactCostPet.mood - 1 }, offer.id, now).reason, 'mood');
+
+let fullBoardPet = createReadyPet(8);
+let fullBoardNow = now;
+for (const size of ['short', 'standard', 'long'] as const) {
+  const nextOffer = fullBoardPet.partnerSchedule.offers.find((item) => getPartnerScheduleDefinition(item.templateId)?.size === size);
+  assert(nextOffer, `Lv8 board should contain a ${size} schedule`);
+  assert.equal(
+    getPartnerScheduleStartCheck(fullBoardPet, nextOffer.id, fullBoardNow).canStart,
+    true,
+    `a full-energy pet should be able to complete the ${size} schedule in the three-item sequence`,
+  );
+  fullBoardPet = startPartnerSchedule(fullBoardPet, nextOffer.id, fullBoardNow);
+  const completedAt = fullBoardPet.partnerSchedule.active!.endsAt;
+  fullBoardPet = claimPartnerScheduleResult(advancePartnerSchedule(fullBoardPet, completedAt), 'coins', completedAt);
+  fullBoardNow = completedAt;
+}
+assert.equal(fullBoardPet.partnerSchedule.completedOfferIds.length, 3, 'all three Lv8 schedules should be completable from 100 starting stats');
+
 const started = startPartnerSchedule(level3, offer.id, now);
 assert(started.partnerSchedule.active, 'schedule should start');
 assert.equal(started.partnerSchedule.active.endsAt - started.partnerSchedule.active.startedAt, definition.durationMinutes * minuteMs);
@@ -720,7 +756,7 @@ const migratedV2Active = normalizePartnerScheduleState({
     exercise: { level: 5, xp: 0 },
   },
 }, { level: level8.level, createdAt: level8.createdAt }, now);
-assert.equal(migratedV2Active.schemaVersion, 3);
+assert.equal(migratedV2Active.schemaVersion, 4);
 assert.equal(migratedV2Active.boardOfferCount, 3, 'schema v2 should preserve the current three-choice board until reset');
 assert.equal(migratedV2Active.skills.study.level, 5);
 assert.equal(migratedV2Active.skills.study.masterCompletions, 0);
@@ -767,7 +803,7 @@ const migratedIndependent = normalizeLegacy({
   requiredFocusMs: 25 * minuteMs,
   focusProgressMs: 0,
 });
-assert.equal(migratedIndependent.schemaVersion, 3);
+assert.equal(migratedIndependent.schemaVersion, 4);
 assert.equal(migratedIndependent.active?.endsAt, legacyIndependentEnd, 'v1 independent activity should preserve its end time');
 
 const migratedTogether = normalizeLegacy({
@@ -816,7 +852,96 @@ const nextDayBoard = advancePartnerSchedule(level3, now + 24 * 60 * minuteMs);
 assert.notEqual(nextDayBoard.partnerSchedule.boardDateKey, level3.partnerSchedule.boardDateKey, 'the board should refresh after the daily boundary');
 assert.equal(nextDayBoard.partnerSchedule.offers.length, 3);
 
-const schemaCheck: PartnerScheduleState['schemaVersion'] = 3;
+const migratedV3Board = normalizePartnerScheduleState({
+  ...level3.partnerSchedule,
+  schemaVersion: 3,
+  neighborOfferId: level3.partnerSchedule.offers[0]?.id,
+  active: undefined,
+  pendingResult: undefined,
+}, { level: level3.level, createdAt: level3.createdAt }, now);
+assert.equal(migratedV3Board.neighborOfferId, undefined, 'a current v3 board should not gain neighbor content retroactively');
+
+let neighborSchedulePet: PetState | undefined;
+for (let offset = 0; offset < 200 && !neighborSchedulePet; offset += 1) {
+  const candidate = createReadyPet(3, now - (10 * 24 * 60 + offset) * minuteMs);
+  if (getPartnerScheduleNeighborOfferId(candidate)) neighborSchedulePet = candidate;
+}
+assert(neighborSchedulePet, 'the deterministic 30% rule should produce a neighbor board in a bounded sample');
+const neighborOfferId = getPartnerScheduleNeighborOfferId(neighborSchedulePet!);
+assert(neighborOfferId && neighborSchedulePet!.partnerSchedule.offers.some((item) => item.id === neighborOfferId));
+const neighborIdentities = [
+  { modId: 'creator.alpha', name: 'Alpha' },
+  { modId: 'creator.beta', name: 'Beta' },
+];
+const neighborReference = selectNeighborReference(neighborOfferId!, neighborIdentities);
+const neighborStarted = startPartnerSchedule(neighborSchedulePet!, neighborOfferId!, now, neighborReference);
+assert.deepEqual(neighborStarted.partnerSchedule.active?.neighbor, neighborReference, 'start should snapshot only the neighbor mod id');
+const neighborFinished = advancePartnerSchedule(neighborStarted, neighborStarted.partnerSchedule.active!.endsAt);
+assert.deepEqual(neighborFinished.partnerSchedule.pendingResult?.neighbor, neighborReference, 'completion should preserve the neighbor reference');
+if (neighborReference.kind === 'mod') {
+  assert.equal(resolveNeighborName(neighborReference, neighborIdentities), neighborIdentities.find((item) => item.modId === neighborReference.modId)?.name);
+  assert.equal(resolveNeighborName(neighborReference, [{ modId: neighborReference.modId, name: 'Updated name' }]), 'Updated name');
+  assert.equal(resolveNeighborName(neighborReference, []), undefined, 'a deleted mod should fall back to the generic neighbor copy');
+}
+
+const randomFrom = (...values: number[]) => {
+  let index = 0;
+  return () => values[Math.min(index++, values.length - 1)] ?? 0;
+};
+const giftCandidates: NeighborGiftCandidate[] = [
+  { itemId: 'apple', displayName: 'Apple', price: 1000 },
+  { itemId: 'creator.test:rare', displayName: 'Rare', price: 1001 },
+];
+assert.equal(selectNeighborGift(giftCandidates, randomFrom(0.5, 0)).itemId, 'apple', 'price 1000 should remain in the common pool');
+assert.equal(selectNeighborGift(giftCandidates, randomFrom(0.005, 0.59)).itemId, 'golden_apple', '60% of the rare branch should be golden apples');
+assert.equal(selectNeighborGift(giftCandidates, randomFrom(0.005, 0.61, 0)).itemId, 'creator.test:rare', 'the remaining rare branch should select price-over-1000 items');
+assert.equal(
+  selectNeighborGift([{ itemId: 'creator.test:rare', displayName: 'Rare', price: 1001 }], randomFrom(0.5)).itemId,
+  'emergency_biscuit',
+  'an empty common pool should fall back to a soda biscuit',
+);
+
+const giftEventContext: NeighborEventContext = {
+  neighbors: [{ modId: 'creator.alpha', name: 'Alpha' }],
+  giftCandidates,
+  random: randomFrom(0.2, 0, 0.5, 0),
+};
+const dailyGift = getRandomDailyEncounter('Furo', giftEventContext, true);
+assert.equal(dailyGift.kind, 'neighbor_gift');
+const twiceGifted = { ...createDefaultPet(now), neighborGiftDateKey: '2026-07-20', neighborGiftCount: 2 };
+const thirdGift = applyTimedEvent(twiceGifted, dailyGift, now, '');
+assert.equal(thirdGift.neighborGiftCount, neighborGiftDailyLimit, 'the third gift should settle normally');
+const cappedDailyEvent = getRandomDailyEncounter('Furo', { ...giftEventContext, random: randomFrom(0.2) }, false);
+const cappedOfflineEvent = getRandomOfflineEvent('Furo', 'sunny', { ...giftEventContext, random: randomFrom(0.2) }, false);
+assert.notEqual(cappedDailyEvent.kind, 'neighbor_gift', 'daily gift candidates should be removed after the cap');
+assert.notEqual(cappedOfflineEvent.kind, 'neighbor_gift', 'offline gift candidates should be removed after the cap');
+const nextDayAfterEvent = applyTimedEvent(thirdGift, { text: 'next day' }, now + 24 * 60 * minuteMs, '');
+assert.equal(nextDayAfterEvent.neighborGiftCount, 0, 'the local-day gift count should reset on the next event');
+
+const libraryMods = Array.from({ length: petModLibraryLimit + 1 }, (_, index) => ({
+  manifest: {
+    schemaVersion: 1 as const,
+    id: `creator.mod${index}`,
+    name: `Mod ${index}`,
+    version: '1.0.0',
+    defaultPetName: `Pet ${index}`,
+  },
+  importedAt: index,
+}));
+const normalizedLibrary = normalizePetModLibraryState({
+  schemaVersion: 1,
+  activeModId: libraryMods.at(-1)!.manifest.id,
+  mods: [{ manifest: { schemaVersion: 99 }, importedAt: 0 }, ...libraryMods],
+});
+assert.equal(normalizedLibrary.mods.length, petModLibraryLimit, 'the library catalog should enforce its 12-mod limit');
+assert.equal(normalizedLibrary.activeModId, libraryMods.at(-1)!.manifest.id, 'a valid active mod id should survive normalization');
+assert.equal(
+  normalizePetModLibraryState({ ...normalizedLibrary, activeModId: 'missing.mod' }).activeModId,
+  undefined,
+  'an invalid active id should fall back to the built-in pet',
+);
+
+const schemaCheck: PartnerScheduleState['schemaVersion'] = 4;
 const stateCheck: PetState = { ...level3, partnerSchedule: migratedTogether };
 assert.equal(schemaCheck, stateCheck.partnerSchedule.schemaVersion);
 

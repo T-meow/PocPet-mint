@@ -1,9 +1,10 @@
 import { t } from '../i18n';
 import { applyBoostCardHeartBonus } from './boostCards';
+import { getDailyResetDate, getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
 import { addInventoryItem, getInventoryItem, shopItems } from './items';
 import { clampCoins, clampCount } from './petStats';
 import type { AchievementCounters, AchievementId, AchievementState, CareActionKey, GardenTreeId, ItemId, PartnerScheduleCategory, PartnerScheduleRewardChoice, PartnerScheduleSize, PetState, YearlyCareActionKey, YearlyStats } from './petTypes';
-import { getLocalDateKey, isNumber } from './utils';
+import { isNumber } from './utils';
 
 export type AchievementCategory = 'care' | 'daily' | 'garden' | 'shop' | 'inventory' | 'pomodoro' | 'growth' | 'date' | 'schedule' | 'hidden';
 export type AchievementRarity = 'normal' | 'rare' | 'hidden';
@@ -153,10 +154,13 @@ export const getCompanionYear = (createdAt: number, now = Date.now()) => {
   return Math.max(1, year);
 };
 
+const getCompanionActivityYear = (createdAt: number, now = Date.now()) =>
+  getCompanionYear(createdAt, getDailyResetDate(now).getTime());
+
 export const defaultAchievementState = (now = Date.now(), createdAt = now, pendingReviewNotice = false, initialCoins = 0): AchievementState => {
   const counters = defaultAchievementCounters();
   counters.maxCoinsHeld = clampCount(initialCoins);
-  counters.companionYearActiveDateKeysByYear[String(getCompanionYear(createdAt, now))] = [getLocalDateKey(now)];
+  counters.companionYearActiveDateKeysByYear[String(getCompanionActivityYear(createdAt, now))] = [getDailyResetDateKey(now)];
   return {
     unlockedAtById: {},
     claimedOneTimeRewardIds: [],
@@ -259,10 +263,14 @@ export const normalizeAchievementState = (
   const companionYearActiveDateKeysByYear: Record<string, string[]> = {};
   Object.entries(rawYears).forEach(([year, keys]) => {
     if (!/^\d+$/.test(year)) return;
-    companionYearActiveDateKeysByYear[year] = normalizeStringArray(keys, 370).filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key));
+    companionYearActiveDateKeysByYear[year] = Array.from(new Set(
+      normalizeStringArray(keys, 370)
+        .filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key))
+        .map((key) => normalizeLegacyDailyDateKey(key, now) || key),
+    ));
   });
-  const currentYear = String(getCompanionYear(createdAt, now));
-  const today = getLocalDateKey(now);
+  const currentYear = String(getCompanionActivityYear(createdAt, now));
+  const today = getDailyResetDateKey(now);
   const currentKeys = companionYearActiveDateKeysByYear[currentYear] ?? [];
   companionYearActiveDateKeysByYear[currentYear] = currentKeys.includes(today) ? currentKeys : [...currentKeys, today].slice(-370);
   const rawUnlocked = raw.unlockedAtById && typeof raw.unlockedAtById === 'object'
@@ -275,7 +283,7 @@ export const normalizeAchievementState = (
   return {
     unlockedAtById,
     claimedOneTimeRewardIds: normalizeStringArray(raw.claimedOneTimeRewardIds),
-    dailyStipendClaimDateKey: typeof raw.dailyStipendClaimDateKey === 'string' ? raw.dailyStipendClaimDateKey.slice(0, 16) : '',
+    dailyStipendClaimDateKey: normalizeLegacyDailyDateKey(raw.dailyStipendClaimDateKey, now),
     completedGoodEndingYears: normalizeNumberArray(raw.completedGoodEndingYears),
     unlockedCgIds: normalizeStringArray(raw.unlockedCgIds),
     pendingReviewNotice: Boolean(raw.pendingReviewNotice),
@@ -462,8 +470,8 @@ export const achievementDefinitions: readonly AchievementDefinition[] = achievem
 }));
 
 export const recordCompanionYearActivity = (pet: PetState, now = Date.now()): PetState => {
-  const year = String(getCompanionYear(pet.createdAt, now));
-  const dateKey = getLocalDateKey(now);
+  const year = String(getCompanionActivityYear(pet.createdAt, now));
+  const dateKey = getDailyResetDateKey(now);
   const keys = pet.achievements.counters.companionYearActiveDateKeysByYear[year] ?? [];
   if (keys.includes(dateKey)) return pet;
   return {
@@ -564,7 +572,11 @@ export const incrementAchievementItemUse = (pet: PetState, itemId: ItemId): PetS
   },
 });
 
-export const incrementAchievementPomodoroFocus = (pet: PetState, count: number): PetState =>
+export const incrementAchievementPomodoroFocus = (
+  pet: PetState,
+  count: number,
+  completedDailyFocusCount = pet.pomodoro.dailyCompletedFocusCount,
+): PetState =>
   count <= 0
     ? pet
     : {
@@ -576,7 +588,7 @@ export const incrementAchievementPomodoroFocus = (pet: PetState, count: number):
             pomodoroFocusCount: pet.achievements.counters.pomodoroFocusCount + Math.floor(count),
             bestDailyPomodoroFocusCount: Math.max(
               pet.achievements.counters.bestDailyPomodoroFocusCount,
-              pet.pomodoro.dailyCompletedFocusCount,
+              completedDailyFocusCount,
             ),
           },
         },
@@ -889,7 +901,7 @@ export const claimAllAchievementRewards = (pet: PetState, now = Date.now()): Ach
   };
 };
 
-export const claimAchievementDailyStipendWithResult = (pet: PetState, now = Date.now(), dateKey = getLocalDateKey(now)): { pet: PetState; coins: number } => {
+export const claimAchievementDailyStipendWithResult = (pet: PetState, now = Date.now(), dateKey = getDailyResetDateKey(now)): { pet: PetState; coins: number } => {
   const coins = getAchievementEffects(pet).dailyStipendCoins;
   if (coins <= 0 || pet.achievements.dailyStipendClaimDateKey === dateKey) return { pet, coins: 0 };
   const gain = applyCoinGain(pet, coins);
@@ -912,7 +924,7 @@ export const getAchievementSummary = (pet: PetState, now = Date.now()): Achievem
   const views = getAchievementViews(pet);
   const effects = getAchievementEffects(pet);
   const dailyStipendCoins = effects.dailyStipendCoins;
-  const dateKey = getLocalDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   return {
     total: views.length,
     unlocked: views.filter((view) => view.unlocked).length,

@@ -16,7 +16,7 @@ import { playSfx } from '../../core/audio';
 import { t } from '../../i18n';
 
 export type FloatingRewardConfig = { id: string; coins: number; eventKey: string };
-export type RewardPopupData = Pick<ClaimedDateReward, 'id' | 'title' | 'message' | 'coins' | 'hearts' | 'items'>;
+export type RewardPopupData = Pick<ClaimedDateReward, 'id' | 'title' | 'message' | 'coins' | 'hearts' | 'gachaTickets' | 'items'>;
 
 const floatingRewardConfigs: readonly FloatingRewardConfig[] = [
   { id: helpStarterGiftRewardId, coins: helpStarterGiftCoins, eventKey: 'pet.reward.helpStarterGift' },

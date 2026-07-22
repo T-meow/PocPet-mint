@@ -271,7 +271,182 @@
       "partnerScheduleHint": "安排今天的活动",
       "partnerScheduleLocked": "Lv.{level} 解锁",
       "partnerScheduleReady": "有活动收获待领取",
-      "partnerScheduleActive": "日程进行中"
+      "partnerScheduleActive": "日程进行中",
+      "gacha": "金苹果扭蛋",
+      "gachaHint": "用金币或扭蛋券试试手气",
+      "gachaTickets": "扭蛋券 {count} 张",
+      "commonDreams": "共同目标",
+      "commonDreamsLocked": "需 Lv.{level} · 全技能 Lv.{skill}（当前最低 {currentSkill}）",
+      "commonDreamsReady": "终局目标已解锁",
+      "commonDreamsComplete": "四项目标已完成 · 纪念 Lv.{level}"
+    },
+    "gacha": {
+      "title": "金苹果扭蛋",
+      "subtitle": "优先使用扭蛋券；金币不会直接回本，主要收益是不可出售的道具与金苹果。",
+      "close": "关闭金苹果扭蛋",
+      "walletAria": "扭蛋余额",
+      "paymentAria": "选择扭蛋支付方式",
+      "payCoins": "金币",
+      "payTickets": "扭蛋券",
+      "singleDraw": "单抽 · {cost}",
+      "tenDraw": "十连 · {cost}",
+      "coinCostHint": "单抽 500 金币，十连 5,000 金币",
+      "ticketCostHint": "单抽 1 张，十连 10 张，不可混合补差",
+      "notEnoughCoins": "金币不足，无法完成这次扭蛋。",
+      "notEnoughTickets": "扭蛋券不足，无法完成这次扭蛋。",
+      "charging": "扭蛋机正在蓄力",
+      "burst": "扭蛋结果即将揭晓",
+      "skip": "跳过演出",
+      "revealAll": "全部揭示",
+      "starterGift": "初始礼物",
+      "starterGiftHint": "领取 {count} 张扭蛋券",
+      "starterGiftClaimed": "获得扭蛋券 ×{count}",
+      "coinReward": "{coins} 金币",
+      "unknownReward": "未知道具",
+      "guaranteed": "十连金苹果保证",
+      "pityGuaranteed": "首次终极保底",
+      "jackpot": "终极大奖",
+      "probabilities": "完整概率",
+      "guaranteeNote": "十连若十个基础结果都没有金苹果，第 10 个结果会替换为金苹果×1。",
+      "pityProgress": "首次终极保底进度：{current}/{threshold}",
+      "pityAvailable": "本存档的一次性终极保底尚未触发。",
+      "pityUsed": "本存档的一次性终极保底已触发，计数不再累计。",
+      "pityRule": "首次保底可用时，连续 {threshold} 抽未获得金苹果×100，下一抽必定获得；自然抽中会清零连续计数，但不会消耗保底资格。保底只触发一次。",
+      "recentTitle": "最近结果",
+      "recentEmpty": "还没有扭蛋记录。",
+      "detailsAria": "扭蛋详情",
+      "closeDetails": "关闭扭蛋详情",
+      "rarity": {
+        "common": "普通",
+        "uncommon": "优良",
+        "rare": "稀有",
+        "legendary": "传说",
+        "jackpot": "终极大奖"
+      },
+      "confirm": {
+        "title": "确认抽取？",
+        "coins": "将进行 {count} 次扭蛋并消耗 {cost} 金币。结果生成后无法撤回。",
+        "tickets": "将进行 {count} 次扭蛋并消耗 {cost} 张扭蛋券。结果生成后无法撤回。",
+        "cancel": "再想想",
+        "submit": "确认抽取"
+      },
+      "appleUseConfirm": {
+        "title": "使用金苹果？",
+        "message": "金苹果会恢复全部属性并给予小心心，同时也是共同目标与无限纪念等级的终局材料。使用后无法撤回。",
+        "cancel": "保留金苹果",
+        "confirm": "确认使用"
+      }
+    },
+    "classicEndgame": {
+      "back": "返回首页",
+      "kicker": "Classic Endgame",
+      "title": "共同目标",
+      "summary": "把长期积累投入四个明确目标，和伙伴一起完成属于你们的 Classic 终局。",
+      "appleMaterialHint": "终局材料：金苹果",
+      "progress": "目标进度",
+      "stageProgress": "阶段完成度",
+      "fundingProgress": "目标资金进度",
+      "lockedProgress": "需宠物 Lv.{targetLevel}（当前 {level}），四项日程技能均达到 Lv.{targetSkill}（当前最低 {skill}）。",
+      "finalComplete": "Classic 主线已经完成，照顾与养成仍可继续。",
+      "stage": "第 {stage} 阶段",
+      "stageNamed": "第 {stage} 阶段 · {name}",
+      "nextStage": "下一阶段 · 第 {stage} 阶段 · {name}",
+      "finalStagePreview": "完成后达成最终成果",
+      "goldTrophyPreview": "同时解锁：{trophy}",
+      "projectComplete": "目标已经达成",
+      "requirementSkill": "技能 Lv.{current}/{target}",
+      "requirementSchedule": "分类日程 {current}/{target}",
+      "requirementMaster": "大师完成 {current}/{target}",
+      "requirementApples": "金苹果 {current}/{target}",
+      "funding": "金币投入",
+      "nextRequirementCoins": "金币 {target}",
+      "nextRequirementSkill": "技能 Lv.{target}",
+      "nextRequirementSchedule": "分类日程 {target} 次",
+      "nextRequirementMaster": "大师完成 {target} 次",
+      "nextRequirementApples": "金苹果 {target} 个",
+      "completeStage": "完成当前阶段",
+      "legacyKicker": "共同纪念",
+      "legacyTitle": "纪念等级 Lv.{level}",
+      "legacySummary": "纪念等级不提供数值增益，是 Classic 完成后的永久金币与金苹果出口。",
+      "legacyCoins": "金币 {current}/{target}",
+      "completeLegacy": "完成 Lv.{level}",
+      "invest": {
+        "ten": "投入 10% · {coins}",
+        "quarter": "投入 25% · {coins}",
+        "fill": "补足 · {coins}"
+      },
+      "confirm": {
+        "title": "确认大额投入？",
+        "message": "将投入 {coins} 金币，投入不可撤回。",
+        "cancel": "暂不投入",
+        "confirm": "确认投入"
+      },
+      "trophies": {
+        "kicker": "Trophy Cabinet",
+        "title": "奖杯展示柜",
+        "summary": "奖杯随目标阶段自动解锁，每类只生效当前最高档。",
+        "unlocked": "已解锁 · 效果已生效",
+        "unlockStage": "完成该目标第 {stage} 阶段解锁",
+        "unlockDiamond": "解锁全部 {count} 个普通奖杯后获得",
+        "names": {
+          "study": { "bronze": "灵感铜杯", "silver": "成稿银杯", "gold": "传世金杯" },
+          "cooking": { "bronze": "初味铜杯", "silver": "招牌银杯", "gold": "厨神金杯" },
+          "garden": { "bronze": "新芽铜杯", "silver": "四季银杯", "gold": "园丁金杯" },
+          "exercise": { "bronze": "启程铜杯", "silver": "山海银杯", "gold": "环游金杯" },
+          "diamond": "永恒同行钻石杯"
+        },
+        "effects": {
+          "schedule": "日程全部结算奖励 ×{value}",
+          "food": "普通食物正面属性效果 ×{value}",
+          "garden": "花园额外产物率 +{value} 个百分点",
+          "energy": "体力上限 +{value}",
+          "diamond": "日程与食物 ×2.5 · 花园额外产物率 +150 个百分点 · 体力上限 +150"
+        }
+      },
+      "exchange": {
+        "kicker": "Diamond Benefit",
+        "title": "金苹果兑换",
+        "unlocked": "钻石杯已解锁。兑换固定获得小心心，不受其他心心增益影响。",
+        "locked": "获得“永恒同行钻石杯”后开放兑换。",
+        "inventory": "现有金苹果 {apples} 个",
+        "allValue": "全部可兑换 {hearts} 小心心",
+        "actionsAria": "选择金苹果兑换数量",
+        "one": "兑换 1 个",
+        "ten": "兑换 10 个",
+        "all": "全部 · {apples} 个",
+        "confirm": {
+          "title": "确认兑换金苹果？",
+          "message": "将消耗 {apples} 个金苹果并获得 {hearts} 小心心。兑换不可撤回。",
+          "cancel": "暂不兑换",
+          "confirm": "确认兑换"
+        }
+      },
+      "projects": {
+        "study": {
+          "title": "写一本书",
+          "summary": "把共同生活中的见闻与故事整理成书。",
+          "result": "你们一起写完了一本书。",
+          "stages": { "1": "确定主题", "2": "收集素材", "3": "完成初稿", "4": "编辑定稿", "5": "正式成书" }
+        },
+        "cooking": {
+          "title": "成为厨神",
+          "summary": "磨炼料理技巧，做出值得纪念的招牌菜。",
+          "result": "料理技艺登峰造极，成为了厨神。",
+          "stages": { "1": "熟悉灶台", "2": "掌握火候", "3": "创作招牌菜", "4": "完成盛宴", "5": "厨神加冕" }
+        },
+        "garden": {
+          "title": "园丁大师",
+          "summary": "照料四季花木，把花园经营得生机盎然。",
+          "result": "花园四季常青，成为了园丁大师。",
+          "stages": { "1": "规划花圃", "2": "培育新苗", "3": "打理四季", "4": "培育珍品", "5": "大师庭园" }
+        },
+        "exercise": {
+          "title": "周游世界",
+          "summary": "用每一次锻炼为下一段远行做好准备。",
+          "result": "你们携手走过各地，完成了周游世界。",
+          "stages": { "1": "制定路线", "2": "整装出发", "3": "跨越山海", "4": "留下足迹", "5": "周游世界" }
+        }
+      }
     },
     "partnerSchedule": {
       "aria": "伙伴日程",
@@ -419,6 +594,7 @@
       "dailyTitle": "每日登录礼物",
       "coins": "+{coins} 金币",
       "hearts": "+{hearts} 小心心",
+      "gachaTickets": "+{count} 张扭蛋券",
       "item": "{item} x{count}",
       "confirm": "收下礼物",
       "anniversaryTitle": "{name} 的相遇纪念日",
@@ -1591,6 +1767,31 @@
         }
       }
     },
+    "gacha": {
+      "drawn": "完成了 {count} 次金苹果扭蛋，直接获得 {coins} 金币。",
+      "ticketGranted": "额外获得 1 张扭蛋券。",
+      "starterGiftClaimed": "领取了初始礼物，获得 {count} 张扭蛋券。"
+    },
+    "classicEndgame": {
+      "locked": "共同目标尚未解锁。",
+      "projectComplete": "这项目标已经达成。",
+      "notEnoughCoins": "当前没有可投入的金币。",
+      "stageFunded": "当前阶段的金币已经投入完毕。",
+      "invested": "向共同目标投入了 {coins} 金币。",
+      "stageNeedsCoins": "需要先补足当前阶段的金币。",
+      "requirementsMissing": "技能、日程或大师次数尚未满足当前阶段要求。",
+      "applesMissing": "完成时需要 {apples} 个金苹果。",
+      "stageComplete": "共同目标第 {stage} 阶段完成，小心心 +{hearts}。",
+      "allComplete": "四项目标全部达成，Classic 最终纪念已经解锁，小心心 +{hearts}。",
+      "legacyLocked": "需要先完成四项目标。",
+      "legacyFunded": "当前纪念等级的金币已经投入完毕。",
+      "legacyInvested": "向共同纪念投入了 {coins} 金币。",
+      "legacyNeedsCoins": "需要先补足当前纪念等级的金币。",
+      "legacyComplete": "共同纪念升到 Lv.{level}，消耗 {apples} 个金苹果。",
+      "exchangeLocked": "需要先获得永恒同行钻石杯。",
+      "exchangeEmpty": "当前没有可兑换的金苹果。",
+      "exchangeSuccess": "兑换了 {apples} 个金苹果，小心心 +{hearts}。"
+    },
     "partnerSchedule": {
       "completed": "{name} 完成了今天的活动，可以去看看收获。",
       "started": "{name} 开始进行今天的伙伴日程。",
@@ -1624,6 +1825,7 @@
       "notEnoughCoins": "金币不足，需要 {coins} 金币。",
       "slotLocked": "这个栏位还没有解锁。",
       "slotNotEmpty": "这个栏位已经有树了。",
+      "goldenAppleTreeLimit": "花园里最多同时存在 {limit} 棵金苹果树。",
       "unlockSlotSuccess": "解锁了第 {slot} 个栏位，花费 {coins} 金币。",
       "plantSuccess": "种下了{tree}，消耗 {item}。",
       "cannotWater": "这棵树现在不能浇水。",

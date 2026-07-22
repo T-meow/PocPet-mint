@@ -33,7 +33,12 @@ export const InventoryModal = ({
   const visibleItems = items.filter((item) => item.kind === activeCategory);
 
   return (
-    <DialogShell className="inventory-modal" labelId="inventory-title" onClose={onClose}>
+    <DialogShell
+      className="inventory-modal"
+      backdropClassName="inventory-backdrop"
+      labelId="inventory-title"
+      onClose={onClose}
+    >
       <header className="dialog-header inventory-modal__header">
         <div className="dialog-title-group">
           <span className="dialog-title-icon" aria-hidden="true"><PackageOpen size={22} /></span>

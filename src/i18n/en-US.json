@@ -271,7 +271,182 @@
       "partnerScheduleHint": "Plan today's activities",
       "partnerScheduleLocked": "Unlocks at Lv.{level}",
       "partnerScheduleReady": "Activity rewards ready",
-      "partnerScheduleActive": "Schedule in progress"
+      "partnerScheduleActive": "Schedule in progress",
+      "gacha": "Golden Apple Gacha",
+      "gachaHint": "Spend coins or tickets for a chance at prizes",
+      "gachaTickets": "{count} gacha tickets",
+      "commonDreams": "Shared Goals",
+      "commonDreamsLocked": "Needs Lv.{level} and all skills Lv.{skill} (lowest {currentSkill})",
+      "commonDreamsReady": "Endgame goals unlocked",
+      "commonDreamsComplete": "All goals complete · Legacy Lv.{level}"
+    },
+    "gacha": {
+      "title": "Golden Apple Gacha",
+      "subtitle": "Use gacha tickets first. Coin payouts do not cover the draw cost; most value comes from non-sellable items and Golden Apples.",
+      "close": "Close Golden Apple Gacha",
+      "walletAria": "Gacha balances",
+      "paymentAria": "Choose gacha payment method",
+      "payCoins": "Coins",
+      "payTickets": "Tickets",
+      "singleDraw": "Draw 1 · {cost}",
+      "tenDraw": "Draw 10 · {cost}",
+      "coinCostHint": "One draw costs 500 coins; ten draws cost 5,000 coins",
+      "ticketCostHint": "One draw costs 1 ticket; ten cost 10; payments cannot be mixed",
+      "notEnoughCoins": "You do not have enough coins for this draw.",
+      "notEnoughTickets": "You do not have enough gacha tickets for this draw.",
+      "charging": "The gacha machine is charging",
+      "burst": "The results are about to appear",
+      "skip": "Skip animation",
+      "revealAll": "Reveal all",
+      "starterGift": "Starter gift",
+      "starterGiftHint": "Claim {count} gacha tickets",
+      "starterGiftClaimed": "Gacha tickets ×{count}",
+      "coinReward": "{coins} coins",
+      "unknownReward": "Unknown item",
+      "guaranteed": "Ten-draw apple guarantee",
+      "pityGuaranteed": "First ultimate pity",
+      "jackpot": "Ultimate Jackpot",
+      "probabilities": "Full probabilities",
+      "guaranteeNote": "If none of ten base results contains a golden apple, the tenth is replaced with one golden apple.",
+      "pityProgress": "First ultimate pity progress: {current}/{threshold}",
+      "pityAvailable": "This save's one-time ultimate pity has not triggered yet.",
+      "pityUsed": "This save's one-time ultimate pity has triggered; the counter no longer increases.",
+      "pityRule": "While the first pity is available, {threshold} consecutive draws without Golden Apples ×100 make the next draw award it. A natural jackpot resets the miss counter without using the pity. The pity can trigger only once.",
+      "recentTitle": "Recent results",
+      "recentEmpty": "No gacha results yet.",
+      "detailsAria": "Gacha details",
+      "closeDetails": "Close gacha details",
+      "rarity": {
+        "common": "Common",
+        "uncommon": "Uncommon",
+        "rare": "Rare",
+        "legendary": "Legendary",
+        "jackpot": "Ultimate jackpot"
+      },
+      "confirm": {
+        "title": "Confirm draw?",
+        "coins": "Draw {count} time(s) and spend {cost} coins. Generated results cannot be reversed.",
+        "tickets": "Draw {count} time(s) and spend {cost} gacha tickets. Generated results cannot be reversed.",
+        "cancel": "Not yet",
+        "submit": "Confirm draw"
+      },
+      "appleUseConfirm": {
+        "title": "Use a golden apple?",
+        "message": "Golden apples restore every stat and grant hearts, but they are also endgame materials for Shared Goals and legacy levels. This cannot be undone.",
+        "cancel": "Keep apple",
+        "confirm": "Use apple"
+      }
+    },
+    "classicEndgame": {
+      "back": "Back home",
+      "kicker": "Classic Endgame",
+      "title": "Shared Goals",
+      "summary": "Invest long-term savings in four clear goals and complete your Classic ending together.",
+      "appleMaterialHint": "Endgame material: golden apples",
+      "progress": "Goal progress",
+      "stageProgress": "Stage completion",
+      "fundingProgress": "Goal funding",
+      "lockedProgress": "Requires pet Lv.{targetLevel} (currently {level}) and all four schedule skills at Lv.{targetSkill} (lowest {skill}).",
+      "finalComplete": "The Classic story is complete, but care and growth can continue.",
+      "stage": "Stage {stage}",
+      "stageNamed": "Stage {stage} · {name}",
+      "nextStage": "Next · Stage {stage} · {name}",
+      "finalStagePreview": "Completing this stage achieves the final result",
+      "goldTrophyPreview": "Also unlocks: {trophy}",
+      "projectComplete": "Goal achieved",
+      "requirementSkill": "Skill Lv.{current}/{target}",
+      "requirementSchedule": "Category schedules {current}/{target}",
+      "requirementMaster": "Master completions {current}/{target}",
+      "requirementApples": "Golden apples {current}/{target}",
+      "funding": "Coin investment",
+      "nextRequirementCoins": "{target} coins",
+      "nextRequirementSkill": "Skill Lv.{target}",
+      "nextRequirementSchedule": "{target} category schedules",
+      "nextRequirementMaster": "{target} master completions",
+      "nextRequirementApples": "{target} golden apples",
+      "completeStage": "Complete this stage",
+      "legacyKicker": "Shared Legacy",
+      "legacyTitle": "Legacy Level {level}",
+      "legacySummary": "Legacy levels grant no stat bonuses. They are a permanent coin and golden-apple sink after Classic completion.",
+      "legacyCoins": "Coins {current}/{target}",
+      "completeLegacy": "Complete Lv.{level}",
+      "invest": {
+        "ten": "Invest 10% · {coins}",
+        "quarter": "Invest 25% · {coins}",
+        "fill": "Fill · {coins}"
+      },
+      "confirm": {
+        "title": "Confirm large investment?",
+        "message": "This will invest {coins} coins and cannot be reversed.",
+        "cancel": "Not now",
+        "confirm": "Invest"
+      },
+      "trophies": {
+        "kicker": "Trophy Cabinet",
+        "title": "Trophy Cabinet",
+        "summary": "Trophies unlock automatically with goal stages. Only the highest tier in each category applies.",
+        "unlocked": "Unlocked · Effect active",
+        "unlockStage": "Complete stage {stage} of this goal to unlock",
+        "unlockDiamond": "Unlock all {count} standard trophies to earn this",
+        "names": {
+          "study": { "bronze": "Inspiration Bronze", "silver": "Manuscript Silver", "gold": "Timeless Gold" },
+          "cooking": { "bronze": "First Taste Bronze", "silver": "Signature Silver", "gold": "Master Chef Gold" },
+          "garden": { "bronze": "New Sprout Bronze", "silver": "Four Seasons Silver", "gold": "Master Gardener Gold" },
+          "exercise": { "bronze": "Departure Bronze", "silver": "Mountains and Seas Silver", "gold": "World Tour Gold" },
+          "diamond": "Eternal Companions Diamond"
+        },
+        "effects": {
+          "schedule": "All schedule settlement rewards ×{value}",
+          "food": "Positive stat effects from normal food ×{value}",
+          "garden": "Garden extra-yield chance +{value} percentage points",
+          "energy": "Energy cap +{value}",
+          "diamond": "Schedules and food ×2.5 · Garden extra-yield chance +150 points · Energy cap +150"
+        }
+      },
+      "exchange": {
+        "kicker": "Diamond Benefit",
+        "title": "Golden Apple Exchange",
+        "unlocked": "The Diamond Trophy is unlocked. Exchanges grant a fixed number of hearts and ignore other heart bonuses.",
+        "locked": "Earn the Eternal Companions Diamond Trophy to unlock exchanges.",
+        "inventory": "Golden apples: {apples}",
+        "allValue": "Exchange all for {hearts} hearts",
+        "actionsAria": "Choose a golden apple exchange amount",
+        "one": "Exchange 1",
+        "ten": "Exchange 10",
+        "all": "All · {apples}",
+        "confirm": {
+          "title": "Exchange golden apples?",
+          "message": "This will use {apples} golden apples and grant {hearts} hearts. The exchange cannot be reversed.",
+          "cancel": "Not now",
+          "confirm": "Exchange"
+        }
+      },
+      "projects": {
+        "study": {
+          "title": "Write a Book",
+          "summary": "Turn the stories and discoveries from life together into a book.",
+          "result": "You finished writing a book together.",
+          "stages": { "1": "Choose a Theme", "2": "Gather Material", "3": "Finish the Draft", "4": "Edit the Final Copy", "5": "Publish the Book" }
+        },
+        "cooking": {
+          "title": "Become a Master Chef",
+          "summary": "Hone your cooking skills and create signature dishes worth remembering.",
+          "result": "Your cooking reached new heights and earned master-chef status.",
+          "stages": { "1": "Know the Kitchen", "2": "Master the Heat", "3": "Create a Signature Dish", "4": "Complete the Feast", "5": "Master Chef Crown" }
+        },
+        "garden": {
+          "title": "Master Gardener",
+          "summary": "Tend plants through every season and keep the garden flourishing.",
+          "result": "The garden flourished year-round, earning master-gardener status.",
+          "stages": { "1": "Plan the Beds", "2": "Raise New Seedlings", "3": "Tend Every Season", "4": "Cultivate a Treasure", "5": "Master's Garden" }
+        },
+        "exercise": {
+          "title": "Travel the World",
+          "summary": "Let every workout prepare you for the next journey.",
+          "result": "You traveled far and wide together, completing a journey around the world.",
+          "stages": { "1": "Plan the Route", "2": "Set Out", "3": "Cross Mountains and Seas", "4": "Leave Your Mark", "5": "Travel the World" }
+        }
+      }
     },
     "partnerSchedule": {
       "aria": "Partner Schedule",
@@ -419,6 +594,7 @@
       "dailyTitle": "Daily login gift",
       "coins": "+{coins} coins",
       "hearts": "+{hearts} hearts",
+      "gachaTickets": "+{count} gacha tickets",
       "item": "{item} x{count}",
       "confirm": "Take gift",
       "anniversaryTitle": "{name} anniversary",
@@ -1591,6 +1767,31 @@
         }
       }
     },
+    "gacha": {
+      "drawn": "Completed {count} Golden Apple Gacha draws and received {coins} coins directly.",
+      "ticketGranted": "Received 1 extra gacha ticket.",
+      "starterGiftClaimed": "Claimed the starter gift and received {count} gacha tickets."
+    },
+    "classicEndgame": {
+      "locked": "Shared Goals are not unlocked yet.",
+      "projectComplete": "This shared goal is already complete.",
+      "notEnoughCoins": "There are no coins available to invest.",
+      "stageFunded": "This stage is fully funded.",
+      "invested": "Invested {coins} coins in a shared goal.",
+      "stageNeedsCoins": "Fully fund this stage first.",
+      "requirementsMissing": "The skill, schedule, or master requirements are not met.",
+      "applesMissing": "Completion requires {apples} golden apples.",
+      "stageComplete": "Shared Goal stage {stage} completed. Hearts +{hearts}.",
+      "allComplete": "All four Shared Goals are complete. The Classic finale is unlocked. Hearts +{hearts}.",
+      "legacyLocked": "Complete all four Shared Goals first.",
+      "legacyFunded": "This legacy level is fully funded.",
+      "legacyInvested": "Invested {coins} coins in Shared Legacy.",
+      "legacyNeedsCoins": "Fully fund this legacy level first.",
+      "legacyComplete": "Shared Legacy reached Lv.{level}, using {apples} golden apples.",
+      "exchangeLocked": "Earn the Eternal Companions Diamond Trophy first.",
+      "exchangeEmpty": "There are no golden apples available to exchange.",
+      "exchangeSuccess": "Exchanged {apples} golden apples. Hearts +{hearts}."
+    },
     "partnerSchedule": {
       "completed": "{name} finished today's activity. The rewards are ready.",
       "started": "{name} started today's partner schedule.",
@@ -1624,6 +1825,7 @@
       "notEnoughCoins": "Not enough coins. Need {coins}.",
       "slotLocked": "This slot is locked.",
       "slotNotEmpty": "This slot already has a tree.",
+      "goldenAppleTreeLimit": "The garden can contain at most {limit} golden apple trees at once.",
       "unlockSlotSuccess": "Unlocked slot {slot} for {coins} coins.",
       "plantSuccess": "Planted {tree} and used {item}.",
       "cannotWater": "This tree cannot be watered now.",

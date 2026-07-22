@@ -1,14 +1,16 @@
 import { t } from '../i18n';
 import { defaultBoostCardState, normalizeBoostCardState } from './boostCards';
+import { defaultClassicEndgameState, normalizeClassicEndgameState } from './classicEndgame';
 import { defaultAchievementState, normalizeAchievementState } from './achievements';
 import { defaultPetBirthday, normalizePetBirthday } from './dateRewards';
 import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
 import { createDailyWish, normalizeDailyWishState, normalizeReturnWelcomeState } from './dailyWishes';
 import { defaultGardenState, normalizeGardenState } from './garden';
+import { defaultGoldenAppleGachaState, normalizeGoldenAppleGachaState } from './goldenAppleGacha';
 import { addInventoryItem } from './items';
 import { dailyBiscuitClaimLimit, dailyHeartExchangeLimit, isBuiltinItemId } from './items';
 import { neighborGiftDailyLimit } from './neighbors';
-import { clampCoins, clampCount, clampHealth, clampLevel, clampStat, defaultPetName, getPetStatCap, lowCleanlinessSleepConfirmClicks } from './petStats';
+import { clampCoins, clampCount, clampHealth, clampLevel, clampStat, defaultPetName, getPetEnergyCap, getPetStatCap, lowCleanlinessSleepConfirmClicks } from './petStats';
 import type { AchievementState, ActionStreak, BuiltinItemId, Inventory, PartnerScheduleCategory, PetState, PetStatus, RecentActivity, WeatherType } from './petTypes';
 import { defaultPomodoroState, normalizePomodoroState } from './pomodoro';
 import { defaultPartnerScheduleState, normalizePartnerScheduleState } from './partnerSchedule';
@@ -143,6 +145,8 @@ export const createDefaultPet = (now = Date.now()): PetState => ({
   garden: defaultGardenState(now),
   boostCards: defaultBoostCardState(now),
   partnerSchedule: defaultPartnerScheduleState({ level: 1, createdAt: now }, now),
+  goldenAppleGacha: defaultGoldenAppleGachaState(now, now),
+  classicEndgame: defaultClassicEndgameState(),
   dailyWish: createDailyWish({
     createdAt: now,
     name: defaultPetName,
@@ -235,7 +239,9 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   }
 
   const level = clampLevel(isNumber(raw.level) ? raw.level : fallback.level);
+  const classicEndgame = normalizeClassicEndgameState(raw.classicEndgame);
   const statCap = getPetStatCap(level);
+  const energyCap = getPetEnergyCap({ level, classicEndgame });
   const createdAt = isNumber(raw.createdAt)
     ? Math.min(now, raw.createdAt)
     : ageSeconds > 0
@@ -244,7 +250,7 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   const pendingYearReview = normalizeYearReview(raw.pendingYearReview);
   const yearlyStats = normalizeYearlyStats(raw.yearlyStats, now);
   const normalizedName = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 32) : fallback.name;
-  const normalizedEnergy = clampStat(isNumber(raw.energy) ? raw.energy : fallback.energy, statCap);
+  const normalizedEnergy = clampStat(isNumber(raw.energy) ? raw.energy : fallback.energy, energyCap);
   const normalizedHealth = clampHealth(isNumber(raw.health) ? raw.health : fallback.health, statCap);
   const normalizedIsSleeping = Boolean(raw.isSleeping);
   const dailyWish = normalizeDailyWishState(raw.dailyWish, {
@@ -430,6 +436,8 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
     garden,
     boostCards: normalizeBoostCardState(raw.boostCards, now),
     partnerSchedule,
+    goldenAppleGacha: normalizeGoldenAppleGachaState(raw.goldenAppleGacha, createdAt, now),
+    classicEndgame,
   };
 };
 

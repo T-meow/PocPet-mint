@@ -1,4 +1,5 @@
 import { getEnergyRecoverySeasonModifier } from './season';
+import { getClassicTrophyEffects } from './classicTrophies';
 import { getPartnerScheduleCrossSystemEffects } from './partnerScheduleEffects';
 import type { PetState } from './petTypes';
 
@@ -15,6 +16,12 @@ export const lowCleanlinessSleepMoodPenalty = 12;
 export const defaultPetName = 'Furo';
 
 export const maxPetLevel = 99;
+
+export const linearUpgradeHeartStartLevel = 20;
+
+export const linearUpgradeHeartBaseCost = 6900;
+
+export const linearUpgradeHeartCostPerLevel = 22;
 
 export const baseStatCap = 100;
 
@@ -36,7 +43,7 @@ export const clampCount = (value: number) => Math.max(0, Math.floor(value));
 
 export const clampLevel = (value: number) => Math.max(1, Math.min(maxPetLevel, clampCount(value)));
 
-export const getPetStatCap = (petOrLevel: PetState | number) => {
+export const getPetStatCap = (petOrLevel: Pick<PetState, 'level'> | number) => {
   const level = typeof petOrLevel === 'number' ? petOrLevel : petOrLevel.level;
   return baseStatCap + (clampLevel(level) - 1) * statCapPerLevel;
 };
@@ -45,7 +52,18 @@ export const clampPetStat = (pet: PetState, value: number) => clampStat(value, g
 
 export const clampPetHealth = (pet: PetState, value: number) => clampHealth(value, getPetStatCap(pet));
 
-export const getUpgradeHeartCost = (targetLevel: number) => clampLevel(targetLevel) ** 3;
+export const getPetEnergyCap = (pet: Pick<PetState, 'level' | 'classicEndgame'>) =>
+  getPetStatCap(pet) + getClassicTrophyEffects(pet).energyCapBonus;
+
+export const clampPetEnergy = (pet: Pick<PetState, 'level' | 'classicEndgame'>, value: number) =>
+  clampStat(value, getPetEnergyCap(pet));
+
+export const getUpgradeHeartCost = (targetLevel: number) => {
+  const level = clampLevel(targetLevel);
+  return level < linearUpgradeHeartStartLevel
+    ? level ** 3
+    : linearUpgradeHeartBaseCost + linearUpgradeHeartCostPerLevel * (level - linearUpgradeHeartStartLevel);
+};
 
 export const getNextUpgradeHeartCost = (pet: PetState) =>
   pet.level >= maxPetLevel ? 0 : getUpgradeHeartCost(pet.level + 1);

@@ -3,7 +3,7 @@ import { applyHeartGain, recordEarnedCoins, recordEarnedHearts } from './achieve
 import { getDailyResetDateKey } from './dailyReset';
 import { addInventoryItem } from './items';
 import { createNeighborGift, getNeighborEventRandom, pickNeighborEventValue, pickNeighborName } from './neighborGifts';
-import { clampCoins, clampCount, clampPetHealth, clampPetStat } from './petStats';
+import { clampCoins, clampCount, clampPetEnergy, clampPetHealth, clampPetStat } from './petStats';
 import type { ItemEffect, ItemId, NeighborEventContext, PetState, WeatherType } from './petTypes';
 import { hashString, pickRandom } from './utils';
 import { neighborGiftDailyLimit } from './neighbors';
@@ -168,7 +168,7 @@ export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, p
     hunger: clampPetStat(pet, pet.hunger + (effect.hunger ?? 0)),
     mood: clampPetStat(pet, pet.mood + (effect.mood ?? 0)),
     cleanliness: clampPetStat(pet, pet.cleanliness + (effect.cleanliness ?? 0)),
-    energy: clampPetStat(pet, pet.energy + (effect.energy ?? 0)),
+    energy: clampPetEnergy(pet, pet.energy + (effect.energy ?? 0)),
     health: clampPetHealth(pet, pet.health + (effect.health ?? 0)),
     coins: clampCoins(pet.coins + (event.coins ?? 0)),
     hearts: heartGain.hearts,

@@ -1,6 +1,7 @@
 import { t } from '../i18n';
 import { getAchievementEffects, incrementAchievementGardenHarvest, incrementAchievementGardenPlant, incrementAchievementGardenWater, recordEarnedCoins } from './achievements';
 import { getBoostCardEffects, normalizeBoostCardState, spendBoostCardGardenExtraDrop } from './boostCards';
+import { getClassicTrophyEffects } from './classicTrophies';
 import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
 import { addInventoryItem, getInventoryCount, isBuiltinItemId, removeInventoryItem } from './items';
 import { getPartnerScheduleCrossSystemEffects } from './partnerScheduleEffects';
@@ -9,8 +10,9 @@ import { getSeasonForDate, type Season } from './season';
 import type { BoostCardState, BuiltinItemId, GardenDrop, GardenFertilizerId, GardenSlot, GardenSlotState, GardenState, GardenToolId, GardenTools, GardenTreeId, ItemId, PetState, WeatherType } from './petTypes';
 import { hashString, isNumber } from './utils';
 
-export const gardenSchemaVersion = 1;
+export const gardenSchemaVersion = 2;
 export const gardenSlotCount = 5;
+export const goldenAppleTreeLimit = 3;
 export const maxGardenToolLevel = 3;
 export const dailyGardenSlotHarvestLimit = 999;
 export const dailyGardenHarvestLimit = 999;
@@ -59,7 +61,7 @@ export const gardenTreeDefinitions: Record<GardenTreeId, GardenTreeDefinition> =
   care_tree: { id: 'care_tree', price: 30, growDurationMs: 10 * hourMs, harvestCooldownMs: 10 * hourMs, maxHarvests: 7, dropPool: [{ itemId: 'wet_wipes', weight: 26 }, { itemId: 'vitamin_tablet', weight: 20 }, { itemId: 'shampoo', weight: 14 }, { itemId: 'energy_drink', weight: 14 }, { itemId: 'blanket', weight: 10 }, { itemId: 'medicine', weight: 6, rare: true }, { itemId: 'apple', weight: 6 }, { itemId: 'watermelon', weight: 4, rare: true }] },
   gift_tree: { id: 'gift_tree', price: 30, growDurationMs: 12 * hourMs, harvestCooldownMs: 12 * hourMs, maxHarvests: 6, dropPool: [{ itemId: 'small_bouquet', weight: 24 }, { itemId: 'shiny_sticker', weight: 22 }, { itemId: 'ribbon_bell', weight: 18 }, { itemId: 'toy_ball', weight: 14 }, { itemId: 'picture_book', weight: 8, rare: true }, { itemId: 'soft_cloud_doll', weight: 5, rare: true }, { itemId: 'strawberry_cake', weight: 5, rare: true }, { itemId: 'strawberry_milk', weight: 4, rare: true }] },
   money_tree: { id: 'money_tree', price: 3000, growDurationMs: 3 * dayMs, harvestCooldownMs: 36 * hourMs, maxHarvests: 8, dropPool: [] },
-  golden_apple_tree: { id: 'golden_apple_tree', price: 8888, growDurationMs: 5 * dayMs, harvestCooldownMs: 48 * hourMs, maxHarvests: 7, dropPool: [] },
+  golden_apple_tree: { id: 'golden_apple_tree', price: 8888, growDurationMs: 4 * dayMs, harvestCooldownMs: 48 * hourMs, maxHarvests: 9, dropPool: [] },
 };
 
 export const gardenTreeMaxHarvests: Record<GardenTreeId, number> = Object.fromEntries(gardenTreeIds.map((treeId) => [treeId, gardenTreeDefinitions[treeId].maxHarvests])) as Record<GardenTreeId, number>;
@@ -112,7 +114,7 @@ const normalizeGardenTools = (value: unknown): GardenTools => {
   return { wateringCanLevel: clampToolLevel(raw.wateringCanLevel), shovelLevel: clampToolLevel(raw.shovelLevel), fertilizerBoxLevel: clampToolLevel(raw.fertilizerBoxLevel) };
 };
 
-const normalizeGardenSlot = (value: unknown, slotIndex: number, previousUnlocked: boolean, now: number): GardenSlot => {
+const normalizeGardenSlot = (value: unknown, slotIndex: number, previousUnlocked: boolean, now: number, migrateGoldenAppleTree: boolean): GardenSlot => {
   const fallback = defaultGardenSlot(slotIndex, now);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
   const raw = value as Record<string, unknown>;
@@ -122,7 +124,9 @@ const normalizeGardenSlot = (value: unknown, slotIndex: number, previousUnlocked
   const pendingDrops = normalizeGardenDrops(raw.pendingDrops);
   const plantedAt = clampTimestamp(raw.plantedAt, now);
   const nextReadyAt = clampTimestamp(raw.nextReadyAt, now);
-  const maxHarvests = treeId ? Math.min(99, Math.max(1, isNumber(raw.maxHarvests) ? Math.floor(raw.maxHarvests) : gardenTreeMaxHarvests[treeId])) : 0;
+  const storedMaxHarvests = treeId ? Math.min(99, Math.max(1, isNumber(raw.maxHarvests) ? Math.floor(raw.maxHarvests) : gardenTreeMaxHarvests[treeId])) : 0;
+  const shouldExtendGoldenAppleTree = migrateGoldenAppleTree && treeId === 'golden_apple_tree' && state !== 'withered';
+  const maxHarvests = shouldExtendGoldenAppleTree ? Math.min(99, storedMaxHarvests + 2) : storedMaxHarvests;
   const harvestsUsed = treeId ? Math.min(maxHarvests, clampCount(isNumber(raw.harvestsUsed) ? raw.harvestsUsed : 0)) : 0;
   const resetDateKey = getDailyResetDateKey(now);
   const isDailyHarvestCurrent = normalizeLegacyDailyDateKey(raw.dailyHarvestDateKey, now) === resetDateKey;
@@ -136,10 +140,11 @@ export const normalizeGardenState = (value: unknown, now = Date.now()): GardenSt
   const fallback = defaultGardenState(now);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
   const raw = value as Record<string, unknown>;
+  const migrateGoldenAppleTree = !isNumber(raw.schemaVersion) || raw.schemaVersion < gardenSchemaVersion;
   const rawSlots = Array.isArray(raw.slots) ? raw.slots : [];
   let previousUnlocked = true;
   const slots = Array.from({ length: gardenSlotCount }, (_, slotIndex) => {
-    const slot = normalizeGardenSlot(rawSlots[slotIndex], slotIndex, previousUnlocked, now);
+    const slot = normalizeGardenSlot(rawSlots[slotIndex], slotIndex, previousUnlocked, now, migrateGoldenAppleTree);
     previousUnlocked = slot.unlocked;
     return slot;
   });
@@ -241,7 +246,8 @@ const pickGoldenAppleTreeDrops = (slot: GardenSlot, seed: string): GardenDrop[] 
 const resolveExtraDrops = (pet: PetState, slot: GardenSlot, seed: string, now: number) => {
   const environmentChance = getGardenEnvironmentEffects(pet, now).extraDropChancePercent;
   const achievementChance = getAchievementEffects(pet).gardenExtraDropChancePercent;
-  const totalChance = Math.max(0, getExtraDropChance(slot, pet.garden) + environmentChance + achievementChance);
+  const trophyChance = getClassicTrophyEffects(pet).gardenExtraDropChancePercent;
+  const totalChance = Math.max(0, getExtraDropChance(slot, pet.garden) + environmentChance + achievementChance + trophyChance);
   const remainderChance = totalChance % 100;
   let extraDropCount = Math.floor(totalChance / 100) + (remainderChance > 0 && (hashString(seed + ':extra') % 100) < remainderChance ? 1 : 0);
   let boostCards = normalizeBoostCardState(pet.boostCards, now);
@@ -284,6 +290,9 @@ export const plantTree = (pet: PetState, slotIndex: number, treeId: GardenTreeId
   if (!slot || !definition || !saplingItemId) return failGardenAction(current, 'pet.garden.invalidSlot');
   if (!slot.unlocked) return failGardenAction(current, 'pet.garden.slotLocked');
   if (slot.state !== 'empty') return failGardenAction(current, 'pet.garden.slotNotEmpty');
+  if (treeId === 'golden_apple_tree' && current.garden.slots.filter((candidate) => candidate.treeId === 'golden_apple_tree' && candidate.state !== 'empty').length >= goldenAppleTreeLimit) {
+    return failGardenAction(current, 'pet.garden.goldenAppleTreeLimit', { limit: goldenAppleTreeLimit });
+  }
   if (getInventoryCount(current.inventory, saplingItemId) <= 0) return failGardenAction(current, 'pet.garden.missingGardenItem', { item: getItemName(saplingItemId) });
   const environment = getGardenEnvironmentEffects(current, now);
   return incrementAchievementGardenPlant({

@@ -4,10 +4,11 @@ import { ensureDailyWishForDate, maybeCreateReturnWelcome, returnWelcomeMinAwayM
 import { getAchievementEffects, incrementAchievementPomodoroFocus, incrementNaturalWake, recordEarnedCoins } from './achievements';
 import { canClaimBoostCardDailyReward } from './boostCards';
 import { advanceGarden } from './garden';
+import { resolveDailyGachaTicket } from './goldenAppleGacha';
 import { dailyBiscuitClaimLimit } from './items';
 import { applyTimedEvent, getRandomDailyEncounter, getRandomOfflineDiary, getRandomOfflineEvent, maybeApplyDreamTalk, settleSleep, startSleepSnapshot } from './petEvents';
 import { neighborGiftDailyLimit } from './neighbors';
-import { clampCoins, clampCount, clampPetHealth, clampPetStat, criticalHungerActionThreshold, getEnergyRecoveryIntervalMs, getPetStatCap, lowEnergyThreshold } from './petStats';
+import { clampCoins, clampCount, clampPetEnergy, clampPetHealth, clampPetStat, criticalHungerActionThreshold, getEnergyRecoveryIntervalMs, getPetEnergyCap, getPetStatCap, lowEnergyThreshold } from './petStats';
 import type { NeighborEventContext, PetState } from './petTypes';
 import {
   getDefaultPomodoroRemainingMs,
@@ -30,9 +31,9 @@ import { isNightTime } from './utils';
 
 export const getEnergyRecoveryInfo = (pet: PetState, now = Date.now()) => {
   const current = normalizePet(pet, now);
-  const statCap = getPetStatCap(current);
+  const energyCap = getPetEnergyCap(current);
   const intervalMs = getEnergyRecoveryIntervalMs(current, current.isSleeping, now);
-  if (current.energy >= statCap) {
+  if (current.energy >= energyCap) {
     return { intervalMs, remainingMs: 0, isFull: true, isPaused: false };
   }
 
@@ -304,7 +305,8 @@ const applyDailyEncounter = (pet: PetState, now: number, eventContext?: Neighbor
   const giftCount = pet.neighborGiftDateKey === getDailyResetDateKey(now) ? pet.neighborGiftCount : 0;
   const randomGiftLimit = canClaimBoostCardDailyReward(pet, now) ? neighborGiftDailyLimit - 1 : neighborGiftDailyLimit;
   const encounter = getRandomDailyEncounter(pet.name, eventContext, giftCount < randomGiftLimit);
-  return applyTimedEvent(pet, encounter, now, t('pet.prefix.dailyEncounter'));
+  const settled = applyTimedEvent(pet, encounter, now, t('pet.prefix.dailyEncounter'));
+  return resolveDailyGachaTicket(settled, 'daily_encounter', 20, now).pet;
 };
 
 export const advancePet = (pet: PetState, now = Date.now(), eventContext?: NeighborEventContext): PetState => {
@@ -343,6 +345,7 @@ export const advancePet = (pet: PetState, now = Date.now(), eventContext?: Neigh
   }
 
   const statCap = getPetStatCap(currentForActivity);
+  const energyCap = getPetEnergyCap(currentForActivity);
   const weatherMoodModifier = weather === 'sunny' ? 0.75 : 1;
   const seasonMoodModifier = getMoodDecaySeasonModifier(now);
   const weatherCleanlinessModifier = weather === 'rainy' ? 1.3 : 1;
@@ -372,11 +375,11 @@ export const advancePet = (pet: PetState, now = Date.now(), eventContext?: Neigh
   const energyRecoveryIntervalMs = getEnergyRecoveryIntervalMs(currentForActivity, sleepingForDecay, now);
   const recoveryStartedAt = Math.min(currentForActivity.lastEnergyRecoveryAt, now);
   const elapsedRecoveryMs = Math.max(0, now - recoveryStartedAt - getProtectedScheduleMs(recoveryStartedAt, now));
-  const recoverableEnergy = Math.max(0, statCap - currentForActivity.energy);
-  const energyRecoveryPoints = currentForActivity.energy >= statCap ? 0 : Math.floor(elapsedRecoveryMs / energyRecoveryIntervalMs);
+  const recoverableEnergy = Math.max(0, energyCap - currentForActivity.energy);
+  const energyRecoveryPoints = currentForActivity.energy >= energyCap ? 0 : Math.floor(elapsedRecoveryMs / energyRecoveryIntervalMs);
   const recoveredEnergy = Math.min(recoverableEnergy, energyRecoveryPoints);
-  const energy = clampPetStat(currentForActivity, currentForActivity.energy + recoveredEnergy);
-  const lastEnergyRecoveryAt = energy >= statCap
+  const energy = clampPetEnergy(currentForActivity, currentForActivity.energy + recoveredEnergy);
+  const lastEnergyRecoveryAt = energy >= energyCap
     ? now
     : now - (elapsedRecoveryMs % energyRecoveryIntervalMs);
 
@@ -387,7 +390,7 @@ export const advancePet = (pet: PetState, now = Date.now(), eventContext?: Neigh
   const ageSeconds = currentForActivity.ageSeconds + deltaMs / 1000;
   const keepSleepingAtNight =
     sleepingForDecay && isNightTime(now) && now - currentForActivity.lastInteractionAt >= 30 * 60 * 1000;
-  const wokeUp = currentForActivity.isSleeping && energy >= statCap && !keepSleepingAtNight;
+  const wokeUp = currentForActivity.isSleeping && energy >= energyCap && !keepSleepingAtNight;
 
   let recentEvent = currentForActivity.recentEvent;
   let recentActivity = currentForActivity.recentActivityUntil > now ? currentForActivity.recentActivity : 'idle';

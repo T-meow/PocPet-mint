@@ -216,7 +216,7 @@ export const PartnerSchedulePage = ({
           </div>
           <div className="partner-schedule-active__reward">
             <Coins size={18} aria-hidden="true" />
-            <strong>+{active.coinReward}</strong>
+            <strong>+{Math.max(1, Math.round(active.coinReward * active.trophyRewardMultiplier))}</strong>
           </div>
           <button type="button" className="icon-button partner-schedule-cancel" onClick={onCancel} aria-label={t('ui.partnerSchedule.cancel')} title={t('ui.partnerSchedule.cancel')}>
             <X size={20} aria-hidden="true" />

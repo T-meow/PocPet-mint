@@ -1,7 +1,7 @@
 import { useRef, useState } from 'react';
 
-export type ActivePage = 'home' | 'achievements' | 'garden' | 'partnerSchedule';
-export type UtilityDialog = 'inventory' | 'shop' | 'boostCards' | 'settings' | null;
+export type ActivePage = 'home' | 'achievements' | 'garden' | 'partnerSchedule' | 'commonDreams';
+export type UtilityDialog = 'inventory' | 'shop' | 'boostCards' | 'gacha' | 'settings' | null;
 
 export const useAppNavigation = () => {
   const [activePage, setActivePageState] = useState<ActivePage>('home');

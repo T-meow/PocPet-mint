@@ -3,6 +3,7 @@ import { useEffect, useRef, type ReactNode } from 'react';
 interface DialogShellProps {
   children: ReactNode;
   className: string;
+  backdropClassName?: string;
   labelId: string;
   onClose: () => void;
   closeOnEscape?: boolean;
@@ -18,22 +19,29 @@ const focusableSelector = [
   '[tabindex]:not([tabindex="-1"])',
 ].join(',');
 
+const dialogStack: symbol[] = [];
+let bodyOverflowBeforeDialogs: string | undefined;
+
 export const DialogShell = ({
   children,
   className,
+  backdropClassName,
   labelId,
   onClose,
   closeOnEscape = true,
   role = 'dialog',
 }: DialogShellProps) => {
   const dialogRef = useRef<HTMLElement>(null);
+  const dialogIdRef = useRef(Symbol('dialog'));
   const closeRef = useRef(onClose);
 
   closeRef.current = onClose;
 
   useEffect(() => {
     const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    const previousOverflow = document.body.style.overflow;
+    const dialogId = dialogIdRef.current;
+    if (dialogStack.length === 0) bodyOverflowBeforeDialogs = document.body.style.overflow;
+    dialogStack.push(dialogId);
     document.body.style.overflow = 'hidden';
 
     const dialog = dialogRef.current;
@@ -41,13 +49,15 @@ export const DialogShell = ({
     window.requestAnimationFrame(() => focusTarget?.focus());
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (dialogStack[dialogStack.length - 1] !== dialogId) return;
+
       if (event.key === 'Escape' && closeOnEscape) {
         event.preventDefault();
         closeRef.current();
         return;
       }
 
-      if (event.key !== 'Tab' || !closeOnEscape || !dialog) return;
+      if (event.key !== 'Tab' || !dialog) return;
       const focusable = Array.from(dialog.querySelectorAll<HTMLElement>(focusableSelector));
       if (focusable.length === 0) {
         event.preventDefault();
@@ -69,13 +79,20 @@ export const DialogShell = ({
     document.addEventListener('keydown', handleKeyDown);
     return () => {
       document.removeEventListener('keydown', handleKeyDown);
-      document.body.style.overflow = previousOverflow;
+      const stackIndex = dialogStack.lastIndexOf(dialogId);
+      if (stackIndex >= 0) dialogStack.splice(stackIndex, 1);
+      if (dialogStack.length === 0) {
+        document.body.style.overflow = bodyOverflowBeforeDialogs ?? '';
+        bodyOverflowBeforeDialogs = undefined;
+      } else {
+        document.body.style.overflow = 'hidden';
+      }
       window.requestAnimationFrame(() => previousFocus?.focus());
     };
   }, [closeOnEscape]);
 
   return (
-    <div className="modal-backdrop" role="presentation">
+    <div className={`modal-backdrop${backdropClassName ? ` ${backdropClassName}` : ''}`} role="presentation">
       <section
         ref={dialogRef}
         className={`dialog-shell ${className}`}

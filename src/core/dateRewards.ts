@@ -12,6 +12,7 @@ export const birthdayRewardHearts = 10;
 export const anniversaryRewardCoins = 50;
 export const anniversaryRewardHearts = 3;
 export const monthlyGiftCoins = 20;
+export const annualDateRewardGachaTickets = 10;
 
 export type DateRewardKind = 'birthday' | 'anniversary' | 'festival' | 'monthly_gift' | 'daily_login';
 
@@ -27,6 +28,7 @@ export interface ClaimedDateReward {
   message: string;
   coins?: number;
   hearts?: number;
+  gachaTickets?: number;
   items: DateRewardItem[];
   achievementBonusItemCount?: number;
 }
@@ -195,6 +197,10 @@ const applyReward = (pet: PetState, reward: ClaimedDateReward): { pet: PetState;
       hearts: actualReward.hearts ? heartGain.hearts : pet.hearts,
       boostCards: actualReward.hearts ? heartGain.boostCards : pet.boostCards,
       inventory: addRewardItems(pet.inventory, actualReward.items),
+      goldenAppleGacha: actualReward.gachaTickets ? {
+        ...pet.goldenAppleGacha,
+        tickets: Math.min(9999, pet.goldenAppleGacha.tickets + actualReward.gachaTickets),
+      } : pet.goldenAppleGacha,
       recentEvent: actualReward.message,
     },
     reward: actualReward,
@@ -238,6 +244,7 @@ const claimBirthdayReward = (pet: PetState, now: number): { pet: PetState; rewar
     message: t('pet.reward.birthday', { name: pet.name, coins: birthdayRewardCoins, hearts: '{hearts}' }),
     coins: birthdayRewardCoins,
     hearts: birthdayRewardHearts,
+    gachaTickets: annualDateRewardGachaTickets,
     items: [{ itemId: 'birthday_cake', amount: 1 }],
   };
 
@@ -262,6 +269,7 @@ const claimAnniversaryReward = (pet: PetState, now: number): { pet: PetState; re
     message: t('pet.reward.anniversary', { name: pet.name, coins: anniversaryRewardCoins, hearts: '{hearts}' }),
     coins: anniversaryRewardCoins,
     hearts: anniversaryRewardHearts,
+    gachaTickets: annualDateRewardGachaTickets,
     items: [{ itemId: 'shiny_sticker', amount: 1 }],
   };
 
@@ -286,6 +294,7 @@ const claimFestivalReward = (pet: PetState, now: number): { pet: PetState; rewar
     kind: 'festival',
     title: t('ui.rewards.festivalTitle', { festival: festivalName }),
     message: t(festival.dialogueKey, { name: pet.name, festival: festivalName }),
+    gachaTickets: annualDateRewardGachaTickets,
     items,
   };
 

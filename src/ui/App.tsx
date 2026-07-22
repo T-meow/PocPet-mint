@@ -1,7 +1,10 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Heart, Settings, Trophy, Volume2, VolumeX } from 'lucide-react';
+import { Heart, Settings, Ticket, Trophy, Volume2, VolumeX } from 'lucide-react';
 import {
   buyBoostCard,
+  completeClassicLegacyLevel,
+  completeDreamProjectStage,
+  exchangeClassicGoldenApplesForHearts,
   claimBoostCardDailyReward,
   getGardenReminder,
   cancelPartnerSchedule,
@@ -13,8 +16,10 @@ import {
   buyItem,
   canStartPomodoro,
   claimDailyWishReward,
+  claimGoldenAppleGachaStarterGift,
   exchangeHeartForCoins,
   createDefaultPet,
+  drawGoldenAppleGacha,
   defaultPetBirthday,
   defaultPetName,
   dismissYearReview,
@@ -31,6 +36,8 @@ import {
   createItemRegistry,
   heartExchangeCooldownMs,
   interactWithPet,
+  investClassicLegacy,
+  investDreamProject,
   isPetCriticallyHungry,
   isPetLowEnergy,
   markAchievementReviewSeen,
@@ -51,6 +58,8 @@ import {
   type AchievementView,
   type BoostCardId,
   type InventoryItemDefinition,
+  type GachaPaymentMethod,
+  type GoldenAppleGachaDrawOutcome,
   type ItemId,
   type NeighborEventContext,
   type NeighborIdentity,
@@ -59,6 +68,7 @@ import {
   type PetState,
   type PetStatus,
   type PartnerScheduleRewardChoice,
+  type PartnerScheduleCategory,
   type PomodoroDurations,
   type ShopCategory,
 } from '../core/pet';
@@ -72,7 +82,7 @@ import {
   type BgmMode,
   type SfxId,
 } from '../core/audio';
-import { clearPet, loadPetOrNull } from '../core/storage';
+import { clearPet, loadPetOrNull, savePet } from '../core/storage';
 import {
   formatFavoriteFoodText,
   getModFavoriteFoodIds,
@@ -94,8 +104,10 @@ import {
 import { createSaveFileText, parseSaveFileText } from '../core/saveCodec';
 import { AchievementsPage, type AchievementTabId } from './AchievementsPage';
 import { BoostCardModal } from './BoostCardModal';
+import { CommonDreamsPage } from './CommonDreamsPage';
 import { ConfirmDialog } from './ConfirmDialog';
 import { GardenPage } from './GardenPage';
+import { GoldenAppleGachaModal } from './GoldenAppleGachaModal';
 import { HomePage } from './HomePage';
 import { InventoryModal } from './InventoryModal';
 import { PomodoroOverlay } from './PomodoroOverlay';
@@ -136,7 +148,7 @@ const getPomodoroProgress = (pet: PetState) => {
 type PomodoroSettingKey = keyof PomodoroDurations;
 type SoundOutcome = 'success' | 'blocked' | 'heart' | 'low_state';
 type RewardPopup = RewardPopupData;
-type RewardDisplayItem = { key: string; icon?: string; label: string; title?: string };
+type RewardDisplayItem = { key: string; icon?: string; glyph?: 'heart' | 'ticket'; label: string; title?: string };
 type WishQuickAction = PetState['dailyWish']['action'] | NonNullable<PetState['returnWelcome']>['action'];
 type AchievementCgPopup = { title: string; description: string; image: string; fileName: string };
 type PetAppProps = {
@@ -269,6 +281,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
   const [isResetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [modDeleteConfirmId, setModDeleteConfirmId] = useState<string | null>(null);
   const [isPartnerScheduleCancelConfirmOpen, setPartnerScheduleCancelConfirmOpen] = useState(false);
+  const [isGoldenAppleUseConfirmOpen, setGoldenAppleUseConfirmOpen] = useState(false);
   const [activeAchievementCategory, setActiveAchievementCategory] = useState<AchievementTabId>('all');
   const [achievementCgPopup, setAchievementCgPopup] = useState<AchievementCgPopup | null>(null);
   const itemIconMap = useMemo(() => resolveItemIcons(activeMod), [activeMod]);
@@ -293,6 +306,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
   const isInventoryOpen = utilityDialog === 'inventory';
   const isShopOpen = utilityDialog === 'shop';
   const isBoostCardOpen = utilityDialog === 'boostCards';
+  const isGachaOpen = utilityDialog === 'gacha';
   const isSettingsOpen = utilityDialog === 'settings';
 
   useEffect(() => {
@@ -459,7 +473,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     });
   };
 
-  const handleUseItem = (itemId: ItemId) => {
+  const useItemNow = (itemId: ItemId) => {
     playAfterUnlock('tap');
     setPet((current) => {
       const beforeCount = getInventoryCount(current, itemId);
@@ -556,6 +570,20 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     });
   };
 
+  const handleUseItem = (itemId: ItemId) => {
+    if (itemId === 'golden_apple') {
+      playAfterUnlock('tap');
+      setGoldenAppleUseConfirmOpen(true);
+      return;
+    }
+    useItemNow(itemId);
+  };
+
+  const handleConfirmGoldenAppleUse = () => {
+    setGoldenAppleUseConfirmOpen(false);
+    useItemNow('golden_apple');
+  };
+
   const handleConfirmPartnerScheduleCancel = () => {
     setPartnerScheduleCancelConfirmOpen(false);
     playAfterUnlock('close');
@@ -593,6 +621,51 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
       }
       return commitPet(result.pet);
     });
+  };
+
+  const handleOpenGacha = () => {
+    playAfterUnlock('open');
+    openUtilityDialog('gacha');
+  };
+
+  const handleCloseGacha = () => {
+    playAfterUnlock('close');
+    closeUtilityDialog();
+  };
+
+  const handleGachaDraw = (payment: GachaPaymentMethod, count: 1 | 10): GoldenAppleGachaDrawOutcome => {
+    const outcome = drawGoldenAppleGacha(petRef.current, payment, count, Date.now());
+    if (outcome.error) return outcome;
+    const settled = commitPet(outcome.pet);
+    savePet(settled);
+    petRef.current = settled;
+    setPet(settled);
+    return { ...outcome, pet: settled };
+  };
+
+  const handleClaimGachaStarterGift = () => {
+    const outcome = claimGoldenAppleGachaStarterGift(petRef.current);
+    if (!outcome.claimed) return false;
+    const settled = commitPet(outcome.pet);
+    savePet(settled);
+    petRef.current = settled;
+    setPet(settled);
+    return true;
+  };
+
+  const handleOpenCommonDreams = () => {
+    playAfterUnlock('open');
+    setActivePage('commonDreams');
+  };
+
+  const handleCloseCommonDreams = () => {
+    playAfterUnlock('close');
+    setActivePage('home');
+  };
+
+  const commitEndgameAction = (updater: (current: PetState) => PetState) => {
+    playAfterUnlock('tap');
+    setPet((current) => commitPet(updater(current)));
   };
 
   const handleOpenAchievements = () => {
@@ -696,7 +769,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
   };
 
   const completeFeedWishAction = () => {
-    const foodItem = displayInventoryItems.find((item) => item.kind === 'food' && getInventoryCount(petRef.current, item.id) > 0);
+    const foodItem = displayInventoryItems.find((item) => item.kind === 'food' && item.id !== 'golden_apple' && getInventoryCount(petRef.current, item.id) > 0);
     if (!foodItem) {
       playAfterUnlock('open');
       setActiveShopCategory('food');
@@ -996,8 +1069,18 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     if (reward.hearts) {
       rewardItems.push({
         key: 'hearts',
+        glyph: 'heart',
         label: t('ui.rewards.hearts', { hearts: formatCompactNumber(reward.hearts) }),
         title: t('ui.rewards.hearts', { hearts: reward.hearts }),
+      });
+    }
+
+    if (reward.gachaTickets) {
+      rewardItems.push({
+        key: 'gacha-tickets',
+        glyph: 'ticket',
+        label: t('ui.rewards.gachaTickets', { count: formatCompactNumber(reward.gachaTickets) }),
+        title: t('ui.rewards.gachaTickets', { count: reward.gachaTickets }),
       });
     }
 
@@ -1012,7 +1095,11 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
 
     return rewardItems.map((item) => (
       <div className="reward-modal__item" key={item.key} title={item.title}>
-        {item.icon ? <img src={item.icon} alt="" aria-hidden="true" /> : <Heart size={22} aria-hidden="true" />}
+        {item.icon
+          ? <img src={item.icon} alt="" aria-hidden="true" />
+          : item.glyph === 'ticket'
+            ? <Ticket size={22} aria-hidden="true" />
+            : <Heart size={22} aria-hidden="true" />}
         <span>{item.label}</span>
       </div>
     ));
@@ -1127,6 +1214,16 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
           onCancel={() => setPartnerScheduleCancelConfirmOpen(true)}
           onClaim={handleClaimPartnerSchedule}
         />
+      ) : activePage === 'commonDreams' ? (
+        <CommonDreamsPage
+          pet={pet}
+          onBack={handleCloseCommonDreams}
+          onInvestProject={(category: PartnerScheduleCategory, coins: number) => commitEndgameAction((current) => investDreamProject(current, category, coins))}
+          onCompleteProjectStage={(category: PartnerScheduleCategory) => commitEndgameAction((current) => completeDreamProjectStage(current, category))}
+          onInvestLegacy={(coins: number) => commitEndgameAction((current) => investClassicLegacy(current, coins))}
+          onCompleteLegacy={() => commitEndgameAction((current) => completeClassicLegacyLevel(current))}
+          onExchangeGoldenApples={(apples: number) => commitEndgameAction((current) => exchangeClassicGoldenApplesForHearts(current, apples))}
+        />
       ) : (
         <HomePage
           pet={pet}
@@ -1153,6 +1250,8 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
           onOpenGarden={handleOpenGarden}
           onOpenBoostCards={handleOpenBoostCards}
           onOpenPartnerSchedule={handleOpenPartnerSchedule}
+          onOpenGacha={handleOpenGacha}
+          onOpenCommonDreams={handleOpenCommonDreams}
           onAction={handleAction}
         />
       )}
@@ -1190,6 +1289,16 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
           onOpenShop={handleOpenShop}
           onOpenGarden={handleOpenGarden}
           onUseItem={handleUseItem}
+        />
+      )}
+      {isGachaOpen && (
+        <GoldenAppleGachaModal
+          pet={pet}
+          itemIconMap={itemIconMap}
+          onClose={handleCloseGacha}
+          onDraw={handleGachaDraw}
+          onClaimStarterGift={handleClaimGachaStarterGift}
+          onPlaySfx={playAfterUnlock}
         />
       )}
       {activeRewardPopup && (
@@ -1322,6 +1431,16 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
           confirmLabel={t('ui.partnerSchedule.cancelDialog.confirm')}
           onCancel={() => setPartnerScheduleCancelConfirmOpen(false)}
           onConfirm={handleConfirmPartnerScheduleCancel}
+        />
+      )}
+      {isGoldenAppleUseConfirmOpen && (
+        <ConfirmDialog
+          title={t('ui.gacha.appleUseConfirm.title')}
+          message={t('ui.gacha.appleUseConfirm.message')}
+          cancelLabel={t('ui.gacha.appleUseConfirm.cancel')}
+          confirmLabel={t('ui.gacha.appleUseConfirm.confirm')}
+          onCancel={() => setGoldenAppleUseConfirmOpen(false)}
+          onConfirm={handleConfirmGoldenAppleUse}
         />
       )}
       {gardenClearConfirm && (

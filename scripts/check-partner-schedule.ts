@@ -30,6 +30,7 @@ import {
   getPartnerScheduleSkillXpReward,
   normalizePartnerScheduleState,
   partnerScheduleDefinitions,
+  partnerScheduleSchemaVersion,
   startPartnerSchedule,
 } from '../src/core/partnerSchedule';
 import { neighborGiftDailyLimit, resolveNeighborName, selectNeighborReference } from '../src/core/neighbors';
@@ -469,6 +470,7 @@ const baseBonusResult: PartnerScheduleResult = {
   completedAt: now,
   coinReward: 100,
   skillXp: 4,
+  trophyRewardMultiplier: 1,
   grantsMasterCompletion: false,
 };
 const deterministicBonusResult = findResultWithExtraCopies(combinedScheduleBonusPet, baseBonusResult, 1);
@@ -768,7 +770,7 @@ const migratedV2Active = normalizePartnerScheduleState({
     exercise: { level: 5, xp: 0 },
   },
 }, { level: level8.level, createdAt: level8.createdAt }, now);
-assert.equal(migratedV2Active.schemaVersion, 4);
+assert.equal(migratedV2Active.schemaVersion, partnerScheduleSchemaVersion);
 assert.equal(migratedV2Active.boardOfferCount, 3, 'schema v2 should preserve the current three-choice board until reset');
 assert.equal(migratedV2Active.skills.study.level, 5);
 assert.equal(migratedV2Active.skills.study.masterCompletions, 0);
@@ -815,7 +817,7 @@ const migratedIndependent = normalizeLegacy({
   requiredFocusMs: 25 * minuteMs,
   focusProgressMs: 0,
 });
-assert.equal(migratedIndependent.schemaVersion, 4);
+assert.equal(migratedIndependent.schemaVersion, partnerScheduleSchemaVersion);
 assert.equal(migratedIndependent.active?.endsAt, legacyIndependentEnd, 'v1 independent activity should preserve its end time');
 
 const migratedTogether = normalizeLegacy({
@@ -1216,7 +1218,7 @@ assert.equal(
   'an invalid active id should fall back to the built-in pet',
 );
 
-const schemaCheck: PartnerScheduleState['schemaVersion'] = 4;
+const schemaCheck: PartnerScheduleState['schemaVersion'] = partnerScheduleSchemaVersion;
 const stateCheck: PetState = { ...level3, partnerSchedule: migratedTogether };
 assert.equal(schemaCheck, stateCheck.partnerSchedule.schemaVersion);
 

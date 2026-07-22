@@ -81,7 +81,7 @@ export interface GardenTools {
 }
 
 export interface GardenState {
-  schemaVersion: 1;
+  schemaVersion: 2;
   activeSlotIndex: number;
   slots: GardenSlot[];
   dailyCareDateKey: string;
@@ -104,6 +104,57 @@ export interface BoostCardState {
   dailyRewardClaimed: boolean;
   dailyWorkBonusCoinsUsed: number;
   dailyGardenExtraDrops: number;
+}
+
+export type GachaTicketSource = 'partner_schedule' | 'daily_wish' | 'daily_encounter';
+
+export type GachaPaymentMethod = 'coins' | 'tickets';
+
+export type GachaRewardRarity = 'common' | 'uncommon' | 'rare' | 'legendary' | 'jackpot';
+
+export interface GachaResult {
+  id: string;
+  rewardId: string;
+  kind: 'coins' | 'item';
+  amount: number;
+  itemId?: BuiltinItemId;
+  rarity: GachaRewardRarity;
+  guaranteed: boolean;
+  pityGuaranteed: boolean;
+  drawnAt: number;
+}
+
+export interface GoldenAppleGachaState {
+  schemaVersion: 2;
+  tickets: number;
+  totalDraws: number;
+  coinsSpent: number;
+  ticketsSpent: number;
+  rngSeed: string;
+  rngCounter: number;
+  dailyDateKey: string;
+  dailyProcessedSources: GachaTicketSource[];
+  dailyGrantedSources: GachaTicketSource[];
+  dailyTicketsGranted: number;
+  jackpotCount: number;
+  jackpotPityMisses: number;
+  jackpotPityUsed: boolean;
+  recentResults: GachaResult[];
+}
+
+export interface DreamProjectProgress {
+  completedStages: number;
+  currentStageCoins: number;
+  completedAt?: number;
+}
+
+export interface ClassicEndgameState {
+  schemaVersion: 1;
+  projects: Record<PartnerScheduleCategory, DreamProjectProgress>;
+  completedAt?: number;
+  legacyLevel: number;
+  legacyCoinsInvested: number;
+  lifetimeCoinsInvested: number;
 }
 
 export type ShopCategory = 'food' | 'item' | 'care' | 'garden';
@@ -269,6 +320,7 @@ export interface ActivePartnerSchedule {
   endsAt: number;
   coinReward: number;
   skillXp: number;
+  trophyRewardMultiplier: number;
   grantsMasterCompletion: boolean;
   neighbor?: NeighborReference;
 }
@@ -281,12 +333,13 @@ export interface PartnerScheduleResult {
   completedAt: number;
   coinReward: number;
   skillXp: number;
+  trophyRewardMultiplier: number;
   grantsMasterCompletion: boolean;
   neighbor?: NeighborReference;
 }
 
 export interface PartnerScheduleState {
-  schemaVersion: 4;
+  schemaVersion: 5;
   boardDateKey: string;
   boardOfferCount: number;
   offers: PartnerScheduleOffer[];
@@ -396,6 +449,8 @@ export interface PetState {
   garden: GardenState;
   boostCards: BoostCardState;
   partnerSchedule: PartnerScheduleState;
+  goldenAppleGacha: GoldenAppleGachaState;
+  classicEndgame: ClassicEndgameState;
 }
 
 export type PetAction = 'play' | 'clean' | 'sleep' | 'work';

@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import {
   getDailyWishView,
   getEnergyRecoveryInfo,
+  getPetEnergyCap,
   getPetStatCap,
   getReturnWelcomeView,
   type PetAction,
@@ -42,6 +43,8 @@ interface HomePageProps {
   onOpenGarden: () => void;
   onOpenBoostCards: () => void;
   onOpenPartnerSchedule: () => void;
+  onOpenGacha: () => void;
+  onOpenCommonDreams: () => void;
   onAction: (action: PetAction) => void;
 }
 
@@ -89,9 +92,12 @@ export const HomePage = ({
   onOpenGarden,
   onOpenBoostCards,
   onOpenPartnerSchedule,
+  onOpenGacha,
+  onOpenCommonDreams,
   onAction,
 }: HomePageProps) => {
   const statCap = getPetStatCap(pet);
+  const energyCap = getPetEnergyCap(pet);
   const isPetBusy = Boolean(pet.partnerSchedule.active);
   const energyRecoveryInfo = getEnergyRecoveryInfo(pet);
   const energyRecoveryText = energyRecoveryInfo.isFull || energyRecoveryInfo.isPaused ? '' : formatCountdownTime(energyRecoveryInfo.remainingMs);
@@ -99,7 +105,7 @@ export const HomePage = ({
     { label: t('ui.stats.hunger'), value: pet.hunger, max: statCap, tone: 'food' as const },
     { label: t('ui.stats.mood'), value: pet.mood, max: statCap, tone: 'mood' as const },
     { label: t('ui.stats.cleanliness'), value: pet.cleanliness, max: statCap, tone: 'clean' as const },
-    { label: t('ui.stats.energy'), value: pet.energy, max: statCap, detail: energyRecoveryText, tone: 'energy' as const },
+    { label: t('ui.stats.energy'), value: pet.energy, max: energyCap, detail: energyRecoveryText, tone: 'energy' as const },
     { label: t('ui.stats.health'), value: pet.health, max: statCap, tone: 'health' as const },
   ];
   const dailyWishView = getDailyWishView(pet);
@@ -192,6 +198,8 @@ export const HomePage = ({
             onOpenGarden={onOpenGarden}
             onOpenBoostCards={onOpenBoostCards}
             onOpenPartnerSchedule={onOpenPartnerSchedule}
+            onOpenGacha={onOpenGacha}
+            onOpenCommonDreams={onOpenCommonDreams}
           />
 
           <div className="meta-row" aria-label={t('ui.dashboard.metaAria')}>

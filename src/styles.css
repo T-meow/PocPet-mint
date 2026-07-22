@@ -1673,10 +1673,6 @@ h1 {
     width: 100%;
     justify-content: flex-start;
   }
-
-  .inventory-effect-badges {
-    display: none;
-  }
 }
 
 @media (max-width: 420px) {

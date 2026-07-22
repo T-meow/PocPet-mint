@@ -1,0 +1,339 @@
+.classic-endgame-page {
+  display: grid;
+  width: min(1180px, calc(100% - 32px));
+  gap: 16px;
+  margin: 0 auto;
+  padding: 16px 0 calc(34px + var(--safe-bottom));
+}
+
+.classic-endgame-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 12px;
+  padding: 10px 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.classic-endgame-header > div:nth-child(2) { display: grid; gap: 3px; }
+.classic-endgame-header span { color: var(--accent-gold); font-size: 0.72rem; font-weight: 900; text-transform: uppercase; }
+.classic-endgame-header h1 { margin: 0; font-size: 1.7rem; }
+.classic-endgame-header p { margin: 0; color: var(--text-muted); line-height: 1.45; }
+
+.classic-endgame-apples {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 11px;
+  border: 1px solid rgba(166, 110, 22, 0.25);
+  border-radius: 8px;
+  color: #8a4f08;
+  background: #fff5d8;
+}
+
+.classic-endgame-overview {
+  display: grid;
+  gap: 8px;
+  padding: 14px 0;
+}
+
+.classic-endgame-overview__metrics {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.classic-endgame-overview__metric {
+  display: grid;
+  gap: 7px;
+}
+
+.classic-endgame-overview__metric > div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  color: var(--text-muted);
+  font-weight: 800;
+}
+
+.classic-endgame-overview p { margin: 0; color: var(--text-muted); font-size: 0.84rem; }
+.classic-endgame-overview__complete { color: var(--accent-green) !important; font-weight: 900; }
+.classic-endgame-overview__bar,
+.classic-dream__bar { height: 8px; overflow: hidden; border-radius: 4px; background: #e5ebef; }
+.classic-endgame-overview__bar i,
+.classic-dream__bar i { display: block; height: 100%; border-radius: inherit; background: #3b8c63; transition: width 180ms ease; }
+
+.classic-dream-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.classic-dream {
+  display: grid;
+  min-width: 0;
+  align-content: start;
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 8px 22px rgba(35, 58, 83, 0.08);
+}
+
+.classic-dream > header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.classic-dream__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 8px;
+  color: #245b96;
+  background: var(--surface-blue);
+}
+
+.classic-dream h2,
+.classic-legacy h2 { margin: 0; font-size: 1.05rem; }
+.classic-dream small { color: var(--accent-gold); font-size: 0.68rem; font-weight: 900; }
+.classic-dream > p,
+.classic-legacy > p { margin: 0; color: var(--text-muted); font-size: 0.82rem; line-height: 1.45; }
+
+.classic-dream__requirements {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.classic-dream__requirements span,
+.classic-legacy__requirements span {
+  min-width: 0;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: var(--danger);
+  background: #fff0f0;
+  font-size: 0.72rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.classic-dream__requirements span[data-met="true"] {
+  color: #2b7551;
+  background: #eaf7ef;
+}
+
+.classic-dream__funding { display: grid; gap: 6px; }
+.classic-dream__funding > div:first-child { display: flex; justify-content: space-between; gap: 8px; color: var(--text-muted); font-size: 0.76rem; font-weight: 800; }
+.classic-dream__next {
+  display: grid;
+  gap: 7px;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line);
+}
+.classic-dream__next > strong { font-size: 0.78rem; }
+.classic-dream__next > div { display: flex; flex-wrap: wrap; gap: 5px; }
+.classic-dream__next span {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  font-weight: 750;
+}
+.classic-dream__next > div span {
+  padding: 4px 6px;
+  border-radius: 4px;
+  background: #eef2f4;
+}
+.classic-dream__next p { margin: 0; color: var(--text-muted); font-size: 0.76rem; line-height: 1.4; }
+.classic-dream__actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
+.classic-dream__actions button { min-width: 0; white-space: normal; overflow-wrap: anywhere; }
+
+.classic-dream--complete {
+  min-height: 220px;
+  place-items: center;
+  align-content: center;
+  text-align: center;
+  color: var(--accent-green);
+  background: #edf8f2;
+}
+
+.classic-dream--complete p { max-width: 34ch; }
+
+.classic-legacy {
+  display: grid;
+  width: min(720px, 100%);
+  gap: 14px;
+  margin: 8px auto 0;
+  padding: 20px;
+  border: 1px solid rgba(166, 110, 22, 0.25);
+  border-radius: 8px;
+  background: #fffaf0;
+  box-shadow: 0 10px 28px rgba(35, 58, 83, 0.1);
+}
+
+.classic-legacy__heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.classic-legacy__heading span { color: var(--accent-gold); font-size: 0.7rem; font-weight: 900; text-transform: uppercase; }
+.classic-legacy__heading > strong { color: #8a4f08; font-size: 1.35rem; }
+.classic-legacy__requirements { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.classic-legacy__requirements span { color: var(--text); background: #ffffff; border: 1px solid var(--line); }
+
+.classic-trophy-cabinet {
+  display: grid;
+  gap: 14px;
+  padding: 22px 0 4px;
+  border-top: 1px solid var(--line);
+}
+
+.classic-trophy-cabinet__header {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.classic-trophy-cabinet__header > div { display: grid; gap: 3px; }
+.classic-trophy-cabinet__header span { color: #286451; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; }
+.classic-trophy-cabinet__header h2 { margin: 0; font-size: 1.15rem; }
+.classic-trophy-cabinet__header p { margin: 0; color: var(--text-muted); font-size: 0.8rem; line-height: 1.45; }
+.classic-trophy-cabinet__header > strong { flex: 0 0 auto; color: #286451; font-size: 1.2rem; }
+
+.classic-trophy-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.classic-trophy {
+  display: grid;
+  grid-template-columns: 38px minmax(0, 1fr);
+  align-items: start;
+  gap: 9px;
+  min-width: 0;
+  padding: 11px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+}
+
+.classic-trophy__icon {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 6px;
+  color: #75808a;
+  background: #edf0f2;
+}
+
+.classic-trophy > div { display: grid; gap: 3px; min-width: 0; }
+.classic-trophy h3 { margin: 0; font-size: 0.82rem; overflow-wrap: anywhere; }
+.classic-trophy p { margin: 0; color: var(--text-muted); font-size: 0.7rem; line-height: 1.4; }
+.classic-trophy small { color: #7b858e; font-size: 0.64rem; line-height: 1.35; }
+.classic-trophy.is-locked { opacity: 0.7; }
+.classic-trophy.is-unlocked { border-color: color-mix(in srgb, currentColor 30%, var(--line)); }
+.classic-trophy.is-unlocked small { color: #28734f; font-weight: 800; }
+.classic-trophy--bronze.is-unlocked .classic-trophy__icon { color: #8c4f2f; background: #f6e1d5; }
+.classic-trophy--silver.is-unlocked .classic-trophy__icon { color: #596873; background: #e4eaee; }
+.classic-trophy--gold.is-unlocked .classic-trophy__icon { color: #946600; background: #fff0b8; }
+.classic-trophy--diamond { grid-template-columns: 42px minmax(0, 1fr); border-color: #9acbd1; background: #f1fbfc; }
+.classic-trophy--diamond .classic-trophy__icon { width: 40px; height: 40px; color: #187787; background: #d6f2f5; }
+.classic-trophy--diamond h3 { font-size: 0.9rem; }
+
+.classic-apple-exchange {
+  display: grid;
+  gap: 12px;
+  padding: 20px 0 4px;
+  border-top: 1px solid var(--line);
+}
+
+.classic-apple-exchange__header {
+  display: grid;
+  grid-template-columns: 42px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+}
+
+.classic-apple-exchange__icon {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border-radius: 7px;
+  color: #187787;
+  background: #d6f2f5;
+}
+
+.classic-apple-exchange.is-locked .classic-apple-exchange__icon { color: #75808a; background: #edf0f2; }
+.classic-apple-exchange__header > div { display: grid; gap: 3px; min-width: 0; }
+.classic-apple-exchange__header small { color: #286451; font-size: 0.7rem; font-weight: 900; text-transform: uppercase; }
+.classic-apple-exchange__header h2 { margin: 0; font-size: 1.15rem; }
+.classic-apple-exchange__header p { margin: 0; color: var(--text-muted); font-size: 0.8rem; line-height: 1.45; }
+.classic-apple-exchange__header > strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid #9acbd1;
+  border-radius: 8px;
+  color: #187787;
+  background: #f1fbfc;
+  white-space: nowrap;
+}
+
+.classic-apple-exchange__summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.classic-apple-exchange__summary span {
+  min-width: 0;
+  padding: 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface);
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  overflow-wrap: anywhere;
+}
+
+.classic-apple-exchange__actions {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.classic-apple-exchange__actions button { width: 100%; min-width: 0; }
+
+@media (max-width: 760px) {
+  .classic-endgame-page { width: min(100% - 20px, 680px); }
+  .classic-dream-grid { grid-template-columns: minmax(0, 1fr); }
+  .classic-trophy-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .classic-apple-exchange__header { grid-template-columns: 42px minmax(0, 1fr); }
+  .classic-apple-exchange__header > strong { grid-column: 2; justify-self: start; }
+}
+
+@media (max-width: 430px) {
+  .classic-endgame-header { grid-template-columns: auto minmax(0, 1fr); }
+  .classic-endgame-apples { grid-column: 2; justify-self: start; }
+  .classic-dream { padding: 13px; }
+  .classic-dream__requirements,
+  .classic-legacy__requirements,
+  .classic-dream__actions { grid-template-columns: minmax(0, 1fr); }
+  .classic-endgame-overview__metrics,
+  .classic-trophy-grid,
+  .classic-apple-exchange__summary,
+  .classic-apple-exchange__actions { grid-template-columns: minmax(0, 1fr); }
+  .classic-trophy-cabinet__header { align-items: start; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .classic-endgame-overview__bar i,
+  .classic-dream__bar i { transition: none; }
+}

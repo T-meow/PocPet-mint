@@ -301,19 +301,32 @@
 
 .feature-row {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+  container-type: inline-size;
 }
 
 .feature-button {
-  min-height: 64px;
+  height: 64px;
   padding: 10px 12px;
   background: var(--surface);
   box-shadow: inset 0 0 0 1px var(--line);
+}
+
+.feature-button--common-dreams {
+  grid-column: 1 / -1;
 }
 
 .feature-button--inventory { background: var(--surface-gold); }
 .feature-button--pomodoro { background: var(--surface-blue); }
 .feature-button--boost-card { background: var(--surface-pink); }
 .feature-button--garden { background: var(--surface-green); }
+.feature-button--gacha { background: #fff4df; }
+.feature-button--common-dreams { background: #edf6f2; }
+
+@container (max-width: 280px) {
+  .feature-button {
+    grid-column: 1 / -1;
+  }
+}
 
 .event-panel {
   grid-template-columns: auto minmax(0, 1fr);

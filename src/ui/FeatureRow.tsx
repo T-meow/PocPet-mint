@@ -1,5 +1,5 @@
-import { BadgeCheck, CalendarClock, PackageOpen, Sprout, Timer } from 'lucide-react';
-import { canClaimBoostCardDailyReward, getActiveBoostCard, partnerScheduleUnlockLevel, type PetState } from '../core/pet';
+import { BadgeCheck, CalendarClock, Dices, Flag, PackageOpen, Sprout, Timer } from 'lucide-react';
+import { canClaimBoostCardDailyReward, classicEndgameUnlockLevel, classicEndgameUnlockSkillLevel, getActiveBoostCard, isClassicEndgameComplete, isClassicEndgameUnlocked, partnerScheduleUnlockLevel, type PetState } from '../core/pet';
 import { t } from '../i18n';
 import { formatPomodoroTime } from './time';
 
@@ -15,6 +15,8 @@ interface FeatureRowProps {
   onOpenGarden: () => void;
   onOpenBoostCards: () => void;
   onOpenPartnerSchedule: () => void;
+  onOpenGacha: () => void;
+  onOpenCommonDreams: () => void;
 }
 
 export const FeatureRow = ({
@@ -29,6 +31,8 @@ export const FeatureRow = ({
   onOpenGarden,
   onOpenBoostCards,
   onOpenPartnerSchedule,
+  onOpenGacha,
+  onOpenCommonDreams,
 }: FeatureRowProps) => {
   const activeBoostCardId = getActiveBoostCard(pet);
   const canClaimBoostReward = canClaimBoostCardDailyReward(pet);
@@ -48,6 +52,16 @@ export const FeatureRow = ({
       : pet.partnerSchedule.active
         ? t('ui.features.partnerScheduleActive')
         : t('ui.features.partnerScheduleHint');
+  const endgameUnlocked = isClassicEndgameUnlocked(pet);
+  const endgameHint = isClassicEndgameComplete(pet)
+    ? t('ui.features.commonDreamsComplete', { level: pet.classicEndgame.legacyLevel })
+    : endgameUnlocked
+      ? t('ui.features.commonDreamsReady')
+      : t('ui.features.commonDreamsLocked', {
+        level: classicEndgameUnlockLevel,
+        skill: classicEndgameUnlockSkillLevel,
+        currentSkill: Math.min(...Object.values(pet.partnerSchedule.skills).map((skill) => skill.level)),
+      });
 
   return (
     <div className="feature-row" aria-label={t('ui.features.aria')}>
@@ -114,6 +128,28 @@ export const FeatureRow = ({
           <small>{partnerScheduleHint}</small>
         </span>
         {pet.partnerSchedule.pendingResult ? <i aria-hidden="true" /> : null}
+      </button>
+
+      <button type="button" className="feature-button feature-button--gacha" onClick={onOpenGacha} title={t('ui.features.gachaHint')}>
+        <Dices size={20} aria-hidden="true" />
+        <span>
+          {t('ui.features.gacha')}
+          <small>{t('ui.features.gachaTickets', { count: pet.goldenAppleGacha.tickets })}</small>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        className={endgameUnlocked ? 'feature-button feature-button--common-dreams feature-button--active' : 'feature-button feature-button--common-dreams'}
+        onClick={onOpenCommonDreams}
+        title={endgameHint}
+      >
+        <Flag size={20} aria-hidden="true" />
+        <span>
+          {t('ui.features.commonDreams')}
+          <small>{endgameHint}</small>
+        </span>
+        {endgameUnlocked && <i aria-hidden="true" />}
       </button>
     </div>
   );

@@ -2,6 +2,7 @@ import { t } from '../i18n';
 import { getDailyResetDateKey } from './dailyReset';
 import { incrementDailyWishClaim, incrementReturnWelcomeClaim, recordEarnedCoins } from './achievements';
 import { addInventoryItem, allItemIds } from './items';
+import { resolveDailyGachaTicket } from './goldenAppleGacha';
 import { getPartnerScheduleCrossSystemEffects } from './partnerScheduleEffects';
 import { clampCoins, clampCount } from './petStats';
 import type {
@@ -244,12 +245,13 @@ export const claimDailyWishReward = (pet: PetState, now = Date.now()): PetState 
   const rewardCoins = Math.max(1, Math.round(
     wish.rewardCoins * getPartnerScheduleCrossSystemEffects(current).dailyWishCoinMultiplier,
   ));
-  return recordEarnedCoins(incrementDailyWishClaim({
+  const rewarded = recordEarnedCoins(incrementDailyWishClaim({
     ...current,
     coins: clampCoins(current.coins + rewardCoins),
     dailyWish: { ...wish, claimedAt: now },
     recentEvent: t('pet.dailyWish.claimed', { coins: rewardCoins }),
   }), rewardCoins);
+  return resolveDailyGachaTicket(rewarded, 'daily_wish', 20, now).pet;
 };
 
 export const claimReturnWelcomeReward = (pet: PetState, now = Date.now()): PetState => {

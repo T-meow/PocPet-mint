@@ -1,6 +1,16 @@
 import assert from 'node:assert/strict';
 import { buyItem, interactWithPet, upgradePet, useInventoryItem, applyPetAction } from '../src/core/petActions';
 import { achievementDefinitions, claimAchievementReward, evaluateAchievements, getAchievementEffects, taskMasterCompletionRatio } from '../src/core/achievements';
+import {
+  applyBoostCardWorkBonus,
+  boostCardDefinitions,
+  buyBoostCard,
+  canClaimBoostCardDailyReward,
+  claimBoostCardDailyReward,
+  normalizeBoostCardState,
+} from '../src/core/boostCards';
+import { claimAvailableDateRewards } from '../src/core/dateRewards';
+import { getDailyResetDateKey } from '../src/core/dailyReset';
 import { claimDailyWishReward, getDailyWishView } from '../src/core/dailyWishes';
 import { advancePet } from '../src/core/petLifecycle';
 import { plantTree, selectGardenSlot } from '../src/core/garden';
@@ -900,6 +910,11 @@ assert.equal(
   'emergency_biscuit',
   'an empty common pool should fall back to a soda biscuit',
 );
+assert.equal(
+  selectNeighborGift([], randomFrom(0.005)).itemId,
+  'emergency_biscuit',
+  'a completely empty gift pool should still fall back to a soda biscuit on the rare branch',
+);
 
 const giftEventContext: NeighborEventContext = {
   neighbors: [{ modId: 'creator.alpha', name: 'Alpha' }],
@@ -917,6 +932,220 @@ assert.notEqual(cappedDailyEvent.kind, 'neighbor_gift', 'daily gift candidates s
 assert.notEqual(cappedOfflineEvent.kind, 'neighbor_gift', 'offline gift candidates should be removed after the cap');
 const nextDayAfterEvent = applyTimedEvent(thirdGift, { text: 'next day' }, now + 24 * 60 * minuteMs, '');
 assert.equal(nextDayAfterEvent.neighborGiftCount, 0, 'the local-day gift count should reset on the next event');
+
+const fourthGiftInventoryBefore = thirdGift.inventory[dailyGift.itemId!] ?? 0;
+const blockedFourthGift = applyTimedEvent(thirdGift, dailyGift, now, '');
+assert.equal(blockedFourthGift.neighborGiftCount, neighborGiftDailyLimit, 'the settlement layer should keep the neighbor gift cap at three');
+assert.equal(blockedFourthGift.inventory[dailyGift.itemId!] ?? 0, fourthGiftInventoryBefore, 'a fourth neighbor gift must not enter inventory');
+assert.equal(blockedFourthGift.recentEvent, thirdGift.recentEvent, 'a blocked fourth gift must not claim that an item was received');
+
+assert.deepEqual(
+  {
+    friendPrice: boostCardDefinitions.friend_pass.priceHearts,
+    friendCoins: boostCardDefinitions.friend_pass.dailyCoins,
+    friendWork: boostCardDefinitions.friend_pass.workBonusCoins,
+    friendWorkLimit: boostCardDefinitions.friend_pass.workBonusDailyLimit,
+    friendHearts: boostCardDefinitions.friend_pass.extraHeartChancePercent,
+    bestPrice: boostCardDefinitions.best_friend_pass.priceHearts,
+    bestCoins: boostCardDefinitions.best_friend_pass.dailyCoins,
+    bestWork: boostCardDefinitions.best_friend_pass.workBonusCoins,
+    bestWorkLimit: boostCardDefinitions.best_friend_pass.workBonusDailyLimit,
+    bestHearts: boostCardDefinitions.best_friend_pass.extraHeartChancePercent,
+    bestSchedule: boostCardDefinitions.best_friend_pass.partnerScheduleCoinBonusPercent,
+  },
+  {
+    friendPrice: 10,
+    friendCoins: 15,
+    friendWork: 8,
+    friendWorkLimit: 80,
+    friendHearts: 10,
+    bestPrice: 90,
+    bestCoins: 50,
+    bestWork: 0,
+    bestWorkLimit: 0,
+    bestHearts: 30,
+    bestSchedule: 10,
+  },
+  'boost-card values should match the v2 balance',
+);
+
+let friendWorkPet = buyBoostCard({ ...createDefaultPet(now), hearts: 200 }, 'friend_pass', now);
+let friendWorkCoins = 0;
+for (let index = 0; index < 11; index += 1) {
+  const workBonus = applyBoostCardWorkBonus(friendWorkPet, now);
+  friendWorkCoins += workBonus.bonusCoins;
+  friendWorkPet = { ...friendWorkPet, boostCards: workBonus.boostCards };
+}
+assert.equal(friendWorkCoins, 80, 'Friend Pass work rewards should stop at the daily 80-coin cap');
+const bestWorkPet = buyBoostCard({ ...createDefaultPet(now), hearts: 200 }, 'best_friend_pass', now);
+assert.equal(applyBoostCardWorkBonus(bestWorkPet, now).bonusCoins, 0, 'Best Friend Pass should no longer affect work');
+
+const friendRewardContext: NeighborEventContext = {
+  neighbors: [{ modId: 'creator.alpha', name: 'Alpha' }],
+  giftCandidates: [{ itemId: 'creator.test:gift', displayName: 'Mod Gift', price: 30 }],
+  random: randomFrom(0, 0.5, 0),
+};
+const friendRewardStart = buyBoostCard({ ...createDefaultPet(now), hearts: 200 }, 'friend_pass', now);
+const friendCoinsBefore = friendRewardStart.coins;
+const friendReward = claimBoostCardDailyReward(friendRewardStart, friendRewardContext, now);
+assert.equal(friendReward.coins, 15);
+assert.equal(friendReward.pet.coins, friendCoinsBefore + 15);
+assert.equal(friendReward.gift?.itemId, 'creator.test:gift', 'card claims should use the current Mod-aware gift pool');
+assert.equal(friendReward.gift?.neighborName, 'Alpha', 'card claims should retain a named installed neighbor');
+assert.equal(friendReward.pet.inventory['creator.test:gift'], 1);
+assert.equal(friendReward.pet.neighborGiftCount, 1, 'card gifts should count toward the daily neighbor cap');
+assert.equal(canClaimBoostCardDailyReward(friendReward.pet, now), false);
+const upgradedAfterClaim = buyBoostCard(friendReward.pet, 'best_friend_pass', now);
+assert.equal(canClaimBoostCardDailyReward(upgradedAfterClaim, now), false, 'switching to Best Friend Pass must not grant a second daily claim');
+assert.equal(claimBoostCardDailyReward(upgradedAfterClaim, friendRewardContext, now).coins, 0);
+
+const fullGiftPet = buyBoostCard({
+  ...createDefaultPet(now),
+  hearts: 200,
+  neighborGiftDateKey: getDailyResetDateKey(now),
+  neighborGiftCount: neighborGiftDailyLimit,
+}, 'best_friend_pass', now);
+const fullGiftInventoryBefore = fullGiftPet.inventory.apple ?? 0;
+const coinsOnlyReward = claimBoostCardDailyReward(fullGiftPet, {
+  neighbors: [],
+  giftCandidates: [{ itemId: 'apple', displayName: 'Apple', price: 10 }],
+  random: randomFrom(0.5, 0),
+}, now);
+assert.equal(coinsOnlyReward.coins, 50);
+assert.equal(coinsOnlyReward.gift, undefined, 'a card bought after three random gifts should grant coins only');
+assert.equal(coinsOnlyReward.pet.inventory.apple ?? 0, fullGiftInventoryBefore);
+assert.equal(coinsOnlyReward.pet.neighborGiftCount, neighborGiftDailyLimit);
+
+const unclaimedReservedPet = buyBoostCard({
+  ...createDefaultPet(now),
+  hearts: 200,
+  neighborGiftDateKey: getDailyResetDateKey(now),
+  neighborGiftCount: 2,
+  lastUpdatedAt: now - 3 * 60 * minuteMs,
+  lastInteractionAt: now,
+}, 'friend_pass', now);
+const reservedAfterOffline = advancePet(unclaimedReservedPet, now, {
+  neighbors: [],
+  giftCandidates: [{ itemId: 'apple', displayName: 'Apple', price: 10 }],
+  random: randomFrom(0.2, 0.5, 0),
+});
+assert.equal(reservedAfterOffline.neighborGiftCount, 2, 'random events should stop at two gifts while the card reward is unclaimed');
+const claimedReservedPet = {
+  ...unclaimedReservedPet,
+  boostCards: { ...unclaimedReservedPet.boostCards, dailyRewardClaimed: true },
+};
+const thirdRandomAfterClaim = advancePet(claimedReservedPet, now, {
+  neighbors: [],
+  giftCandidates: [{ itemId: 'apple', displayName: 'Apple', price: 10 }],
+  random: randomFrom(0.2, 0.5, 0),
+});
+assert.equal(thirdRandomAfterClaim.neighborGiftCount, 3, 'random gifts may use the third slot after the card claim is settled');
+
+const bestSchedulePet = buyBoostCard({ ...level3, hearts: 200 }, 'best_friend_pass', now);
+const baseSchedulePreview = getPartnerScheduleOfferPreview(level3, definition, now);
+const bestSchedulePreview = getPartnerScheduleOfferPreview(bestSchedulePet, definition, now);
+assert.equal(bestSchedulePreview.coinReward, Math.round(baseSchedulePreview.coinReward * 1.1), 'Best Friend Pass should add 10% schedule coins');
+assert.equal(bestSchedulePreview.skillXp, baseSchedulePreview.skillXp, 'the card must not increase schedule XP');
+const bestScheduleStarted = startPartnerSchedule(bestSchedulePet, offer.id, now);
+const snapshottedScheduleCoins = bestScheduleStarted.partnerSchedule.active!.coinReward;
+const expiredDuringSchedule = {
+  ...bestScheduleStarted,
+  boostCards: { ...bestScheduleStarted.boostCards, bestFriendPassExpiresAt: now - 1 },
+};
+const scheduleAfterCardExpiry = advancePartnerSchedule(expiredDuringSchedule, bestScheduleStarted.partnerSchedule.active!.endsAt);
+assert.equal(scheduleAfterCardExpiry.partnerSchedule.pendingResult?.coinReward, snapshottedScheduleCoins, 'schedule rewards should remain snapshotted after the card expires');
+
+const beforeFive = new Date(2026, 6, 21, 4, 59, 59, 999).getTime();
+const atFive = new Date(2026, 6, 21, 5, 0, 0, 0).getTime();
+assert.equal(getDailyResetDateKey(beforeFive), '2026-07-20');
+assert.equal(getDailyResetDateKey(atFive), '2026-07-21');
+
+const legacyMidnightPet = {
+  ...createDefaultPet(beforeFive),
+  neighborGiftDateKey: '2026-07-21',
+  neighborGiftCount: 2,
+  dailyBiscuitClaimDate: '2026-07-21',
+  dailyBiscuitClaims: 2,
+  dailyDiscountDate: '2026-07-21',
+  dailyDiscountItemIds: ['apple' as const],
+  dailyDiscountUsedItemIds: ['apple' as const],
+  dailyDiscountUsed: true,
+  dailyHeartExchangeDate: '2026-07-21',
+  dailyHeartExchangeCount: 2,
+  weatherDate: '2026-07-21',
+  weather: 'rainy' as const,
+  dailyLoginRewardDateKey: '2026-07-21',
+  pomodoro: {
+    ...createDefaultPet(beforeFive).pomodoro,
+    dailyFocusDate: '2026-07-21',
+    dailyCompletedFocusCount: 3,
+  },
+  garden: {
+    ...createDefaultPet(beforeFive).garden,
+    dailyCareDateKey: '2026-07-21',
+    dailyWaterCount: 2,
+    dailyFertilizeCount: 1,
+    dailyHarvestDateKey: '2026-07-21',
+    dailyHarvestCount: 2,
+  },
+  boostCards: {
+    schemaVersion: 1,
+    friendPassExpiresAt: beforeFive + 10 * 24 * 60 * minuteMs,
+    bestFriendPassExpiresAt: 0,
+    bestFriendPassPurchasedDays: 0,
+    dailyDateKey: '2026-07-21',
+    dailyCoinsClaimedCardId: 'friend_pass',
+    dailyWorkBonusCoinsUsed: 24,
+    dailyExtraHeartCount: 9,
+    dailyGardenExtraDrops: 0,
+  } as unknown as PetState['boostCards'],
+};
+const normalizedBeforeFive = normalizePet(legacyMidnightPet, beforeFive);
+assert.equal(normalizedBeforeFive.neighborGiftDateKey, '2026-07-20');
+assert.equal(normalizedBeforeFive.neighborGiftCount, 2);
+assert.equal(normalizedBeforeFive.dailyBiscuitClaims, 2);
+assert.deepEqual(normalizedBeforeFive.dailyDiscountUsedItemIds, ['apple']);
+assert.equal(normalizedBeforeFive.dailyHeartExchangeCount, 2);
+assert.equal(normalizedBeforeFive.weather, 'rainy');
+assert.equal(normalizedBeforeFive.dailyLoginRewardDateKey, '2026-07-20');
+assert.equal(normalizedBeforeFive.pomodoro.dailyCompletedFocusCount, 3);
+assert.equal(normalizedBeforeFive.garden.dailyWaterCount, 2);
+assert.equal(normalizedBeforeFive.garden.dailyHarvestCount, 2);
+assert.equal(normalizedBeforeFive.boostCards.schemaVersion, 2);
+assert.equal(normalizedBeforeFive.boostCards.dailyRewardClaimed, true, 'a v1 card coin claim should migrate to the shared reward flag');
+assert.equal(normalizedBeforeFive.boostCards.dailyWorkBonusCoinsUsed, 24);
+assert.equal('dailyExtraHeartCount' in normalizedBeforeFive.boostCards, false, 'obsolete extra-heart counters should be discarded');
+
+const normalizedAtFive = normalizePet(normalizedBeforeFive, atFive);
+assert.equal(normalizedAtFive.neighborGiftCount, 0);
+assert.equal(normalizedAtFive.dailyBiscuitClaims, 0);
+assert.equal(normalizedAtFive.dailyHeartExchangeCount, 0);
+assert.equal(normalizedAtFive.pomodoro.dailyCompletedFocusCount, 0);
+assert.equal(normalizedAtFive.garden.dailyWaterCount, 0);
+assert.equal(normalizedAtFive.garden.dailyHarvestCount, 0);
+assert.equal(normalizedAtFive.boostCards.dailyRewardClaimed, false);
+assert.equal(normalizedAtFive.boostCards.dailyWorkBonusCoinsUsed, 0);
+
+const fiveThirty = new Date(2026, 6, 21, 5, 30, 0).getTime();
+const migratedOldSixState = normalizeBoostCardState({
+  ...normalizedBeforeFive.boostCards,
+  schemaVersion: 1,
+  dailyDateKey: '2026-07-20',
+  dailyCoinsClaimedCardId: 'friend_pass',
+  dailyWorkBonusCoinsUsed: 24,
+}, fiveThirty);
+assert.equal(migratedOldSixState.dailyRewardClaimed, false, 'the former 6:00 system should refresh early between 5:00 and 6:00');
+assert.equal(migratedOldSixState.dailyWorkBonusCoinsUsed, 0);
+
+const calendarMidnight = new Date(2027, 0, 1, 0, 1, 0).getTime();
+const calendarPet = {
+  ...createDefaultPet(calendarMidnight),
+  birthday: { month: 1, day: 1 },
+  dailyLoginRewardDateKey: getDailyResetDateKey(calendarMidnight),
+  monthlyGiftDateKey: '2027-01',
+};
+const calendarRewards = claimAvailableDateRewards(calendarPet, calendarMidnight).rewards;
+assert(calendarRewards.some((reward) => reward.kind === 'birthday'), 'calendar-date birthday rewards should still switch at midnight');
 
 const libraryMods = Array.from({ length: petModLibraryLimit + 1 }, (_, index) => ({
   manifest: {

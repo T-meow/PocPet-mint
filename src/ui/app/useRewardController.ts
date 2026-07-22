@@ -16,6 +16,7 @@ import { playSfx } from '../../core/audio';
 import { t } from '../../i18n';
 
 export type FloatingRewardConfig = { id: string; coins: number; eventKey: string };
+export type RewardPopupData = Pick<ClaimedDateReward, 'id' | 'title' | 'message' | 'coins' | 'hearts' | 'items'>;
 
 const floatingRewardConfigs: readonly FloatingRewardConfig[] = [
   { id: helpStarterGiftRewardId, coins: helpStarterGiftCoins, eventKey: 'pet.reward.helpStarterGift' },
@@ -30,7 +31,11 @@ interface RewardControllerOptions {
 }
 
 export const useRewardController = ({ pet, setPet, commitPet, hasLoadedModRef, playAfterUnlock }: RewardControllerOptions) => {
-  const [queue, setQueue] = useState<ClaimedDateReward[]>([]);
+  const [queue, setQueue] = useState<RewardPopupData[]>([]);
+
+  const enqueueReward = (reward: RewardPopupData) => {
+    setQueue((current) => current.some((queued) => queued.id === reward.id) ? current : [...current, reward]);
+  };
 
   const claimDateRewards = () => {
     if (!hasLoadedModRef.current) return;
@@ -89,6 +94,7 @@ export const useRewardController = ({ pet, setPet, commitPet, hasLoadedModRef, p
   return {
     activeReward: queue[0],
     closeActiveReward: () => setQueue((current) => current.slice(1)),
+    enqueueReward,
     availableFloatingReward: floatingRewardConfigs.find((reward) => !pet.claimedRewardIds.includes(reward.id)),
     hasClaimedHelpGift: pet.claimedRewardIds.includes(helpPageGiftRewardId),
     hasClaimedGardenCompensation: pet.claimedRewardIds.includes(gardenCompensationRewardId),

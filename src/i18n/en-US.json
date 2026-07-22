@@ -685,6 +685,8 @@
       "todayGarden": "Garden drops {count}/{limit}",
       "claimed": "Claimed today",
       "claimReward": "Claim a neighbor gift and {coins} coins",
+      "rewardGiftTitle": "Neighbor gift delivered",
+      "rewardCoinsTitle": "Daily boost-card reward",
       "remaining": "{days} days left",
       "buy": "{hearts} hearts · 30 days",
       "blockedByBestFriend": "Best Friend active",

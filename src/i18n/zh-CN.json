@@ -685,6 +685,8 @@
       "todayGarden": "今日种植额外产物 {count}/{limit}",
       "claimed": "今日已领取",
       "claimReward": "领取邻居礼物和 {coins} 金币",
+      "rewardGiftTitle": "邻居礼物已送达",
+      "rewardCoinsTitle": "增益卡每日奖励",
       "remaining": "剩余 {days} 天",
       "buy": "{hearts} 心心续期 30 天",
       "blockedByBestFriend": "挚友证生效中",

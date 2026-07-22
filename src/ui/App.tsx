@@ -50,7 +50,6 @@ import {
   type AchievementId,
   type AchievementView,
   type BoostCardId,
-  type ClaimedDateReward,
   type InventoryItemDefinition,
   type ItemId,
   type NeighborEventContext,
@@ -112,7 +111,7 @@ import { useAppNavigation } from './app/useAppNavigation';
 import { useInventoryController } from './app/useInventoryController';
 import { useGardenController } from './app/useGardenController';
 import { usePetSession } from './app/usePetSession';
-import { useRewardController } from './app/useRewardController';
+import { useRewardController, type RewardPopupData } from './app/useRewardController';
 
 const getPomodoroRemainingMs = (pet: PetState) =>
   pet.pomodoro.isRunning ? pet.pomodoro.phaseEndsAt - Date.now() : pet.pomodoro.pausedRemainingMs;
@@ -136,7 +135,7 @@ const getPomodoroProgress = (pet: PetState) => {
 
 type PomodoroSettingKey = keyof PomodoroDurations;
 type SoundOutcome = 'success' | 'blocked' | 'heart' | 'low_state';
-type RewardPopup = ClaimedDateReward;
+type RewardPopup = RewardPopupData;
 type RewardDisplayItem = { key: string; icon?: string; label: string; title?: string };
 type WishQuickAction = PetState['dailyWish']['action'] | NonNullable<PetState['returnWelcome']>['action'];
 type AchievementCgPopup = { title: string; description: string; image: string; fileName: string };
@@ -371,6 +370,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
   const {
     activeReward: activeRewardPopup,
     closeActiveReward,
+    enqueueReward,
     availableFloatingReward,
     hasClaimedHelpGift: hasClaimedHelpPageGift,
     hasClaimedGardenCompensation,
@@ -581,6 +581,16 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     setPet((current) => {
       const result = claimBoostCardDailyReward(current, eventContext);
       playSfx(result.coins > 0 ? 'coin' : 'error');
+      if (result.coins > 0) {
+        enqueueReward({
+          id: `boost_card:${result.pet.boostCards.dailyDateKey}`,
+          title: t(result.gift ? 'ui.boostCards.rewardGiftTitle' : 'ui.boostCards.rewardCoinsTitle'),
+          message: result.pet.recentEvent,
+          coins: result.coins,
+          items: result.gift ? [{ itemId: result.gift.itemId, amount: result.gift.itemAmount }] : [],
+        });
+        closeUtilityDialog();
+      }
       return commitPet(result.pet);
     });
   };
@@ -995,7 +1005,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
       const displayItem = getItemDefinition(itemRegistry, item.itemId);
       rewardItems.push({
         key: `${item.itemId}:${index}`,
-        icon: itemIconMap[item.itemId],
+        icon: itemIconMap[item.itemId] ?? displayItem?.imageUrl,
         label: t('ui.rewards.item', { item: displayItem?.name ?? item.itemId, count: item.amount }),
       });
     });

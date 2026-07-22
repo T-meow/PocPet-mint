@@ -23,6 +23,13 @@ export const selectNeighborGift = (
   random: () => number = Math.random,
 ): NeighborGiftCandidate => {
   const available = candidates.filter((item) => item.itemId !== 'golden_apple');
+  if (available.length === 0) {
+    return {
+      itemId: 'emergency_biscuit',
+      displayName: getInventoryItem('emergency_biscuit')?.name ?? t('pet.shop.items.emergency_biscuit.name'),
+      price: 0,
+    };
+  }
   const highValue = available.filter((item) => item.price > 1000);
   if (random() < 0.01) {
     if (highValue.length === 0 || random() < 0.6) {

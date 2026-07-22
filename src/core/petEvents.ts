@@ -175,7 +175,9 @@ export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, p
     inventory: event.itemId && canSettleNeighborGift
       ? addInventoryItem(pet.inventory, event.itemId, event.itemAmount ?? 1)
       : pet.inventory,
-    recentEvent: `${prefix}${event.text.replace(/\{hearts\}/g, String(heartGain.amount))}`,
+    recentEvent: canSettleNeighborGift
+      ? `${prefix}${event.text.replace(/\{hearts\}/g, String(heartGain.amount))}`
+      : pet.recentEvent,
     lastDailyRewardAt: prefix === t('pet.prefix.dailyEncounter') ? now : pet.lastDailyRewardAt,
     lastDailyEncounterAt: prefix === t('pet.prefix.dailyEncounter') ? now : pet.lastDailyEncounterAt,
     neighborGiftDateKey,

@@ -161,7 +161,8 @@ export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, p
   const currentNeighborGiftCount = pet.neighborGiftDateKey === neighborGiftDateKey
     ? Math.min(neighborGiftDailyLimit, clampCount(pet.neighborGiftCount))
     : 0;
-  const canSettleNeighborGift = event.kind !== 'neighbor_gift' || currentNeighborGiftCount < neighborGiftDailyLimit;
+  const canSettleNeighborGift = event.kind !== 'neighbor_gift'
+    || (Boolean(event.itemId) && currentNeighborGiftCount < neighborGiftDailyLimit);
   const withEvent: PetState = {
     ...pet,
     hunger: clampPetStat(pet, pet.hunger + (effect.hunger ?? 0)),

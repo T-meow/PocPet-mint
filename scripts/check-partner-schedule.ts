@@ -12,9 +12,10 @@ import {
 import { claimAvailableDateRewards } from '../src/core/dateRewards';
 import { getDailyResetDateKey } from '../src/core/dailyReset';
 import { claimDailyWishReward, getDailyWishView } from '../src/core/dailyWishes';
-import { advancePet } from '../src/core/petLifecycle';
+import { advancePet, advancePomodoro } from '../src/core/petLifecycle';
 import { plantTree, selectGardenSlot } from '../src/core/garden';
 import { getEnergyRecoveryIntervalMs } from '../src/core/petStats';
+import { getSeasonForDate } from '../src/core/season';
 import {
   advancePartnerSchedule,
   claimPartnerScheduleResult,
@@ -45,6 +46,7 @@ import { createDefaultPet, normalizePet } from '../src/core/petState';
 import { loadStoredPetJson } from '../src/core/saveCodec';
 import { startPomodoro } from '../src/core/petActions';
 import { normalizePetModLibraryState, petModLibraryLimit } from '../src/core/modStorage';
+import { ensureYearlyStatsForDate } from '../src/core/yearlyStats';
 import type { NeighborEventContext, NeighborGiftCandidate, PartnerScheduleCategory, PartnerScheduleResult, PartnerScheduleState, PetState } from '../src/core/petTypes';
 
 const minuteMs = 60 * 1000;
@@ -938,6 +940,8 @@ const blockedFourthGift = applyTimedEvent(thirdGift, dailyGift, now, '');
 assert.equal(blockedFourthGift.neighborGiftCount, neighborGiftDailyLimit, 'the settlement layer should keep the neighbor gift cap at three');
 assert.equal(blockedFourthGift.inventory[dailyGift.itemId!] ?? 0, fourthGiftInventoryBefore, 'a fourth neighbor gift must not enter inventory');
 assert.equal(blockedFourthGift.recentEvent, thirdGift.recentEvent, 'a blocked fourth gift must not claim that an item was received');
+const malformedGift = applyTimedEvent(twiceGifted, { kind: 'neighbor_gift', text: 'missing item' }, now, '');
+assert.equal(malformedGift.neighborGiftCount, twiceGifted.neighborGiftCount, 'a malformed gift without an item must not consume a daily gift slot');
 
 assert.deepEqual(
   {
@@ -1146,6 +1150,48 @@ const calendarPet = {
 };
 const calendarRewards = claimAvailableDateRewards(calendarPet, calendarMidnight).rewards;
 assert(calendarRewards.some((reward) => reward.kind === 'birthday'), 'calendar-date birthday rewards should still switch at midnight');
+
+const februaryEnd = new Date(2027, 1, 28, 23, 59, 59).getTime();
+const marchStart = new Date(2027, 2, 1, 0, 0, 0).getTime();
+assert.equal(getSeasonForDate(februaryEnd), 'winter');
+assert.equal(getSeasonForDate(marchStart), 'spring', 'seasons should continue to switch at calendar midnight');
+
+const focusStartedAt = new Date(2026, 6, 21, 4, 30, 0).getTime();
+const focusEndedAt = new Date(2026, 6, 21, 4, 55, 0).getTime();
+const afterFive = new Date(2026, 6, 21, 5, 1, 0).getTime();
+const crossResetPomodoroPet = {
+  ...createDefaultPet(focusStartedAt),
+  pomodoro: {
+    ...createDefaultPet(focusStartedAt).pomodoro,
+    isRunning: true,
+    phase: 'focus' as const,
+    phaseStartedAt: focusStartedAt,
+    phaseEndsAt: focusEndedAt,
+    focusRewardCheckpointAt: focusStartedAt,
+    dailyFocusDate: getDailyResetDateKey(focusStartedAt),
+  },
+};
+const crossResetPomodoro = advancePomodoro(crossResetPomodoroPet, afterFive);
+assert.equal(crossResetPomodoro.pomodoro.completedFocusCount, 1);
+assert.equal(crossResetPomodoro.pomodoro.dailyFocusDate, getDailyResetDateKey(afterFive));
+assert.equal(crossResetPomodoro.pomodoro.dailyCompletedFocusCount, 0, 'a focus completed before 5:00 must not count toward the new day');
+
+const beforeNewYearReset = new Date(2027, 0, 1, 4, 59, 0).getTime();
+const atNewYearReset = new Date(2027, 0, 1, 5, 0, 0).getTime();
+const yearlyPet = {
+  ...createDefaultPet(new Date(2026, 11, 31, 12, 0, 0).getTime()),
+  yearlyStats: {
+    ...createDefaultPet(new Date(2026, 11, 31, 12, 0, 0).getTime()).yearlyStats,
+    year: 2026,
+    activeDateKeys: ['2026-12-31'],
+  },
+};
+const yearlyBeforeFive = ensureYearlyStatsForDate(yearlyPet, beforeNewYearReset);
+assert.equal(yearlyBeforeFive.yearlyStats.year, 2026, 'annual statistics should not roll before the 5:00 game-day reset');
+assert.equal(yearlyBeforeFive.pendingYearReview, undefined);
+const yearlyAtFive = ensureYearlyStatsForDate(yearlyBeforeFive, atNewYearReset);
+assert.equal(yearlyAtFive.yearlyStats.year, 2027);
+assert.equal(yearlyAtFive.pendingYearReview?.year, 2026, 'the prior-year review should appear at the 5:00 reset');
 
 const libraryMods = Array.from({ length: petModLibraryLimit + 1 }, (_, index) => ({
   manifest: {

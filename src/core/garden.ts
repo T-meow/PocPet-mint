@@ -1,7 +1,7 @@
 import { t } from '../i18n';
 import { getAchievementEffects, incrementAchievementGardenHarvest, incrementAchievementGardenPlant, incrementAchievementGardenWater, recordEarnedCoins } from './achievements';
 import { getBoostCardEffects, normalizeBoostCardState, spendBoostCardGardenExtraDrop } from './boostCards';
-import { getDailyResetDateKey } from './dailyReset';
+import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
 import { addInventoryItem, getInventoryCount, isBuiltinItemId, removeInventoryItem } from './items';
 import { getPartnerScheduleCrossSystemEffects } from './partnerScheduleEffects';
 import { clampCoins, clampCount } from './petStats';
@@ -77,11 +77,6 @@ const isGardenTreeId = (value: unknown): value is GardenTreeId => typeof value =
 const isGardenFertilizerId = (value: unknown): value is GardenFertilizerId => typeof value === 'string' && gardenFertilizerIdSet.has(value as GardenFertilizerId);
 const isGardenSlotState = (value: unknown): value is GardenSlotState => typeof value === 'string' && gardenSlotStateSet.has(value as GardenSlotState);
 export const isGardenToolId = (value: unknown): value is GardenToolId => typeof value === 'string' && gardenToolIdSet.has(value as GardenToolId);
-const normalizeDateKey = (value: unknown, now: number) => {
-  const dateKey = typeof value === 'string' ? value.trim().slice(0, 16) : '';
-  const resetDateKey = getDailyResetDateKey(now);
-  return dateKey === resetDateKey ? dateKey : resetDateKey;
-};
 const defaultGardenTools = (): GardenTools => ({ wateringCanLevel: 1, shovelLevel: 1, fertilizerBoxLevel: 1 });
 const defaultGardenSlot = (slotIndex: number, now = Date.now()): GardenSlot => ({ slotIndex, unlocked: false, plantedAt: 0, lastWateredAt: 0, lastFertilizedAt: 0, lastBoostedAt: 0, nextReadyAt: 0, harvestsUsed: 0, maxHarvests: 0, hasNutrientBoost: false, dailyHarvestDateKey: getDailyResetDateKey(now), dailyHarvestCount: 0, pendingDrops: [], state: 'empty' });
 export const defaultGardenState = (now = Date.now()): GardenState => ({ schemaVersion: gardenSchemaVersion, activeSlotIndex: 0, slots: Array.from({ length: gardenSlotCount }, (_, slotIndex) => defaultGardenSlot(slotIndex, now)), dailyCareDateKey: getDailyResetDateKey(now), dailyWaterCount: 0, dailyFertilizeCount: 0, dailyHarvestDateKey: getDailyResetDateKey(now), dailyHarvestCount: 0, tools: defaultGardenTools(), lifetimeHarvestCount: 0 });
@@ -129,11 +124,12 @@ const normalizeGardenSlot = (value: unknown, slotIndex: number, previousUnlocked
   const nextReadyAt = clampTimestamp(raw.nextReadyAt, now);
   const maxHarvests = treeId ? Math.min(99, Math.max(1, isNumber(raw.maxHarvests) ? Math.floor(raw.maxHarvests) : gardenTreeMaxHarvests[treeId])) : 0;
   const harvestsUsed = treeId ? Math.min(maxHarvests, clampCount(isNumber(raw.harvestsUsed) ? raw.harvestsUsed : 0)) : 0;
-  const dailyHarvestDateKey = normalizeDateKey(raw.dailyHarvestDateKey, now);
   const resetDateKey = getDailyResetDateKey(now);
+  const isDailyHarvestCurrent = normalizeLegacyDailyDateKey(raw.dailyHarvestDateKey, now) === resetDateKey;
+  const dailyHarvestDateKey = resetDateKey;
   if (!unlocked || !treeId || state === 'empty') return { ...fallback, unlocked, dailyHarvestDateKey };
   const normalizedState: GardenSlotState = state === 'ready' && pendingDrops.length === 0 ? 'growing' : harvestsUsed >= maxHarvests && state !== 'ready' ? 'withered' : state;
-  return { slotIndex, unlocked, treeId, plantedAt, lastWateredAt: clampTimestamp(raw.lastWateredAt, now), lastFertilizedAt: clampTimestamp(raw.lastFertilizedAt, now), lastBoostedAt: clampTimestamp(raw.lastBoostedAt, now), nextReadyAt: nextReadyAt > 0 ? nextReadyAt : plantedAt + gardenTreeGrowDurationMs[treeId], harvestsUsed, maxHarvests, fertilizerType: isGardenFertilizerId(raw.fertilizerType) ? raw.fertilizerType : undefined, hasNutrientBoost: Boolean(raw.hasNutrientBoost), dailyHarvestDateKey, dailyHarvestCount: dailyHarvestDateKey === resetDateKey ? Math.min(999, clampCount(isNumber(raw.dailyHarvestCount) ? raw.dailyHarvestCount : 0)) : 0, pendingDrops: normalizedState === 'ready' ? pendingDrops : [], state: normalizedState };
+  return { slotIndex, unlocked, treeId, plantedAt, lastWateredAt: clampTimestamp(raw.lastWateredAt, now), lastFertilizedAt: clampTimestamp(raw.lastFertilizedAt, now), lastBoostedAt: clampTimestamp(raw.lastBoostedAt, now), nextReadyAt: nextReadyAt > 0 ? nextReadyAt : plantedAt + gardenTreeGrowDurationMs[treeId], harvestsUsed, maxHarvests, fertilizerType: isGardenFertilizerId(raw.fertilizerType) ? raw.fertilizerType : undefined, hasNutrientBoost: Boolean(raw.hasNutrientBoost), dailyHarvestDateKey, dailyHarvestCount: isDailyHarvestCurrent ? Math.min(999, clampCount(isNumber(raw.dailyHarvestCount) ? raw.dailyHarvestCount : 0)) : 0, pendingDrops: normalizedState === 'ready' ? pendingDrops : [], state: normalizedState };
 };
 
 export const normalizeGardenState = (value: unknown, now = Date.now()): GardenState => {
@@ -147,10 +143,10 @@ export const normalizeGardenState = (value: unknown, now = Date.now()): GardenSt
     previousUnlocked = slot.unlocked;
     return slot;
   });
-  const dailyCareDateKey = normalizeDateKey(raw.dailyCareDateKey, now);
-  const dailyHarvestDateKey = normalizeDateKey(raw.dailyHarvestDateKey, now);
   const resetDateKey = getDailyResetDateKey(now);
-  return { schemaVersion: gardenSchemaVersion, activeSlotIndex: isNumber(raw.activeSlotIndex) ? Math.min(gardenSlotCount - 1, Math.max(0, Math.floor(raw.activeSlotIndex))) : fallback.activeSlotIndex, slots, dailyCareDateKey, dailyWaterCount: dailyCareDateKey === resetDateKey ? Math.min(999, clampCount(isNumber(raw.dailyWaterCount) ? raw.dailyWaterCount : 0)) : 0, dailyFertilizeCount: dailyCareDateKey === resetDateKey ? Math.min(999, clampCount(isNumber(raw.dailyFertilizeCount) ? raw.dailyFertilizeCount : 0)) : 0, dailyHarvestDateKey, dailyHarvestCount: dailyHarvestDateKey === resetDateKey ? Math.min(999, clampCount(isNumber(raw.dailyHarvestCount) ? raw.dailyHarvestCount : 0)) : 0, tools: normalizeGardenTools(raw.tools), lifetimeHarvestCount: Math.min(999999, clampCount(isNumber(raw.lifetimeHarvestCount) ? raw.lifetimeHarvestCount : 0)) };
+  const isDailyCareCurrent = normalizeLegacyDailyDateKey(raw.dailyCareDateKey, now) === resetDateKey;
+  const isDailyHarvestCurrent = normalizeLegacyDailyDateKey(raw.dailyHarvestDateKey, now) === resetDateKey;
+  return { schemaVersion: gardenSchemaVersion, activeSlotIndex: isNumber(raw.activeSlotIndex) ? Math.min(gardenSlotCount - 1, Math.max(0, Math.floor(raw.activeSlotIndex))) : fallback.activeSlotIndex, slots, dailyCareDateKey: resetDateKey, dailyWaterCount: isDailyCareCurrent ? Math.min(999, clampCount(isNumber(raw.dailyWaterCount) ? raw.dailyWaterCount : 0)) : 0, dailyFertilizeCount: isDailyCareCurrent ? Math.min(999, clampCount(isNumber(raw.dailyFertilizeCount) ? raw.dailyFertilizeCount : 0)) : 0, dailyHarvestDateKey: resetDateKey, dailyHarvestCount: isDailyHarvestCurrent ? Math.min(999, clampCount(isNumber(raw.dailyHarvestCount) ? raw.dailyHarvestCount : 0)) : 0, tools: normalizeGardenTools(raw.tools), lifetimeHarvestCount: Math.min(999999, clampCount(isNumber(raw.lifetimeHarvestCount) ? raw.lifetimeHarvestCount : 0)) };
 };
 
 const getToolLevel = (tools: GardenTools, toolId: GardenToolId) => toolId === 'watering_can' ? tools.wateringCanLevel : toolId === 'shovel' ? tools.shovelLevel : tools.fertilizerBoxLevel;

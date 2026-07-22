@@ -642,18 +642,14 @@ export const renamePet = (pet: PetState, name: string): PetState => {
   };
 };
 
-const isSameBirthday = (left?: PetBirthday, right?: PetBirthday) => left?.month === right?.month && left?.day === right?.day;
-
 export const updatePetProfile = (pet: PetState, name: string, birthday?: PetBirthday): PetState => {
   const nextName = name.trim().slice(0, 32) || pet.name;
   const nextBirthday = normalizePetBirthday(birthday);
-  const birthdayChanged = nextBirthday ? !isSameBirthday(pet.birthday, nextBirthday) : false;
 
   return {
     ...pet,
     name: nextName,
     ...(nextBirthday ? { birthday: nextBirthday } : {}),
-    lastBirthdayRewardYear: birthdayChanged ? undefined : pet.lastBirthdayRewardYear,
     recentEvent: t('pet.profile.updated', { name: nextName }),
   };
 };

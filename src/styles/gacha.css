@@ -1,5 +1,6 @@
 .gacha-modal,
-.gacha-detail-modal {
+.gacha-detail-modal,
+.classic-legacy {
   --gacha-rarity-common-border: rgba(99, 111, 128, 0.3);
   --gacha-rarity-common-bg: #ffffff;
   --gacha-rarity-uncommon-border: rgba(47, 139, 79, 0.48);
@@ -240,27 +241,32 @@
   padding: 22px;
 }
 
-.gacha-result--common {
+.gacha-result--common,
+.classic-legacy.classic-legacy--common {
   border-color: var(--gacha-rarity-common-border);
   background: var(--gacha-rarity-common-bg);
 }
 
-.gacha-result--uncommon {
+.gacha-result--uncommon,
+.classic-legacy.classic-legacy--uncommon {
   border-color: var(--gacha-rarity-uncommon-border);
   background: var(--gacha-rarity-uncommon-bg);
 }
 
-.gacha-result--rare {
+.gacha-result--rare,
+.classic-legacy.classic-legacy--rare {
   border-color: var(--gacha-rarity-rare-border);
   background: var(--gacha-rarity-rare-bg);
 }
 
-.gacha-result--legendary {
+.gacha-result--legendary,
+.classic-legacy.classic-legacy--legendary {
   border-color: var(--gacha-rarity-legendary-border);
   background: var(--gacha-rarity-legendary-bg);
 }
 
-.gacha-result--jackpot {
+.gacha-result--jackpot,
+.classic-legacy.classic-legacy--jackpot {
   border-color: var(--gacha-rarity-jackpot-border);
   background: var(--gacha-rarity-jackpot-bg);
   background-size: 300% 300%;
@@ -268,7 +274,8 @@
   animation: gacha-iridescent 3s ease-in-out infinite;
 }
 
-.gacha-result--legendary::before {
+.gacha-result--legendary::before,
+.classic-legacy.classic-legacy--legendary::before {
   position: absolute;
   inset: 4px;
   border: 1px solid rgba(217, 147, 23, 0.35);
@@ -278,7 +285,8 @@
   animation: gacha-glint 1.2s ease-in-out infinite;
 }
 
-.gacha-result--jackpot::before {
+.gacha-result--jackpot::before,
+.classic-legacy.classic-legacy--jackpot::before {
   position: absolute;
   inset: 3px;
   border: 2px solid #df3558;
@@ -639,6 +647,9 @@
   .gacha-result--jackpot,
   .gacha-result--legendary::before,
   .gacha-result--jackpot::before,
+  .classic-legacy.classic-legacy--jackpot,
+  .classic-legacy.classic-legacy--legendary::before,
+  .classic-legacy.classic-legacy--jackpot::before,
   .gacha-stage--jackpot::after {
     animation: none;
     transition: opacity 100ms linear;

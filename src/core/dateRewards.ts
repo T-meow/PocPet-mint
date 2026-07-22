@@ -3,16 +3,13 @@ import { addInventoryItem } from './items';
 import { applyHeartGain, claimAchievementDailyStipendWithResult, getAchievementEffects, incrementAchievementDateReward, recordEarnedCoins, recordEarnedHearts } from './achievements';
 import { getDailyResetDateKey } from './dailyReset';
 import { clampCoins } from './petStats';
-import type { ItemId, PetBirthday, PetState } from './petTypes';
-import { getLocalDateKey, hashString } from './utils';
+import type { ItemId, PetBirthday, PetCalendarDate, PetState } from './petTypes';
+import { hashString } from './utils';
 
 export const defaultPetBirthday: PetBirthday = { month: 4, day: 23 };
-export const birthdayRewardCoins = 100;
-export const birthdayRewardHearts = 10;
-export const anniversaryRewardCoins = 50;
-export const anniversaryRewardHearts = 3;
-export const monthlyGiftCoins = 20;
 export const annualDateRewardGachaTickets = 10;
+export const monthlyGiftGachaTickets = 3;
+export const dateRewardCatchUpDays = 3;
 
 export type DateRewardKind = 'birthday' | 'anniversary' | 'festival' | 'monthly_gift' | 'daily_login';
 
@@ -91,24 +88,51 @@ const dailyLoginRewardPool: readonly WeightedEntry<{ coins: number } | { itemId:
 const dailyLoginBonusItemPool: readonly WeightedEntry<{ itemId: ItemId }>[] = dailyLoginRewardPool
   .filter((entry): entry is WeightedEntry<{ itemId: ItemId }> => 'itemId' in entry);
 
-const getLocalYear = (time: number) => new Date(time).getFullYear();
-
-const getMonthDay = (time: number) => {
+export const getLocalCalendarDate = (time: number): PetCalendarDate => {
   const date = new Date(time);
-  return { month: date.getMonth() + 1, day: date.getDate() };
+  return { year: date.getFullYear(), month: date.getMonth() + 1, day: date.getDate() };
 };
-
-const getMonthKey = (time: number) => getLocalDateKey(time).slice(0, 7);
 
 const getMonthMaxDayForYear = (month: number, year: number) =>
   month >= 1 && month <= 12 ? new Date(year, month, 0).getDate() : 0;
 
-const isSameMonthDay = (time: number, birthday: PetBirthday) => {
-  const current = getMonthDay(time);
-  return current.month === birthday.month && current.day === birthday.day;
+export const normalizePetCalendarDate = (value: unknown): PetCalendarDate | undefined => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return undefined;
+  const raw = value as Record<string, unknown>;
+  const year = typeof raw.year === 'number' && Number.isInteger(raw.year) ? raw.year : 0;
+  const month = typeof raw.month === 'number' && Number.isInteger(raw.month) ? raw.month : 0;
+  const day = typeof raw.day === 'number' && Number.isInteger(raw.day) ? raw.day : 0;
+  const maxDay = getMonthMaxDayForYear(month, year);
+  return year >= 1 && year <= 9999 && day >= 1 && day <= maxDay ? { year, month, day } : undefined;
 };
 
-const getAnnualRewardKey = (id: string, time: number) => `${id}:${getLocalYear(time)}`;
+const getAnnualMonthDay = (date: PetBirthday, year: number): PetBirthday =>
+  date.month === 2 && date.day === 29 && getMonthMaxDayForYear(2, year) === 28
+    ? { month: 2, day: 28 }
+    : { month: date.month, day: date.day };
+
+const isSameMonthDay = (date: PetCalendarDate, target: PetBirthday) =>
+  date.month === target.month && date.day === target.day;
+
+interface RecentCalendarDate extends PetCalendarDate {
+  dateKey: string;
+  daysAgo: number;
+}
+
+const getCalendarDateKey = (date: PetCalendarDate) =>
+  `${String(date.year).padStart(4, '0')}-${String(date.month).padStart(2, '0')}-${String(date.day).padStart(2, '0')}`;
+
+const getRecentCalendarDates = (now: number): RecentCalendarDate[] => {
+  const current = new Date(now);
+  return Array.from({ length: dateRewardCatchUpDays + 1 }, (_, daysAgo) => {
+    const date = new Date(current.getFullYear(), current.getMonth(), current.getDate() - daysAgo, 12, 0, 0, 0);
+    const calendarDate = getLocalCalendarDate(date.getTime());
+    return { ...calendarDate, dateKey: getCalendarDateKey(calendarDate), daysAgo };
+  }).reverse();
+};
+
+const getMonthKey = (date: PetCalendarDate) =>
+  `${String(date.year).padStart(4, '0')}-${String(date.month).padStart(2, '0')}`;
 
 export const getPetBirthdayMaxDay = (month: number) => (month >= 1 && month <= 12 ? new Date(2024, month, 0).getDate() : 0);
 
@@ -129,11 +153,11 @@ export const withBackfilledBirthday = (pet: PetState, birthday?: PetBirthday): P
 export const withPetIdentityBirthday = (pet: PetState, birthday?: PetBirthday): PetState => {
   if (birthday) {
     if (pet.birthday?.month === birthday.month && pet.birthday.day === birthday.day) return pet;
-    return { ...pet, birthday, lastBirthdayRewardYear: undefined };
+    return { ...pet, birthday };
   }
 
-  if (!pet.birthday && pet.lastBirthdayRewardYear === undefined) return pet;
-  const { birthday: _birthday, lastBirthdayRewardYear: _lastBirthdayRewardYear, ...rest } = pet;
+  if (!pet.birthday) return pet;
+  const { birthday: _birthday, ...rest } = pet;
   return rest;
 };
 
@@ -207,10 +231,8 @@ const applyReward = (pet: PetState, reward: ClaimedDateReward): { pet: PetState;
   };
 };
 
-const getFestivalForDate = (now: number) => {
-  const current = getMonthDay(now);
-  return festivalConfigs.find((festival) => festival.month === current.month && festival.day === current.day);
-};
+const getFestivalForDate = (date: PetCalendarDate) =>
+  festivalConfigs.find((festival) => festival.month === date.month && festival.day === date.day);
 
 const getFestivalItems = (festival: FestivalConfig, annualKey: string): DateRewardItem[] => {
   if (festival.reward.type === 'harvest_food') {
@@ -223,113 +245,102 @@ const getFestivalItems = (festival: FestivalConfig, annualKey: string): DateRewa
   return [{ itemId: pickSeededItem(festival.reward.items, annualKey), amount: 1 }];
 };
 
-const getAnniversaryDateForYear = (createdAt: number, year: number): PetBirthday => {
-  const created = new Date(createdAt);
-  const month = created.getMonth() + 1;
-  const day = created.getDate();
-  if (month === 2 && day === 29 && getMonthMaxDayForYear(2, year) === 28) return { month: 2, day: 28 };
-  return { month, day };
-};
-
-const claimBirthdayReward = (pet: PetState, now: number): { pet: PetState; reward?: ClaimedDateReward } => {
-  if (!pet.birthday || !isSameMonthDay(now, pet.birthday)) return { pet };
-
-  const year = getLocalYear(now);
-  if (pet.lastBirthdayRewardYear === year) return { pet };
-
-  const reward: ClaimedDateReward = {
-    id: `birthday:${year}`,
-    kind: 'birthday',
-    title: t('ui.rewards.birthdayTitle', { name: pet.name }),
-    message: t('pet.reward.birthday', { name: pet.name, coins: birthdayRewardCoins, hearts: '{hearts}' }),
-    coins: birthdayRewardCoins,
-    hearts: birthdayRewardHearts,
-    gachaTickets: annualDateRewardGachaTickets,
-    items: [{ itemId: 'birthday_cake', amount: 1 }],
-  };
-
-  const applied = applyReward(pet, reward);
-  return {
-    pet: { ...applied.pet, lastBirthdayRewardYear: year },
-    reward: applied.reward,
-  };
-};
-
-const claimAnniversaryReward = (pet: PetState, now: number): { pet: PetState; reward?: ClaimedDateReward } => {
-  const year = getLocalYear(now);
-  const createdYear = getLocalYear(pet.createdAt);
-  if (year <= createdYear) return { pet };
-  if (pet.lastAnniversaryRewardYear === year) return { pet };
-  if (!isSameMonthDay(now, getAnniversaryDateForYear(pet.createdAt, year))) return { pet };
-
-  const reward: ClaimedDateReward = {
-    id: `anniversary:${year}`,
-    kind: 'anniversary',
-    title: t('ui.rewards.anniversaryTitle', { name: pet.name }),
-    message: t('pet.reward.anniversary', { name: pet.name, coins: anniversaryRewardCoins, hearts: '{hearts}' }),
-    coins: anniversaryRewardCoins,
-    hearts: anniversaryRewardHearts,
-    gachaTickets: annualDateRewardGachaTickets,
-    items: [{ itemId: 'shiny_sticker', amount: 1 }],
-  };
-
-  const applied = applyReward(pet, reward);
-  return {
-    pet: { ...applied.pet, lastAnniversaryRewardYear: year },
-    reward: applied.reward,
-  };
-};
-
-const claimFestivalReward = (pet: PetState, now: number): { pet: PetState; reward?: ClaimedDateReward } => {
-  const festival = getFestivalForDate(now);
-  if (!festival) return { pet };
-
-  const annualKey = getAnnualRewardKey(festival.id, now);
-  if (pet.claimedFestivalRewardKeys.includes(annualKey)) return { pet };
-
-  const festivalName = t(festival.nameKey);
-  const items = getFestivalItems(festival, annualKey);
-  const reward: ClaimedDateReward = {
-    id: `festival:${annualKey}`,
-    kind: 'festival',
-    title: t('ui.rewards.festivalTitle', { festival: festivalName }),
-    message: t(festival.dialogueKey, { name: pet.name, festival: festivalName }),
-    gachaTickets: annualDateRewardGachaTickets,
-    items,
-  };
-
+const applyCalendarReward = (pet: PetState, reward: ClaimedDateReward) => {
   const applied = applyReward(pet, reward);
   return {
     pet: {
       ...applied.pet,
-      claimedFestivalRewardKeys: [...pet.claimedFestivalRewardKeys, annualKey],
+      claimedDateRewardKeys: [...applied.pet.claimedDateRewardKeys, reward.id],
     },
     reward: applied.reward,
   };
 };
 
-const claimMonthlyGiftReward = (pet: PetState, now: number): { pet: PetState; reward?: ClaimedDateReward } => {
-  const current = getMonthDay(now);
-  if (current.day !== 1) return { pet };
+const getRewardMessage = (pet: PetState, date: RecentCalendarDate, timelyMessage: string) =>
+  date.daysAgo > 0 ? t('pet.reward.catchUp', { name: pet.name }) : timelyMessage;
 
-  const monthKey = getMonthKey(now);
-  if (pet.monthlyGiftDateKey === monthKey) return { pet };
+const claimBirthdayReward = (pet: PetState, date: RecentCalendarDate): { pet: PetState; reward?: ClaimedDateReward } => {
+  if (!pet.birthday || !isSameMonthDay(date, getAnnualMonthDay(pet.birthday, date.year))) return { pet };
 
-  const fruit = pickSeededItem(fruitItems, `monthly:${monthKey}`);
+  const rewardKey = `birthday:${date.year}`;
+  if (pet.claimedDateRewardKeys.includes(rewardKey)) return { pet };
+
   const reward: ClaimedDateReward = {
-    id: `monthly_gift:${monthKey}`,
+    id: rewardKey,
+    kind: 'birthday',
+    title: t('ui.rewards.birthdayTitle', { name: pet.name }),
+    message: getRewardMessage(pet, date, t('pet.reward.birthday', { name: pet.name })),
+    gachaTickets: annualDateRewardGachaTickets,
+    items: [
+      { itemId: 'golden_apple', amount: 1 },
+      { itemId: 'birthday_cake', amount: 1 },
+    ],
+  };
+
+  return applyCalendarReward(pet, reward);
+};
+
+const claimAnniversaryReward = (pet: PetState, date: RecentCalendarDate): { pet: PetState; reward?: ClaimedDateReward } => {
+  if (date.year <= pet.metDate.year) return { pet };
+  if (!isSameMonthDay(date, getAnnualMonthDay(pet.metDate, date.year))) return { pet };
+
+  const rewardKey = `anniversary:${date.year}`;
+  if (pet.claimedDateRewardKeys.includes(rewardKey)) return { pet };
+
+  const reward: ClaimedDateReward = {
+    id: rewardKey,
+    kind: 'anniversary',
+    title: t('ui.rewards.anniversaryTitle', { name: pet.name }),
+    message: getRewardMessage(pet, date, t('pet.reward.anniversary', { name: pet.name })),
+    gachaTickets: annualDateRewardGachaTickets,
+    items: [
+      { itemId: 'golden_apple', amount: 1 },
+      { itemId: 'shiny_sticker', amount: 1 },
+    ],
+  };
+
+  return applyCalendarReward(pet, reward);
+};
+
+const claimFestivalReward = (pet: PetState, date: RecentCalendarDate): { pet: PetState; reward?: ClaimedDateReward } => {
+  const festival = getFestivalForDate(date);
+  if (!festival) return { pet };
+
+  const annualKey = `${festival.id}:${date.year}`;
+  const rewardKey = `festival:${annualKey}`;
+  if (pet.claimedDateRewardKeys.includes(rewardKey)) return { pet };
+
+  const festivalName = t(festival.nameKey);
+  const items = getFestivalItems(festival, annualKey);
+  const reward: ClaimedDateReward = {
+    id: rewardKey,
+    kind: 'festival',
+    title: t('ui.rewards.festivalTitle', { festival: festivalName }),
+    message: getRewardMessage(pet, date, t(festival.dialogueKey, { name: pet.name, festival: festivalName })),
+    gachaTickets: annualDateRewardGachaTickets,
+    items,
+  };
+
+  return applyCalendarReward(pet, reward);
+};
+
+const claimMonthlyGiftReward = (pet: PetState, date: RecentCalendarDate): { pet: PetState; reward?: ClaimedDateReward } => {
+  if (date.day !== 1) return { pet };
+
+  const monthKey = getMonthKey(date);
+  const rewardKey = `monthly_gift:${monthKey}`;
+  if (pet.claimedDateRewardKeys.includes(rewardKey)) return { pet };
+
+  const reward: ClaimedDateReward = {
+    id: rewardKey,
     kind: 'monthly_gift',
     title: t('ui.rewards.monthlyTitle'),
-    message: t('pet.reward.monthlyGift', { coins: monthlyGiftCoins }),
-    coins: monthlyGiftCoins,
-    items: [{ itemId: fruit, amount: 1 }],
+    message: getRewardMessage(pet, date, t('pet.reward.monthlyGift')),
+    gachaTickets: monthlyGiftGachaTickets,
+    items: [{ itemId: 'golden_apple', amount: 1 }],
   };
 
-  const applied = applyReward(pet, reward);
-  return {
-    pet: { ...applied.pet, monthlyGiftDateKey: monthKey },
-    reward: applied.reward,
-  };
+  return applyCalendarReward(pet, reward);
 };
 
 const claimDailyLoginReward = (pet: PetState, now: number): { pet: PetState; reward?: ClaimedDateReward } => {
@@ -364,12 +375,20 @@ const claimDailyLoginReward = (pet: PetState, now: number): { pet: PetState; rew
 export const claimAvailableDateRewards = (pet: PetState, now = Date.now()) => {
   const rewards: ClaimedDateReward[] = [];
   let next = pet;
+  const metDateKey = getCalendarDateKey(pet.metDate);
 
-  for (const claim of [claimBirthdayReward, claimAnniversaryReward, claimFestivalReward, claimMonthlyGiftReward, claimDailyLoginReward]) {
-    const result = claim(next, now);
-    next = result.pet;
-    if (result.reward) rewards.push(result.reward);
+  for (const date of getRecentCalendarDates(now)) {
+    if (date.dateKey < metDateKey) continue;
+    for (const claim of [claimBirthdayReward, claimAnniversaryReward, claimFestivalReward, claimMonthlyGiftReward]) {
+      const result = claim(next, date);
+      next = result.pet;
+      if (result.reward) rewards.push(result.reward);
+    }
   }
+
+  const dailyLoginResult = claimDailyLoginReward(next, now);
+  next = dailyLoginResult.pet;
+  if (dailyLoginResult.reward) rewards.push(dailyLoginResult.reward);
 
   if (rewards.length > 0) {
     rewards.forEach((reward) => {

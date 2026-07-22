@@ -348,6 +348,7 @@
 
 .partner-schedule-section-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: end;
   justify-content: space-between;
   gap: 12px;
@@ -361,6 +362,34 @@
 .partner-schedule-section-heading small {
   color: var(--text-muted);
   font-weight: 800;
+}
+
+.partner-schedule-section-heading__meta {
+  display: grid;
+  min-width: 0;
+  justify-items: end;
+  gap: 4px;
+  text-align: right;
+}
+
+.partner-schedule-daily-ticket {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 5px;
+  color: #8b641e;
+  font-size: 0.74rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.partner-schedule-daily-ticket svg {
+  flex: 0 0 auto;
+}
+
+.partner-schedule-daily-ticket--claimed {
+  color: var(--accent-green);
 }
 
 .partner-schedule-list {
@@ -515,6 +544,20 @@
 
   .partner-schedule-page__header p {
     font-size: 0.78rem;
+  }
+
+  .partner-schedule-section-heading {
+    align-items: start;
+  }
+
+  .partner-schedule-section-heading__meta {
+    width: 100%;
+    justify-items: start;
+    text-align: left;
+  }
+
+  .partner-schedule-daily-ticket {
+    justify-content: flex-start;
   }
 
   .partner-schedule-skills {

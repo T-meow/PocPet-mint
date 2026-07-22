@@ -8,6 +8,7 @@ import {
   Dumbbell,
   Sparkles,
   Sprout,
+  Ticket,
   X,
   type LucideIcon,
 } from 'lucide-react';
@@ -90,6 +91,7 @@ export const PartnerSchedulePage = ({
   const level6Count = skills.filter((skill) => skill.level >= 6).length;
   const globalCoinBonusPercent = getPartnerScheduleGlobalCoinBonusPercent(schedule.skills);
   const extraRewardChancePercent = getAchievementEffects(pet).partnerScheduleExtraRewardChancePercent;
+  const scheduleTicketClaimed = pet.goldenAppleGacha.dailyGrantedSources.includes('partner_schedule');
 
   return (
     <section className="partner-schedule-page" aria-label={t('ui.partnerSchedule.aria')}>
@@ -145,30 +147,6 @@ export const PartnerSchedulePage = ({
           );
         })}
       </div>
-
-      <section className="partner-schedule-milestones" aria-label={t('ui.partnerSchedule.milestones.aria')}>
-        <div>
-          <span>{t('ui.partnerSchedule.milestones.level3Title')}</span>
-          <strong>{t('ui.partnerSchedule.milestones.progress', { count: level3Count, level: 3 })}</strong>
-          <small>{level3Count < categories.length
-            ? t('ui.partnerSchedule.milestones.level3Locked')
-            : schedule.boardOfferCount >= 4
-              ? t('ui.partnerSchedule.milestones.level3Active')
-              : t('ui.partnerSchedule.milestones.nextReset', { count: 4 })}</small>
-        </div>
-        <div>
-          <span>{t('ui.partnerSchedule.milestones.level6Title')}</span>
-          <strong>{t('ui.partnerSchedule.milestones.progress', { count: level6Count, level: 6 })}</strong>
-          <small>{level6Count < categories.length
-            ? t('ui.partnerSchedule.milestones.level6Locked')
-            : schedule.boardOfferCount >= 5
-              ? t('ui.partnerSchedule.milestones.level6Active')
-              : t('ui.partnerSchedule.milestones.nextReset', { count: 5 })}</small>
-        </div>
-        <strong className="partner-schedule-milestones__income">
-          {t('ui.partnerSchedule.milestones.income', { percent: globalCoinBonusPercent })}
-        </strong>
-      </section>
 
       {pendingResult && resultDefinition ? (
         <section className="partner-schedule-result" aria-label={t('ui.partnerSchedule.resultAria')}>
@@ -226,7 +204,15 @@ export const PartnerSchedulePage = ({
 
       <div className="partner-schedule-section-heading">
         <div><span>{t('ui.partnerSchedule.todayKicker')}</span><h3>{t('ui.partnerSchedule.todayTitle')}</h3></div>
-        <small>{t('ui.partnerSchedule.dailyCount', { count: schedule.completedOfferIds.length, limit: partnerScheduleDailyCompletionLimit, offers: schedule.offers.length })}</small>
+        <div className="partner-schedule-section-heading__meta">
+          <small>{t('ui.partnerSchedule.dailyCount', { count: schedule.completedOfferIds.length, limit: partnerScheduleDailyCompletionLimit, offers: schedule.offers.length })}</small>
+          <strong className={`partner-schedule-daily-ticket${scheduleTicketClaimed ? ' partner-schedule-daily-ticket--claimed' : ''}`}>
+            <Ticket size={15} aria-hidden="true" />
+            {scheduleTicketClaimed
+              ? t('ui.partnerSchedule.dailyTicketClaimed')
+              : t('ui.partnerSchedule.dailyTicketHint', { limit: partnerScheduleDailyCompletionLimit })}
+          </strong>
+        </div>
       </div>
 
       <div className="partner-schedule-list">
@@ -275,6 +261,30 @@ export const PartnerSchedulePage = ({
           );
         })}
       </div>
+
+      <section className="partner-schedule-milestones" aria-label={t('ui.partnerSchedule.milestones.aria')}>
+        <div>
+          <span>{t('ui.partnerSchedule.milestones.level3Title')}</span>
+          <strong>{t('ui.partnerSchedule.milestones.progress', { count: level3Count, level: 3 })}</strong>
+          <small>{level3Count < categories.length
+            ? t('ui.partnerSchedule.milestones.level3Locked')
+            : schedule.boardOfferCount >= 4
+              ? t('ui.partnerSchedule.milestones.level3Active')
+              : t('ui.partnerSchedule.milestones.nextReset', { count: 4 })}</small>
+        </div>
+        <div>
+          <span>{t('ui.partnerSchedule.milestones.level6Title')}</span>
+          <strong>{t('ui.partnerSchedule.milestones.progress', { count: level6Count, level: 6 })}</strong>
+          <small>{level6Count < categories.length
+            ? t('ui.partnerSchedule.milestones.level6Locked')
+            : schedule.boardOfferCount >= 5
+              ? t('ui.partnerSchedule.milestones.level6Active')
+              : t('ui.partnerSchedule.milestones.nextReset', { count: 5 })}</small>
+        </div>
+        <strong className="partner-schedule-milestones__income">
+          {t('ui.partnerSchedule.milestones.income', { percent: globalCoinBonusPercent })}
+        </strong>
+      </section>
     </section>
   );
 };

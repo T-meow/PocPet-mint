@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Apple, ArrowLeft, BookOpen, ChefHat, Footprints, Sprout, type LucideIcon } from 'lucide-react';
+import { Apple, ArrowLeft, BookOpen, ChefHat, Footprints, Lock, Sprout, type LucideIcon } from 'lucide-react';
 import {
   classicEndgameUnlockLevel,
   classicEndgameUnlockSkillLevel,
@@ -12,6 +12,7 @@ import {
   getDreamStageEligibility,
   isClassicEndgameComplete,
   isClassicEndgameUnlocked,
+  type GachaRewardRarity,
   type PartnerScheduleCategory,
   type PetState,
 } from '../core/pet';
@@ -49,6 +50,14 @@ const getInvestmentAmounts = (cost: number, invested: number, coins: number) => 
   ] as const;
 };
 
+const getLegacyCardRarity = (level: number): GachaRewardRarity => {
+  if (level >= 12) return 'jackpot';
+  if (level >= 9) return 'legendary';
+  if (level >= 6) return 'rare';
+  if (level >= 3) return 'uncommon';
+  return 'common';
+};
+
 export const CommonDreamsPage = ({
   pet,
   onBack,
@@ -60,6 +69,7 @@ export const CommonDreamsPage = ({
 }: CommonDreamsPageProps) => {
   const [pendingInvestment, setPendingInvestment] = useState<PendingInvestment | null>(null);
   const unlocked = isClassicEndgameUnlocked(pet);
+  const hasReachedDreamLevel = pet.level >= classicEndgameUnlockLevel;
   const complete = isClassicEndgameComplete(pet);
   const goalProgress = getClassicGoalProgress(pet);
   const goldenApples = pet.inventory.golden_apple ?? 0;
@@ -135,10 +145,8 @@ export const CommonDreamsPage = ({
             </div>
           </div>
         </div>
-        {!unlocked && (
+        {hasReachedDreamLevel && !unlocked && !complete && (
           <p>{t('ui.classicEndgame.lockedProgress', {
-            level: pet.level,
-            targetLevel: classicEndgameUnlockLevel,
             skill: Math.min(...dreamProjectCategories.map((category) => pet.partnerSchedule.skills[category].level)),
             targetSkill: classicEndgameUnlockSkillLevel,
           })}</p>
@@ -147,27 +155,36 @@ export const CommonDreamsPage = ({
       </div>
 
       {!complete ? (
-        <div className="classic-dream-grid">
-          {dreamProjectCategories.map((category) => {
-            const progress = pet.classicEndgame.projects[category];
-            const eligibility = getDreamStageEligibility(pet, category);
-            const Icon = projectIcons[category];
-            if (eligibility.complete || !eligibility.definition) {
+        !hasReachedDreamLevel ? (
+          <div className="classic-dream-lock" role="status">
+            <Lock size={20} aria-hidden="true" />
+            <p>{t('ui.classicEndgame.levelLocked', {
+              level: pet.level,
+              targetLevel: classicEndgameUnlockLevel,
+            })}</p>
+          </div>
+        ) : (
+          <div className="classic-dream-grid">
+            {dreamProjectCategories.map((category) => {
+              const progress = pet.classicEndgame.projects[category];
+              const eligibility = getDreamStageEligibility(pet, category);
+              const Icon = projectIcons[category];
+              if (eligibility.complete || !eligibility.definition) {
+                return (
+                  <article className="classic-dream classic-dream--complete" key={category}>
+                    <Icon size={24} aria-hidden="true" />
+                    <h2>{t(`ui.classicEndgame.projects.${category}.title`)}</h2>
+                    <p>{t(`ui.classicEndgame.projects.${category}.result`)}</p>
+                    <strong>{t('ui.classicEndgame.projectComplete')}</strong>
+                  </article>
+                );
+              }
+              const definition = eligibility.definition;
+              const nextDefinition = dreamStageDefinitions[definition.stage];
+              const percent = definition.coinCost > 0 ? progress.currentStageCoins / definition.coinCost * 100 : 100;
+              const canComplete = eligibility.requirementsMet && eligibility.coinsMet && eligibility.applesMet;
               return (
-                <article className="classic-dream classic-dream--complete" key={category}>
-                  <Icon size={24} aria-hidden="true" />
-                  <h2>{t(`ui.classicEndgame.projects.${category}.title`)}</h2>
-                  <p>{t(`ui.classicEndgame.projects.${category}.result`)}</p>
-                  <strong>{t('ui.classicEndgame.projectComplete')}</strong>
-                </article>
-              );
-            }
-            const definition = eligibility.definition;
-            const nextDefinition = dreamStageDefinitions[definition.stage];
-            const percent = definition.coinCost > 0 ? progress.currentStageCoins / definition.coinCost * 100 : 100;
-            const canComplete = eligibility.requirementsMet && eligibility.coinsMet && eligibility.applesMet;
-            return (
-              <article className="classic-dream" key={category}>
+                <article className="classic-dream" key={category}>
                 <header>
                   <span className="classic-dream__icon"><Icon size={22} aria-hidden="true" /></span>
                   <div>
@@ -220,17 +237,19 @@ export const CommonDreamsPage = ({
                     {t('ui.classicEndgame.completeStage')}
                   </button>
                 </div>
-              </article>
-            );
-          })}
-        </div>
+                </article>
+              );
+            })}
+          </div>
+        )
       ) : (() => {
         const targetLevel = pet.classicEndgame.legacyLevel + 1;
         const coinCost = getClassicLegacyLevelCoinCost(targetLevel);
         const appleCost = getClassicLegacyAppleCost(targetLevel);
         const canCompleteLegacy = pet.classicEndgame.legacyCoinsInvested >= coinCost && goldenApples >= appleCost;
+        const legacyRarity = getLegacyCardRarity(pet.classicEndgame.legacyLevel);
         return (
-          <section className="classic-legacy" aria-labelledby="classic-legacy-title">
+          <section className={`classic-legacy classic-legacy--${legacyRarity}`} aria-labelledby="classic-legacy-title">
             <div className="classic-legacy__heading">
               <div>
                 <span>{t('ui.classicEndgame.legacyKicker')}</span>

@@ -1,8 +1,8 @@
 import { t } from '../i18n';
 import { defaultBoostCardState, normalizeBoostCardState } from './boostCards';
-import { defaultClassicEndgameState, normalizeClassicEndgameState } from './classicEndgame';
+import { defaultClassicEndgameState, getClassicLegacyCoinCurveMigrationRefund, normalizeClassicEndgameState } from './classicEndgame';
 import { defaultAchievementState, normalizeAchievementState } from './achievements';
-import { defaultPetBirthday, normalizePetBirthday } from './dateRewards';
+import { defaultPetBirthday, getLocalCalendarDate, normalizePetBirthday, normalizePetCalendarDate } from './dateRewards';
 import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
 import { createDailyWish, normalizeDailyWishState, normalizeReturnWelcomeState } from './dailyWishes';
 import { defaultGardenState, normalizeGardenState } from './garden';
@@ -101,6 +101,7 @@ export const createDefaultPet = (now = Date.now()): PetState => ({
   energy: 76,
   health: 90,
   createdAt: now,
+  metDate: getLocalCalendarDate(now),
   ageSeconds: 0,
   lastUpdatedAt: now,
   isSleeping: false,
@@ -136,9 +137,10 @@ export const createDefaultPet = (now = Date.now()): PetState => ({
   lastPetInteractionAt: 0,
   pomodoro: defaultPomodoroState(now),
   hasOpenedHelp: false,
+  suppressGoldenAppleUseConfirm: false,
   claimedRewardIds: [goldenAppleStarterBackfillRewardId, legacySave13BonusRewardId],
   birthday: defaultPetBirthday,
-  claimedFestivalRewardKeys: [],
+  claimedDateRewardKeys: [],
   yearlyStats: defaultYearlyStats(now),
   achievements: defaultAchievementState(now, now, false, 30),
   lastCleanActionAt: 0,
@@ -190,6 +192,35 @@ const normalizeBuiltinItemIdList = (value: unknown, maxLength: number): BuiltinI
   return ids.slice(0, maxLength);
 };
 
+const normalizeClaimedDateRewardKeys = (raw: Record<string, unknown>) => {
+  const keys: string[] = [];
+  const addKey = (value: unknown) => {
+    if (typeof value !== 'string') return;
+    const key = value.trim().slice(0, 128);
+    if (key && !keys.includes(key)) keys.push(key);
+  };
+  const addLegacyYearKey = (prefix: 'birthday' | 'anniversary', value: unknown) => {
+    if (!isNumber(value)) return;
+    const year = Math.floor(value);
+    if (year >= 1) addKey(`${prefix}:${year}`);
+  };
+
+  if (Array.isArray(raw.claimedDateRewardKeys)) raw.claimedDateRewardKeys.forEach(addKey);
+  addLegacyYearKey('birthday', raw.lastBirthdayRewardYear);
+  addLegacyYearKey('anniversary', raw.lastAnniversaryRewardYear);
+
+  if (typeof raw.monthlyGiftDateKey === 'string' && raw.monthlyGiftDateKey.trim()) {
+    addKey(`monthly_gift:${raw.monthlyGiftDateKey.trim().slice(0, 16)}`);
+  }
+  if (Array.isArray(raw.claimedFestivalRewardKeys)) {
+    raw.claimedFestivalRewardKeys.forEach((value) => {
+      if (typeof value === 'string' && value.trim()) addKey(`festival:${value.trim().slice(0, 96)}`);
+    });
+  }
+
+  return keys;
+};
+
 interface NormalizePetOptions {
   preserveExpiredPartnerSchedule?: boolean;
 }
@@ -221,9 +252,7 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   if (raw.hasClaimedHelpGift === true && !claimedRewardIds.includes(helpStarterGiftRewardId)) {
     claimedRewardIds.push(helpStarterGiftRewardId);
   }
-  const claimedFestivalRewardKeys = Array.isArray(raw.claimedFestivalRewardKeys)
-    ? Array.from(new Set(raw.claimedFestivalRewardKeys.filter((id): id is string => typeof id === 'string' && id.trim().length > 0).map((id) => id.trim().slice(0, 96))))
-    : [];
+  const claimedDateRewardKeys = normalizeClaimedDateRewardKeys(raw);
   const birthday = normalizePetBirthday(raw.birthday);
   const actionStreakKey =
     typeof rawActionStreak.key === 'string' &&
@@ -239,14 +268,16 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   }
 
   const level = clampLevel(isNumber(raw.level) ? raw.level : fallback.level);
+  const classicLegacyCoinCurveRefund = getClassicLegacyCoinCurveMigrationRefund(raw.classicEndgame);
   const classicEndgame = normalizeClassicEndgameState(raw.classicEndgame);
   const statCap = getPetStatCap(level);
   const energyCap = getPetEnergyCap({ level, classicEndgame });
-  const createdAt = isNumber(raw.createdAt)
-    ? Math.min(now, raw.createdAt)
+  const createdAt = isNumber(raw.createdAt) && raw.createdAt >= 0
+    ? raw.createdAt
     : ageSeconds > 0
       ? Math.max(0, now - ageSeconds * 1000)
       : now;
+  const metDate = normalizePetCalendarDate(raw.metDate) ?? getLocalCalendarDate(createdAt);
   const pendingYearReview = normalizeYearReview(raw.pendingYearReview);
   const yearlyStats = normalizeYearlyStats(raw.yearlyStats, now);
   const normalizedName = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 32) : fallback.name;
@@ -312,8 +343,8 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   const unlockedAtById = v2GoldenAppleBackfillIds.length > 0
     ? v2GoldenAppleBackfillIds.reduce<AchievementState['unlockedAtById']>((items, id) => ({ ...items, [id]: items[id] ?? now }), achievements.unlockedAtById)
     : achievements.unlockedAtById;
-  const normalizedCoins = clampCoins(baseCoins + migrationBonusCoins);
-  const countersWithMigration = migrationBonusCoins > 0
+  const normalizedCoins = clampCoins(baseCoins + migrationBonusCoins + classicLegacyCoinCurveRefund);
+  const countersWithMigration = migrationBonusCoins > 0 || classicLegacyCoinCurveRefund > 0
     ? {
       ...achievements.counters,
       coinEarnedTotal: clampCount(achievements.counters.coinEarnedTotal + migrationBonusCoins),
@@ -364,10 +395,13 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
     energy: normalizedEnergy,
     health: normalizedHealth,
     createdAt,
+    metDate,
     ageSeconds,
     lastUpdatedAt: isNumber(raw.lastUpdatedAt) ? raw.lastUpdatedAt : now,
     isSleeping: normalizedIsSleeping,
-    recentEvent: typeof raw.recentEvent === 'string' ? raw.recentEvent : t('pet.default.welcomeBack'),
+    recentEvent: classicLegacyCoinCurveRefund > 0
+      ? t('pet.classicEndgame.legacyCurveRefund', { coins: classicLegacyCoinCurveRefund })
+      : typeof raw.recentEvent === 'string' ? raw.recentEvent : t('pet.default.welcomeBack'),
     recentActivity: isRecentActivity(raw.recentActivity) ? raw.recentActivity : 'idle',
     recentActivityUntil: isNumber(raw.recentActivityUntil) ? raw.recentActivityUntil : 0,
     coins: normalizedCoins,
@@ -419,13 +453,11 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
     lastPetInteractionAt: isNumber(raw.lastPetInteractionAt) ? raw.lastPetInteractionAt : 0,
     pomodoro: normalizePomodoroState(raw.pomodoro, now),
     hasOpenedHelp: Boolean(raw.hasOpenedHelp),
+    suppressGoldenAppleUseConfirm: Boolean(raw.suppressGoldenAppleUseConfirm),
     claimedRewardIds,
     birthday,
-    lastBirthdayRewardYear: isNumber(raw.lastBirthdayRewardYear) ? Math.floor(raw.lastBirthdayRewardYear) : undefined,
-    lastAnniversaryRewardYear: isNumber(raw.lastAnniversaryRewardYear) ? Math.floor(raw.lastAnniversaryRewardYear) : undefined,
+    claimedDateRewardKeys,
     dailyLoginRewardDateKey: normalizeLegacyDailyDateKey(raw.dailyLoginRewardDateKey, now) || undefined,
-    monthlyGiftDateKey: typeof raw.monthlyGiftDateKey === 'string' ? raw.monthlyGiftDateKey.trim().slice(0, 16) : undefined,
-    claimedFestivalRewardKeys,
     yearlyStats,
     pendingYearReview,
     lastYearReviewYear: isNumber(raw.lastYearReviewYear) ? Math.floor(raw.lastYearReviewYear) : undefined,

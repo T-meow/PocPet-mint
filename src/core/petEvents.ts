@@ -1,6 +1,7 @@
 import { pick, t } from '../i18n';
 import { applyHeartGain, recordEarnedCoins, recordEarnedHearts } from './achievements';
 import { getDailyResetDateKey } from './dailyReset';
+import { grantDailyGachaTickets } from './goldenAppleGacha';
 import { addInventoryItem } from './items';
 import { createNeighborGift, getNeighborEventRandom, pickNeighborEventValue, pickNeighborName } from './neighborGifts';
 import { clampCoins, clampCount, clampPetEnergy, clampPetHealth, clampPetStat } from './petStats';
@@ -25,7 +26,13 @@ export interface TimedEvent {
   itemId?: ItemId;
   itemAmount?: number;
   effect?: ItemEffect;
+  gachaTickets?: number;
   text: string;
+}
+
+export interface OfflineEventOptions {
+  allowNeighborGift?: boolean;
+  allowGachaTicket?: boolean;
 }
 
 const dreamEventMinSleepMinutes = 15;
@@ -89,14 +96,16 @@ export const getRandomOfflineEvent = (
   name: string,
   weather: WeatherType,
   context?: NeighborEventContext,
-  allowNeighborGift = true,
+  eventOptions: OfflineEventOptions = {},
 ): TimedEvent => {
   const random = getNeighborEventRandom(context);
+  const allowNeighborGift = eventOptions.allowNeighborGift ?? true;
+  const allowGachaTicket = eventOptions.allowGachaTicket ?? false;
   const neighborPlay = () => {
     const neighbor = pickNeighborName(context, random);
     return {
       effect: { mood: 6, cleanliness: -2 },
-      text: t(`pet.offlineEvent.${weather === 'sunny' ? 'sunnyPlay' : 'play'}${neighbor ? 'Named' : 'Generic'}`, {
+      text: pick(`pet.offlineEvent.${weather === 'sunny' ? 'sunnyPlay' : 'play'}${neighbor ? 'Named' : 'Generic'}`, {
         name,
         neighbor: neighbor ?? '',
       }),
@@ -105,27 +114,36 @@ export const getRandomOfflineEvent = (
   const options: Array<() => TimedEvent> = [
     () => ({
       coins: 12,
-      text: t('pet.offlineEvent.coins', { name }),
+      text: pick('pet.offlineEvent.coins', { name }),
     }),
     () => ({
       hearts: 1,
-      text: t('pet.offlineEvent.heart', { name, hearts: '{hearts}' }),
+      text: pick('pet.offlineEvent.heart', { name, hearts: '{hearts}' }),
     }),
     neighborPlay,
     () => ({
       effect: { hunger: -4, mood: 4 },
-      text: t('pet.offlineEvent.hungryHappy', { name }),
+      text: pick('pet.offlineEvent.hungryHappy', { name }),
     }),
     () => ({
       effect: { energy: 8 },
-      text: t('pet.offlineEvent.rest', { name }),
+      text: pick('pet.offlineEvent.rest', { name }),
     }),
     () => ({
       effect: { cleanliness: -5 },
-      text: t('pet.offlineEvent.mess', { name }),
+      text: pick('pet.offlineEvent.mess', { name }),
     }),
   ];
   if (allowNeighborGift) options.splice(1, 0, () => getNeighborGiftEvent(context, 'offlineEvent'));
+  if (allowGachaTicket) options.push(() => {
+    const gachaTickets = random() < 0.01 ? 10 : 1;
+    return {
+      gachaTickets,
+      text: t(gachaTickets === 10 ? 'pet.offlineEvent.tenTickets' : 'pet.offlineEvent.ticket', {
+        tickets: '{tickets}',
+      }),
+    };
+  });
   return pickNeighborEventValue(options, random)();
 };
 
@@ -133,58 +151,67 @@ export const getRandomDreamEvent = (name: string): TimedEvent =>
   pickRandom([
     {
       effect: { mood: 3 },
-      text: t('pet.dreamEvent.cloudNap', { name }),
+      text: pick('pet.dreamEvent.cloudNap', { name }),
     },
     {
       coins: 10,
-      text: t('pet.dreamEvent.coinPath', { name }),
+      text: pick('pet.dreamEvent.coinPath', { name }),
     },
     {
       hearts: 1,
-      text: t('pet.dreamEvent.sticker', { name, hearts: '{hearts}' }),
+      text: pick('pet.dreamEvent.sticker', { name, hearts: '{hearts}' }),
     },
     {
       itemId: 'emergency_biscuit',
       itemAmount: 1,
-      text: t('pet.dreamEvent.biscuit'),
+      text: pick('pet.dreamEvent.biscuit'),
     },
     {
       effect: { energy: 4, cleanliness: -1 },
-      text: t('pet.dreamEvent.puddleRun', { name }),
+      text: pick('pet.dreamEvent.puddleRun', { name }),
     },
   ]);
 
 export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, prefix: string): PetState => {
+  const ticketGrant = event.gachaTickets
+    ? grantDailyGachaTickets(pet, event.gachaTickets, now)
+    : { pet, grantedTickets: 0, quotaConsumed: false };
+  const current = ticketGrant.pet;
   const effect = event.effect ?? {};
-  const heartGain = applyHeartGain(pet, event.hearts ?? 0);
+  const heartGain = applyHeartGain(current, event.hearts ?? 0);
   const neighborGiftDateKey = getDailyResetDateKey(now);
-  const currentNeighborGiftCount = pet.neighborGiftDateKey === neighborGiftDateKey
-    ? Math.min(neighborGiftDailyLimit, clampCount(pet.neighborGiftCount))
+  const currentNeighborGiftCount = current.neighborGiftDateKey === neighborGiftDateKey
+    ? Math.min(neighborGiftDailyLimit, clampCount(current.neighborGiftCount))
     : 0;
   const canSettleNeighborGift = event.kind !== 'neighbor_gift'
     || (Boolean(event.itemId) && currentNeighborGiftCount < neighborGiftDailyLimit);
+  const canSettleGachaTickets = !event.gachaTickets || ticketGrant.quotaConsumed;
+  const canSettleEvent = canSettleNeighborGift && canSettleGachaTickets;
+  const eventText = event.gachaTickets === 10 && ticketGrant.grantedTickets < event.gachaTickets
+    ? t('pet.offlineEvent.tenTicketsCapped', { tickets: ticketGrant.grantedTickets })
+    : event.text.replace(/\{tickets\}/g, String(ticketGrant.grantedTickets));
   const withEvent: PetState = {
-    ...pet,
-    hunger: clampPetStat(pet, pet.hunger + (effect.hunger ?? 0)),
-    mood: clampPetStat(pet, pet.mood + (effect.mood ?? 0)),
-    cleanliness: clampPetStat(pet, pet.cleanliness + (effect.cleanliness ?? 0)),
-    energy: clampPetEnergy(pet, pet.energy + (effect.energy ?? 0)),
-    health: clampPetHealth(pet, pet.health + (effect.health ?? 0)),
-    coins: clampCoins(pet.coins + (event.coins ?? 0)),
+    ...current,
+    hunger: clampPetStat(current, current.hunger + (effect.hunger ?? 0)),
+    mood: clampPetStat(current, current.mood + (effect.mood ?? 0)),
+    cleanliness: clampPetStat(current, current.cleanliness + (effect.cleanliness ?? 0)),
+    energy: clampPetEnergy(current, current.energy + (effect.energy ?? 0)),
+    health: clampPetHealth(current, current.health + (effect.health ?? 0)),
+    coins: clampCoins(current.coins + (event.coins ?? 0)),
     hearts: heartGain.hearts,
     boostCards: heartGain.boostCards,
-    inventory: event.itemId && canSettleNeighborGift
-      ? addInventoryItem(pet.inventory, event.itemId, event.itemAmount ?? 1)
-      : pet.inventory,
-    recentEvent: canSettleNeighborGift
-      ? `${prefix}${event.text.replace(/\{hearts\}/g, String(heartGain.amount))}`
-      : pet.recentEvent,
+    inventory: event.itemId && canSettleEvent
+      ? addInventoryItem(current.inventory, event.itemId, event.itemAmount ?? 1)
+      : current.inventory,
+    recentEvent: canSettleEvent
+      ? `${prefix}${eventText.replace(/\{hearts\}/g, String(heartGain.amount))}`
+      : current.recentEvent,
     lastDailyRewardAt: prefix === t('pet.prefix.dailyEncounter') ? now : pet.lastDailyRewardAt,
     lastDailyEncounterAt: prefix === t('pet.prefix.dailyEncounter') ? now : pet.lastDailyEncounterAt,
     neighborGiftDateKey,
     neighborGiftCount: Math.min(
       neighborGiftDailyLimit,
-      currentNeighborGiftCount + (event.kind === 'neighbor_gift' && canSettleNeighborGift ? 1 : 0),
+      currentNeighborGiftCount + (event.kind === 'neighbor_gift' && canSettleEvent ? 1 : 0),
     ),
   };
   return recordEarnedHearts(recordEarnedCoins(withEvent, event.coins ?? 0), heartGain.amount);
@@ -224,27 +251,27 @@ const getSleepSettlement = (pet: PetState, now: number): TimedEvent => {
   if (sleptMinutes < 10) {
     return {
       effect: { mood: -1 },
-      text: t('pet.sleepSettlement.tooShort', { name: pet.name }),
+      text: pick('pet.sleepSettlement.tooShort', { name: pet.name }),
     };
   }
 
   if (startMood <= 25 || startHunger <= 25 || startCleanliness <= 25) {
     return addDreamEvent({
       effect: { mood: -3, health: -1 },
-      text: t('pet.sleepSettlement.bad', { name: pet.name }),
+      text: pick('pet.sleepSettlement.bad', { name: pet.name }),
     }, pet, sleptMinutes);
   }
 
   if (startMood >= 60 && startHunger >= 45 && startCleanliness >= 45 && sleptMinutes >= 20) {
     return addDreamEvent({
       effect: { mood: 4, energy: 5 },
-      text: t('pet.sleepSettlement.good', { name: pet.name }),
+      text: pick('pet.sleepSettlement.good', { name: pet.name }),
     }, pet, sleptMinutes);
   }
 
   return addDreamEvent({
     effect: { mood: 2 },
-    text: t('pet.sleepSettlement.normal', { name: pet.name }),
+    text: pick('pet.sleepSettlement.normal', { name: pet.name }),
   }, pet, sleptMinutes);
 };
 

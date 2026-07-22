@@ -931,9 +931,56 @@ const twiceGifted = { ...createDefaultPet(now), neighborGiftDateKey: '2026-07-20
 const thirdGift = applyTimedEvent(twiceGifted, dailyGift, now, '');
 assert.equal(thirdGift.neighborGiftCount, neighborGiftDailyLimit, 'the third gift should settle normally');
 const cappedDailyEvent = getRandomDailyEncounter('Furo', { ...giftEventContext, random: randomFrom(0.2) }, false);
-const cappedOfflineEvent = getRandomOfflineEvent('Furo', 'sunny', { ...giftEventContext, random: randomFrom(0.2) }, false);
+const cappedOfflineEvent = getRandomOfflineEvent('Furo', 'sunny', { ...giftEventContext, random: randomFrom(0.2) }, {
+  allowNeighborGift: false,
+});
 assert.notEqual(cappedDailyEvent.kind, 'neighbor_gift', 'daily gift candidates should be removed after the cap');
 assert.notEqual(cappedOfflineEvent.kind, 'neighbor_gift', 'offline gift candidates should be removed after the cap');
+const singleTicketEvent = getRandomOfflineEvent('Furo', 'sunny', {
+  ...giftEventContext,
+  random: randomFrom(0.99, 0.5),
+}, { allowNeighborGift: true, allowGachaTicket: true });
+assert.equal(singleTicketEvent.gachaTickets, 1, 'the final equal-weight option should grant one ticket normally');
+const settledSingleTicket = applyTimedEvent(createDefaultPet(now), singleTicketEvent, now, 'offline: ');
+assert.equal(settledSingleTicket.goldenAppleGacha.tickets, 1);
+assert.equal(settledSingleTicket.goldenAppleGacha.dailyTicketsGranted, 1);
+assert.match(settledSingleTicket.recentEvent, /1/);
+const tenTicketEvent = getRandomOfflineEvent('Furo', 'sunny', {
+  ...giftEventContext,
+  random: randomFrom(0.99, 0.009),
+}, { allowNeighborGift: true, allowGachaTicket: true });
+assert.equal(tenTicketEvent.gachaTickets, 10, 'a roll below one percent should become a ten-pull reward');
+const boundaryTicketEvent = getRandomOfflineEvent('Furo', 'sunny', {
+  ...giftEventContext,
+  random: randomFrom(0.99, 0.01),
+}, { allowNeighborGift: true, allowGachaTicket: true });
+assert.equal(boundaryTicketEvent.gachaTickets, 1, 'the exact one-percent boundary should remain a single ticket');
+const noNeighborTicketEvent = getRandomOfflineEvent('Furo', 'sunny', {
+  ...giftEventContext,
+  random: randomFrom(0.99, 0.5),
+}, { allowNeighborGift: false, allowGachaTicket: true });
+assert.equal(noNeighborTicketEvent.gachaTickets, 1, 'the seventh option should be the ticket event without neighbor gifts');
+const noTicketOptionEvent = getRandomOfflineEvent('Furo', 'sunny', {
+  ...giftEventContext,
+  random: randomFrom(0.99),
+}, { allowNeighborGift: false, allowGachaTicket: false });
+assert.equal(noTicketOptionEvent.gachaTickets, undefined, 'the ticket option must disappear after the daily quota is exhausted');
+const cappedTenTicket = applyTimedEvent({
+  ...createDefaultPet(now),
+  goldenAppleGacha: { ...createDefaultPet(now).goldenAppleGacha, tickets: 9995 },
+}, tenTicketEvent, now, 'offline: ');
+assert.equal(cappedTenTicket.goldenAppleGacha.tickets, 9999);
+assert.equal(cappedTenTicket.goldenAppleGacha.dailyTicketsGranted, 1);
+assert.match(cappedTenTicket.recentEvent, /4/);
+const offlineTicketStart = createDefaultPet(now - 2 * 60 * minuteMs);
+const offlineTicketSettlement = advancePet(offlineTicketStart, now, {
+  neighbors: [],
+  giftCandidates,
+  random: randomFrom(0.99, 0.5),
+});
+assert.equal(offlineTicketSettlement.goldenAppleGacha.tickets, 1, 'a qualifying offline settlement should expose the ticket event');
+assert.equal(offlineTicketSettlement.goldenAppleGacha.dailyTicketsGranted, 1);
+assert.match(offlineTicketSettlement.recentEvent, /1/);
 const nextDayAfterEvent = applyTimedEvent(thirdGift, { text: 'next day' }, now + 24 * 60 * minuteMs, '');
 assert.equal(nextDayAfterEvent.neighborGiftCount, 0, 'the local-day gift count should reset on the next event');
 

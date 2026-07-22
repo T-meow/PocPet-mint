@@ -13,7 +13,7 @@ import type {
 import { isNumber } from './utils';
 import { classicTrophyTotal, getClassicTrophyCount, isClassicDiamondTrophyUnlocked } from './classicTrophies';
 
-export const classicEndgameSchemaVersion = 1 as const;
+export const classicEndgameSchemaVersion = 2 as const;
 export const classicEndgameUnlockLevel = 20;
 export const classicEndgameUnlockSkillLevel = 6;
 export const dreamProjectCategories: readonly PartnerScheduleCategory[] = ['study', 'cooking', 'garden', 'exercise'];
@@ -27,6 +27,10 @@ export const dreamTotalCoinCost = dreamProjectTotalCoinCost * dreamProjectCatego
 export const dreamProjectTotalAppleCost = dreamStageAppleCosts.reduce<number>((sum, cost) => sum + cost, 0);
 export const dreamTotalAppleCost = dreamProjectTotalAppleCost * dreamProjectCategories.length;
 export const classicLegacyFirstLevelCoinCost = 20000;
+export const classicLegacyCoinCurveCoefficient = 2500;
+export const classicLegacyCoinCurveExponent = 1.5;
+export const classicLegacyCoinRoundingUnit = 100;
+export const classicLegacyAppleLevelStep = 2;
 export const classicGoldenAppleHeartExchangeRate = 100;
 
 const maxSafeEconomyValue = Number.MAX_SAFE_INTEGER;
@@ -97,13 +101,13 @@ const normalizeProgress = (value: unknown): DreamProjectProgress => {
 };
 
 export const getClassicLegacyLevelCoinCost = (targetLevel: number) => {
-  const safeTarget = Math.max(1, clampCount(targetLevel));
-  let cost = classicLegacyFirstLevelCoinCost;
-  for (let level = 2; level <= safeTarget; level += 1) {
-    cost = Math.min(maxSafeEconomyValue, Math.round(cost * 1.35));
-    if (cost >= maxSafeEconomyValue) break;
-  }
-  return cost;
+  const safeTarget = isNumber(targetLevel)
+    ? Math.max(1, Math.min(maxSafeEconomyValue, clampCount(targetLevel)))
+    : 1;
+  const rawCost = classicLegacyFirstLevelCoinCost
+    + classicLegacyCoinCurveCoefficient * (safeTarget - 1) ** classicLegacyCoinCurveExponent;
+  const roundedCost = Math.round(rawCost / classicLegacyCoinRoundingUnit) * classicLegacyCoinRoundingUnit;
+  return Math.min(maxSafeEconomyValue, roundedCost);
 };
 
 export const getClassicGoalInvestedCoins = (state: ClassicEndgameState) => dreamProjectCategories.reduce((sum, category) => {
@@ -114,11 +118,9 @@ export const getClassicGoalInvestedCoins = (state: ClassicEndgameState) => dream
 
 const getCompletedLegacyCoinTotal = (legacyLevel: number) => {
   let total = 0;
-  let cost = classicLegacyFirstLevelCoinCost;
   for (let level = 1; level <= legacyLevel; level += 1) {
-    total = Math.min(maxSafeEconomyValue, total + cost);
+    total = Math.min(maxSafeEconomyValue, total + getClassicLegacyLevelCoinCost(level));
     if (total >= maxSafeEconomyValue) break;
-    cost = Math.min(maxSafeEconomyValue, Math.round(cost * 1.35));
   }
   return total;
 };
@@ -157,6 +159,26 @@ export const normalizeClassicEndgameState = (value: unknown): ClassicEndgameStat
     clampCount(isNumber(raw.lifetimeCoinsInvested) ? raw.lifetimeCoinsInvested : 0),
   ));
   return state;
+};
+
+export const getClassicLegacyCoinCurveMigrationRefund = (value: unknown) => {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return 0;
+  const raw = value as Record<string, unknown>;
+  const sourceSchemaVersion = isNumber(raw.schemaVersion) ? clampCount(raw.schemaVersion) : 1;
+  if (sourceSchemaVersion >= classicEndgameSchemaVersion) return 0;
+
+  const normalized = normalizeClassicEndgameState(value);
+  const allCompleted = dreamProjectCategories.every((category) =>
+    normalized.projects[category].completedStages >= dreamStageDefinitions.length,
+  );
+  if (!allCompleted) return 0;
+
+  const rawInvested = Math.min(
+    maxSafeEconomyValue,
+    clampCount(isNumber(raw.legacyCoinsInvested) ? raw.legacyCoinsInvested : 0),
+  );
+  const currentCost = getClassicLegacyLevelCoinCost(normalized.legacyLevel + 1);
+  return Math.max(0, rawInvested - currentCost);
 };
 
 export const isClassicEndgameUnlocked = (pet: PetState) =>
@@ -333,7 +355,12 @@ export const completeDreamProjectStage = (
   return recordEarnedHearts(next, reward.hearts);
 };
 
-export const getClassicLegacyAppleCost = (targetLevel: number) => Math.max(1, Math.ceil(Math.max(1, targetLevel) / 5));
+export const getClassicLegacyAppleCost = (targetLevel: number) => {
+  const safeTarget = isNumber(targetLevel)
+    ? Math.max(1, Math.min(maxSafeEconomyValue, clampCount(targetLevel)))
+    : 1;
+  return Math.max(1, Math.ceil(safeTarget / classicLegacyAppleLevelStep));
+};
 
 export const investClassicLegacy = (pet: PetState, requestedCoins: number, now = Date.now()): PetState => {
   if (!isClassicEndgameComplete(pet)) return failEndgameAction(pet, 'pet.classicEndgame.legacyLocked');

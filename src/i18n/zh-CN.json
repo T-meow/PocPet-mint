@@ -10,6 +10,7 @@
       "lessThanMinute": "不到 1 分钟",
       "hoursMinutes": "{hours} 小时 {minutes} 分钟",
       "minutes": "{minutes} 分钟",
+      "seconds": "{seconds} 秒",
       "days": "{days} 天",
       "monthsDays": "{months} 个月 {days} 天",
       "yearsMonthsDays": "{years} 年 {months} 个月 {days} 天"
@@ -90,6 +91,9 @@
       "birthdayDay": "日期",
       "birthdayHint": "生日奖励会使用这个日期，直到重新应用 Mod。",
       "birthdayUnsetHint": "当前没有生日奖励日期，修改月份或日期后会启用。",
+      "petAnniversary": "相遇纪念日",
+      "anniversaryValue": "{month}月{day}日",
+      "metDateValue": "相遇于 {year}年{month}月{day}日",
       "language": "语言",
       "languageHint": "切换后会重新载入界面，存档不会丢失。",
       "saveName": "保存资料",
@@ -179,16 +183,18 @@
           "背包道具可用于喂食、送礼、护理，也可在花园里种植或强化。"
         ],
         "other": [
-          "日程、日常奖励、天气与每日次数统一在本地时间 5:00 刷新；生日、纪念日、节日和季节仍按现实日期切换。",
-          "商店出售食物、礼物、护理和花园道具，每日可领免费苏打饼干，也能用金币兑换小心心。",
-          "每日愿望和回归任务完成后可领奖，离线时也可能留下日记或事件。",
-          "番茄钟按专注和休息循环计时，完成专注可获得金币和心情，状态太差会暂停。",
-          "花园可解锁地块、种树、浇水、施肥和收获，枯树清理后可重新种植。",
-          "成就会记录养成、商店、背包、花园和番茄钟进度，奖励金币、道具、加成或 CG。",
-          "生日、纪念日、节日和年度回顾会提供特殊奖励；天气和季节会轻微影响日常行动。",
+          "日程、日常奖励、天气与每日次数在本地时间 5:00 刷新；生日、相遇纪念日、节日和月初礼物按现实日期计算，并可在事件日后的 3 天内补领。",
+          "商店出售食物、礼物、护理和花园道具，每日可领免费苏打饼干，小心心可兑换金币；好友证和挚友证会提供限时增益与每日邻居礼物。",
+          "每日愿望和回归任务完成后可领奖；离线日记和随机事件可能带来邻居礼物或扭蛋券，离线获券有 1% 概率升级为十连（10 张），并与其他日常来源共享每日 3 次获券额度。",
+          "番茄钟按专注和休息循环计时，完成专注可获得金币和心情；体力或健康过低时会暂停。",
+          "花园可解锁地块、种树、浇水、施肥、升级工具并收获，道具树耗尽收获次数后会枯萎。",
+          "伙伴达到 Lv.3 后可安排伙伴日程，每日最多完成 3 项；四类技能可成长到 Lv.10，满级后继续累计大师次数，完成当日 3 项还会获得扭蛋券。",
+          "金苹果扭蛋可使用金币或扭蛋券，扭蛋机提供一次性 10 张券初始礼物；金苹果既能照顾伙伴，也是伙伴梦想的重要材料。",
+          "成就、生日、纪念日、节日和年度回顾会提供特殊奖励；Lv.20 后可逐步完成伙伴梦想、解锁奖杯和长期纪念等级。",
           "设置里可管理存档、语言、音频和 Mod，Mod 可替换外观文本并添加安全范围内的道具。"
         ],
-        "authorLink": "作者地址，反馈请点击"
+        "authorLinkAvailable": "作者地址与反馈 · 首次点击领取 {count} 张扭蛋券",
+        "authorLinkClaimed": "作者地址与反馈 · {count} 张扭蛋券已领取"
       },
       "back": "返回"
     },
@@ -275,10 +281,10 @@
       "gacha": "金苹果扭蛋",
       "gachaHint": "用金币或扭蛋券试试手气",
       "gachaTickets": "扭蛋券 {count} 张",
-      "commonDreams": "共同目标",
+      "commonDreams": "伙伴梦想",
       "commonDreamsLocked": "需 Lv.{level} · 全技能 Lv.{skill}（当前最低 {currentSkill}）",
-      "commonDreamsReady": "终局目标已解锁",
-      "commonDreamsComplete": "四项目标已完成 · 纪念 Lv.{level}"
+      "commonDreamsReady": "伙伴梦想已解锁",
+      "commonDreamsComplete": "伙伴梦想已完成 · 纪念 Lv.{level}"
     },
     "gacha": {
       "title": "金苹果扭蛋",
@@ -332,22 +338,23 @@
       },
       "appleUseConfirm": {
         "title": "使用金苹果？",
-        "message": "金苹果会恢复全部属性并给予小心心，同时也是共同目标与无限纪念等级的终局材料。使用后无法撤回。",
-        "cancel": "保留金苹果",
-        "confirm": "确认使用"
+        "message": "金苹果是终局玩法重要道具，确认使用吗？",
+        "cancel": "不使用",
+        "confirm": "不再提示"
       }
     },
     "classicEndgame": {
       "back": "返回首页",
-      "kicker": "Classic Endgame",
-      "title": "共同目标",
-      "summary": "把长期积累投入四个明确目标，和伙伴一起完成属于你们的 Classic 终局。",
+      "kicker": "终极梦想",
+      "title": "伙伴梦想",
+      "summary": "实现终极梦想，获得终极加成",
       "appleMaterialHint": "终局材料：金苹果",
       "progress": "目标进度",
       "stageProgress": "阶段完成度",
       "fundingProgress": "目标资金进度",
-      "lockedProgress": "需宠物 Lv.{targetLevel}（当前 {level}），四项日程技能均达到 Lv.{targetSkill}（当前最低 {skill}）。",
-      "finalComplete": "Classic 主线已经完成，照顾与养成仍可继续。",
+      "levelLocked": "伙伴达到 Lv.{targetLevel} 后解锁伙伴梦想目标（当前 Lv.{level}）。",
+      "lockedProgress": "四项日程技能均达到 Lv.{targetSkill} 后可投入目标（当前最低 Lv.{skill}）。",
+      "finalComplete": "终极梦想已经实现，照顾与养成仍可继续。",
       "stage": "第 {stage} 阶段",
       "stageNamed": "第 {stage} 阶段 · {name}",
       "nextStage": "下一阶段 · 第 {stage} 阶段 · {name}",
@@ -367,7 +374,7 @@
       "completeStage": "完成当前阶段",
       "legacyKicker": "共同纪念",
       "legacyTitle": "纪念等级 Lv.{level}",
-      "legacySummary": "纪念等级不提供数值增益，是 Classic 完成后的永久金币与金苹果出口。",
+      "legacySummary": "纪念等级，无收益",
       "legacyCoins": "金币 {current}/{target}",
       "completeLegacy": "完成 Lv.{level}",
       "invest": {
@@ -393,7 +400,7 @@
           "cooking": { "bronze": "初味铜杯", "silver": "招牌银杯", "gold": "厨神金杯" },
           "garden": { "bronze": "新芽铜杯", "silver": "四季银杯", "gold": "园丁金杯" },
           "exercise": { "bronze": "启程铜杯", "silver": "山海银杯", "gold": "环游金杯" },
-          "diamond": "永恒同行钻石杯"
+          "diamond": "钻石友谊奖杯"
         },
         "effects": {
           "schedule": "日程全部结算奖励 ×{value}",
@@ -407,7 +414,7 @@
         "kicker": "Diamond Benefit",
         "title": "金苹果兑换",
         "unlocked": "钻石杯已解锁。兑换固定获得小心心，不受其他心心增益影响。",
-        "locked": "获得“永恒同行钻石杯”后开放兑换。",
+        "locked": "获得“钻石友谊奖杯”后开放兑换。",
         "inventory": "现有金苹果 {apples} 个",
         "allValue": "全部可兑换 {hearts} 小心心",
         "actionsAria": "选择金苹果兑换数量",
@@ -507,6 +514,8 @@
       "todayKicker": "Today",
       "todayTitle": "今天的活动",
       "dailyCount": "已完成 {count}/{limit} · 今日可选 {offers} 项",
+      "dailyTicketHint": "完成今日 {limit} 项日程，可获得 1 张扭蛋券",
+      "dailyTicketClaimed": "今日完成奖励已领取 · 扭蛋券 +1",
       "activeAria": "进行中的活动",
       "activeKicker": "日程进行中",
       "homeDockAria": "当前伙伴日程",
@@ -844,7 +853,10 @@
       "saplingOwned": "树苗 x{count}",
       "needSapling": "商店购买 · {coins} 金币",
       "itemOwned": "背包 x{count}",
-      "waterFree": "免费 · 缩短 {percent}%",
+      "waterPreview": "免费 · 预计缩短 {time}",
+      "fertilizerPreview": "背包 x{count} · 预计缩短 {time}",
+      "careMinimumRemaining": "剩余时间已达最低 10 秒",
+      "careReductionLimitReached": "本轮加速已达上限",
       "coinDropTitle": "收获 {coins} 金币",
       "compensationGiftLabel": "领取种植园补偿 {coins} 金币",
       "compensationGiftCoins": "+{coins}"
@@ -1016,11 +1028,11 @@
         },
         "normal_fertilizer": {
           "name": "普通肥料",
-          "summary": "种植页使用，本轮剩余时间减少 20%"
+          "summary": "按本轮原始时长缩短 20%，单次最多 10 小时"
         },
         "heart_fertilizer": {
           "name": "爱心肥料",
-          "summary": "种植页使用，本轮剩余时间减少 35%"
+          "summary": "按本轮原始时长缩短 35%，单次最多 18 小时"
         },
         "harvest_nutrient": {
           "name": "丰收营养剂",
@@ -1155,42 +1167,88 @@
     "offlineDiary": {
       "sunny": [
         "{name} 在阳光下面打了个小盹，醒来时眯着眼找你。",
-        "{name} 把窗边晒暖的位置占住了，还认真整理了一下小垫子。"
+        "{name} 把窗边晒暖的位置占住了，还认真整理了一下小垫子。",
+        "{name} 追着地板上的光斑走了几圈，最后在最暖和的地方趴下了。"
       ],
       "cloudy": [
         "{name} 安安静静待了一会儿，像是在等你回来。",
-        "{name} 盯着窗外的云看了很久，回来时轻轻蹭了蹭你。"
+        "{name} 盯着窗外的云看了很久，回来时轻轻蹭了蹭你。",
+        "{name} 把小玩具排成整齐的一列，又耐心地等你回家。"
       ],
       "rainy": [
         "{name} 听了一会儿雨声，把小毯子拖到了更舒服的位置。",
-        "{name} 今天有点发呆，雨声停下时才发现你回来了。"
+        "{name} 今天有点发呆，雨声停下时才发现你回来了。",
+        "{name} 靠在窗边听雨点敲玻璃，悄悄给你留出了毯子的一角。"
       ],
       "breezy": [
         "{name} 吹着微风趴了一会儿，看起来比刚才放松。",
-        "{name} 闻到风里的味道，认真地在房间里巡视了一圈。"
+        "{name} 闻到风里的味道，认真地在房间里巡视了一圈。",
+        "{name} 跟着轻轻摆动的窗帘看了很久，尾巴也慢悠悠地晃着。"
       ]
     },
     "offlineEvent": {
-      "coins": "{name} 在垫子旁边发现一枚滚过去的小硬币，金币 +12。",
+      "coins": [
+        "{name} 在垫子旁边发现一枚滚过去的小硬币，金币 +12。",
+        "{name} 从玩具下面翻出一小把零钱，金币 +12。"
+      ],
       "biscuit": "邻居路过时留下一块苏打饼干，背包 +1。",
       "neighborGiftNamed": "邻居 {neighbor} 来拜访，留下了 {item}，背包 +1。",
       "neighborGiftGeneric": "有邻居来拜访，留下了 {item}，背包 +1。",
-      "heart": "{name} 把一张小贴纸藏好等你回来，小心心 +{hearts}。",
+      "heart": [
+        "{name} 把一张小贴纸藏好等你回来，小心心 +{hearts}。",
+        "{name} 认真准备了一张欢迎卡片，小心心 +{hearts}。"
+      ],
       "sunnyPlay": "{name} 偷偷晒了会儿太阳，心情 +6，清洁 -2。",
       "play": "{name} 自己玩了一会儿，心情 +6，清洁 -2。",
-      "sunnyPlayNamed": "{name} 和邻居 {neighbor} 在阳光下玩了一会儿，心情 +6，清洁 -2。",
-      "sunnyPlayGeneric": "{name} 和邻居在阳光下玩了一会儿，心情 +6，清洁 -2。",
-      "playNamed": "{name} 和邻居 {neighbor} 玩了一会儿，心情 +6，清洁 -2。",
-      "playGeneric": "{name} 和邻居玩了一会儿，心情 +6，清洁 -2。",
-      "hungryHappy": "{name} 等你等得有点饿，但看到你回来很开心，饱腹 -4，心情 +4。",
-      "rest": "{name} 安稳地休息了一会儿，体力 +8。",
-      "mess": "{name} 把角落翻得乱糟糟，清洁 -5。"
+      "sunnyPlayNamed": [
+        "{name} 和邻居 {neighbor} 在阳光下玩了一会儿，心情 +6，清洁 -2。",
+        "{name} 拉着邻居 {neighbor} 追逐窗边的光斑，心情 +6，清洁 -2。"
+      ],
+      "sunnyPlayGeneric": [
+        "{name} 和邻居在阳光下玩了一会儿，心情 +6，清洁 -2。",
+        "{name} 和来访的邻居一起追着光斑跑，心情 +6，清洁 -2。"
+      ],
+      "playNamed": [
+        "{name} 和邻居 {neighbor} 玩了一会儿，心情 +6，清洁 -2。",
+        "{name} 与邻居 {neighbor} 把玩具滚来滚去，心情 +6，清洁 -2。"
+      ],
+      "playGeneric": [
+        "{name} 和邻居玩了一会儿，心情 +6，清洁 -2。",
+        "{name} 和来访的邻居分享了玩具，心情 +6，清洁 -2。"
+      ],
+      "hungryHappy": [
+        "{name} 等你等得有点饿，但看到你回来很开心，饱腹 -4，心情 +4。",
+        "{name} 忙着守在门边忘了吃东西，见到你后立刻开心起来，饱腹 -4，心情 +4。"
+      ],
+      "rest": [
+        "{name} 安稳地休息了一会儿，体力 +8。",
+        "{name} 找到舒服的位置打了个盹，体力 +8。"
+      ],
+      "mess": [
+        "{name} 把角落翻得乱糟糟，清洁 -5。",
+        "{name} 为了找一件小玩具翻乱了垫子，清洁 -5。"
+      ],
+      "ticket": "{name} 在垫子下面找到一张扭蛋券，扭蛋券 +{tickets}。",
+      "tenTickets": "{name} 发现一张闪闪发亮的十连券，扭蛋券 +{tickets}！",
+      "tenTicketsCapped": "{name} 发现一张十连券，但票券已接近上限，实际到账 +{tickets} 张。"
     },
     "sleepSettlement": {
-      "tooShort": "{name} 刚躺下没多久就醒了，有点迷迷糊糊，心情 -1。",
-      "bad": "{name} 睡得不太安稳，像是做了一个小噩梦，心情 -3，健康 -1。",
-      "good": "{name} 睡得很香，醒来还蹭了蹭小毯子，心情 +4，体力 +5。",
-      "normal": "{name} 睡醒了，精神平稳了一些，心情 +2。"
+      "tooShort": [
+        "{name} 刚躺下没多久就醒了，有点迷迷糊糊，心情 -1。",
+        "{name} 才闭上眼一会儿就醒来，还是有些困倦，心情 -1。"
+      ],
+      "bad": [
+        "{name} 睡得不太安稳，像是做了一个小噩梦，心情 -3，健康 -1。",
+        "{name} 一直翻来覆去，醒来后看起来不太舒服，心情 -3，健康 -1。"
+      ],
+      "good": [
+        "{name} 睡得很香，醒来还蹭了蹭小毯子，心情 +4，体力 +5。",
+        "{name} 舒舒服服地睡了一觉，醒来后伸了个大懒腰，心情 +4，体力 +5。"
+      ],
+      "normal": [
+        "{name} 睡醒了，精神平稳了一些，心情 +2。",
+        "{name} 安静地休息过后醒来了，心情 +2。"
+      ]
     },
     "streak": {
       "play": "{name} 连续玩了好几次，脚步都慢下来了，体力 -2，饱腹 -2。",
@@ -1270,25 +1328,47 @@
       "{name} 翻了个身，嘟囔着要再数数金币。",
       "{name} 像是在梦里追着亮晶晶的贴纸跑。",
       "{name} 迷迷糊糊地念着你的名字。",
-      "{name} 抱紧小毯子，轻轻哼了一声。"
+      "{name} 抱紧小毯子，轻轻哼了一声。",
+      "{name} 小声问星星今天会不会来做客。",
+      "{name} 嘟囔着要给窗边的云朵留一块饼干。",
+      "{name} 在梦里认真数着一、二、三颗金苹果。",
+      "{name} 轻轻踢了踢小毯子，像是在追一只滚远的球。",
+      "{name} 笑了一声，好像梦见你提前回家了。"
     ],
     "dreamEvent": {
-      "cloudNap": "{name} 梦见躺在软云上，醒来心情 +3。",
-      "coinPath": "{name} 梦见沿着星星小路捡硬币，金币 +10。",
-      "sticker": "{name} 梦见收到一张会发光的贴纸，小心心 +{hearts}。",
-      "biscuit": "梦里的点心篮留下了一块苏打饼干，背包 +1。",
-      "puddleRun": "{name} 梦见踩着水洼跑步，体力 +4，清洁 -1。"
+      "cloudNap": [
+        "{name} 梦见躺在软云上，醒来心情 +3。",
+        "{name} 梦见坐着云朵慢慢旅行，醒来心情 +3。"
+      ],
+      "coinPath": [
+        "{name} 梦见沿着星星小路捡硬币，金币 +10。",
+        "{name} 梦见在月光下找到一枚枚硬币，金币 +10。"
+      ],
+      "sticker": [
+        "{name} 梦见收到一张会发光的贴纸，小心心 +{hearts}。",
+        "{name} 梦见把一颗亮晶晶的星星贴在纪念册上，小心心 +{hearts}。"
+      ],
+      "biscuit": [
+        "梦里的点心篮留下了一块苏打饼干，背包 +1。",
+        "{name} 从梦里的野餐布带回一块苏打饼干，背包 +1。"
+      ],
+      "puddleRun": [
+        "{name} 梦见踩着水洼跑步，体力 +4，清洁 -1。",
+        "{name} 梦见追着雨后的水花奔跑，体力 +4，清洁 -1。"
+      ]
     },
     "reward": {
       "helpStarterGift": "已领取启程赠礼，金币 +{coins}。",
-      "birthday": "今天是 {name} 的生日，生日奖励：金币 +{coins}，小心心 +{hearts}，生日蛋糕 +1。",
+      "birthday": "今天是 {name} 的生日，生日礼物：金苹果 +1、生日蛋糕 +1、扭蛋券 +10。",
       "festival": "{festival} 礼物送到，背包里多了一份节日道具。",
       "dailyCoins": "每日登录礼物：金币 +{coins}。",
       "dailyItem": "每日登录礼物：背包里多了一件惊喜道具。",
       "helpPageGift": "已领取玩法说明赠礼，金币 +{coins}。",
+      "authorLinkGift": "感谢关注作者，扭蛋券 +{count}。",
       "gardenCompensation": "已领取种植园补偿，金币 +{coins}。",
-      "anniversary": "今天是和 {name} 相遇的日子，纪念日奖励：金币 +{coins}，小心心 +{hearts}，闪亮贴纸 +1。",
-      "monthlyGift": "新的月份开始了，月初礼物：金币 +{coins}，还有一份水果。",
+      "anniversary": "今天是和 {name} 相遇的日子，纪念日礼物：金苹果 +1、亮晶晶贴纸 +1、扭蛋券 +10。",
+      "monthlyGift": "新的月份开始了，月初礼物：金苹果 +1、扭蛋券 +3。",
+      "catchUp": "「{name}」带着礼物等你回来。",
       "dailyWithStipend": "每日登录礼物：金币 +{coins}（含成就津贴 +{stipend}）。",
       "dailyWithBonusItems": "每日登录礼物送达，成就额外道具 +{count}。",
       "dailyWithStipendAndBonusItems": "每日登录礼物：金币 +{coins}（含成就津贴 +{stipend}），成就额外道具 +{count}。"
@@ -1773,22 +1853,23 @@
       "starterGiftClaimed": "领取了初始礼物，获得 {count} 张扭蛋券。"
     },
     "classicEndgame": {
-      "locked": "共同目标尚未解锁。",
-      "projectComplete": "这项目标已经达成。",
+      "locked": "伙伴梦想尚未解锁。",
+      "projectComplete": "这项伙伴梦想已经达成。",
       "notEnoughCoins": "当前没有可投入的金币。",
       "stageFunded": "当前阶段的金币已经投入完毕。",
-      "invested": "向共同目标投入了 {coins} 金币。",
+      "invested": "向伙伴梦想投入了 {coins} 金币。",
       "stageNeedsCoins": "需要先补足当前阶段的金币。",
       "requirementsMissing": "技能、日程或大师次数尚未满足当前阶段要求。",
       "applesMissing": "完成时需要 {apples} 个金苹果。",
-      "stageComplete": "共同目标第 {stage} 阶段完成，小心心 +{hearts}。",
-      "allComplete": "四项目标全部达成，Classic 最终纪念已经解锁，小心心 +{hearts}。",
-      "legacyLocked": "需要先完成四项目标。",
+      "stageComplete": "伙伴梦想第 {stage} 阶段完成，小心心 +{hearts}。",
+      "allComplete": "四项伙伴梦想全部达成，最终纪念已经解锁，小心心 +{hearts}。",
+      "legacyLocked": "需要先完成四项伙伴梦想。",
       "legacyFunded": "当前纪念等级的金币已经投入完毕。",
       "legacyInvested": "向共同纪念投入了 {coins} 金币。",
       "legacyNeedsCoins": "需要先补足当前纪念等级的金币。",
       "legacyComplete": "共同纪念升到 Lv.{level}，消耗 {apples} 个金苹果。",
-      "exchangeLocked": "需要先获得永恒同行钻石杯。",
+      "legacyCurveRefund": "纪念等级金币曲线已调整，退回超额投入 {coins} 金币。",
+      "exchangeLocked": "需要先获得钻石友谊奖杯。",
       "exchangeEmpty": "当前没有可兑换的金苹果。",
       "exchangeSuccess": "兑换了 {apples} 个金苹果，小心心 +{hearts}。"
     },
@@ -1830,9 +1911,11 @@
       "plantSuccess": "种下了{tree}，消耗 {item}。",
       "cannotWater": "这棵树现在不能浇水。",
       "wateredToday": "这个栏位今天已经浇过水了。",
-      "waterSuccess": "免费浇水完成，本轮剩余时间缩短 {percent}%。",
+      "waterSuccess": "免费浇水完成，成长时间缩短 {time}。",
       "cannotFertilize": "这棵树现在不能施肥。",
       "fertilizedToday": "这个栏位今天已经施肥了。",
+      "careMinimumRemaining": "成长时间已达到最低 10 秒，无法继续加速。",
+      "careReductionLimitReached": "本轮浇水与施肥加速已达到上限。",
       "cannotBoost": "这棵树现在不能使用营养剂。",
       "boostedToday": "这个栏位今天已经使用过营养剂了。",
       "nutrientSuccess": "使用了{item}，下次收获会有额外产物。",
@@ -1845,7 +1928,7 @@
       "toolMaxLevel": "这个工具已经满级。",
       "toolUpgradeSuccess": "{tool} 升到 Lv.{level}，花费 {coins} 金币。",
       "missingGardenItem": "背包里没有{item}。",
-      "fertilizeSuccess": "使用了{item}，本轮成长加快 {percent}%。",
+      "fertilizeSuccess": "使用了{item}，成长时间缩短 {time}。",
       "harvestCoinsSuccess": "收获金币 +{coins}。",
       "harvestMixedSuccess": "收获了 {count} 件道具，金币 +{coins}。",
       "harvestCoinsWithered": "收获金币 +{coins}，这棵树寿命耗尽枯萎了。",

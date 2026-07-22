@@ -4,7 +4,7 @@ import { ensureDailyWishForDate, maybeCreateReturnWelcome, returnWelcomeMinAwayM
 import { getAchievementEffects, incrementAchievementPomodoroFocus, incrementNaturalWake, recordEarnedCoins } from './achievements';
 import { canClaimBoostCardDailyReward } from './boostCards';
 import { advanceGarden } from './garden';
-import { resolveDailyGachaTicket } from './goldenAppleGacha';
+import { goldenAppleGachaDailyTicketLimit, resolveDailyGachaTicket } from './goldenAppleGacha';
 import { dailyBiscuitClaimLimit } from './items';
 import { applyTimedEvent, getRandomDailyEncounter, getRandomOfflineDiary, getRandomOfflineEvent, maybeApplyDreamTalk, settleSleep, startSleepSnapshot } from './petEvents';
 import { neighborGiftDailyLimit } from './neighbors';
@@ -457,7 +457,11 @@ export const advancePet = (pet: PetState, now = Date.now(), eventContext?: Neigh
     const randomGiftLimit = canClaimBoostCardDailyReward(next, now) ? neighborGiftDailyLimit - 1 : neighborGiftDailyLimit;
     return applyTimedEvent(
       next,
-      getRandomOfflineEvent(next.name, weather, eventContext, giftCount < randomGiftLimit),
+      getRandomOfflineEvent(next.name, weather, eventContext, {
+        allowNeighborGift: giftCount < randomGiftLimit,
+        allowGachaTicket: next.goldenAppleGacha.dailyTicketsGranted < goldenAppleGachaDailyTicketLimit
+          && next.goldenAppleGacha.tickets < 9999,
+      }),
       now,
       t('pet.prefix.offlineEvent'),
     );

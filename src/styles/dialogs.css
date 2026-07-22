@@ -1,12 +1,19 @@
 .dialog-shell {
-  width: min(100%, 560px);
-  max-height: min(760px, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 36px));
+  width: 100%;
+  max-width: 560px;
+  max-height: calc(100vh - 36px);
   overflow: auto;
   border: 1px solid rgba(255, 255, 255, 0.8);
   border-radius: 8px;
   background: var(--surface);
   box-shadow: 0 22px 56px rgba(20, 35, 52, 0.24);
   outline: 0;
+}
+
+@supports (height: 100dvh) {
+  .dialog-shell {
+    max-height: min(760px, calc(100dvh - var(--safe-top) - var(--safe-bottom) - 36px));
+  }
 }
 
 .dialog-header {
@@ -251,17 +258,19 @@
 
 @media (max-width: 560px) {
   .modal-backdrop {
+    align-items: flex-end;
     align-items: end;
     padding: calc(10px + var(--safe-top)) 10px calc(10px + var(--safe-bottom));
   }
 
   .dialog-shell {
     width: 100%;
-    max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 20px);
+    max-height: calc(100vh - 20px);
     border-radius: 8px 8px 0 0;
   }
 
   .modal-backdrop.inventory-backdrop {
+    align-items: flex-start;
     align-items: start;
   }
 
@@ -357,6 +366,10 @@
 
 @supports (height: 100dvh) {
   @media (max-width: 560px) {
+    .dialog-shell {
+      max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 20px);
+    }
+
     .inventory-modal {
       max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom) - 20px);
     }

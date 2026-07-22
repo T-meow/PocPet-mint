@@ -1,12 +1,14 @@
 {
   "name": "pocpet",
-  "version": "1.4.4",
+  "version": "1.4.7",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "serve:local": "node scripts/serve-dev.mjs --port 5173",
     "build": "tsc --noEmit && vite build",
+    "check:date-rewards": "tsx scripts/check-date-rewards.ts",
+    "check:garden-care": "tsx scripts/check-garden-care.ts",
     "check:gacha": "tsx scripts/check-golden-apple-gacha.ts",
     "preview": "vite preview --host 127.0.0.1",
     "tauri": "tauri",

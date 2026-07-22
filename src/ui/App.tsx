@@ -386,10 +386,12 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     closeActiveReward,
     enqueueReward,
     availableFloatingReward,
+    hasClaimedAuthorLinkGift,
     hasClaimedHelpGift: hasClaimedHelpPageGift,
     hasClaimedGardenCompensation,
     claimDateRewards,
     claimFloatingReward: handleClaimFloatingReward,
+    claimAuthorLinkGift: handleClaimAuthorLinkGift,
     claimHelpGift: handleClaimHelpPageGift,
     claimGardenCompensation: handleClaimGardenCompensation,
   } = rewardController;
@@ -473,13 +475,16 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     });
   };
 
-  const useItemNow = (itemId: ItemId) => {
+  const useItemNow = (itemId: ItemId, suppressGoldenAppleConfirm = false) => {
     playAfterUnlock('tap');
     setPet((current) => {
-      const beforeCount = getInventoryCount(current, itemId);
+      const currentWithPreference = suppressGoldenAppleConfirm
+        ? { ...current, suppressGoldenAppleUseConfirm: true }
+        : current;
+      const beforeCount = getInventoryCount(currentWithPreference, itemId);
       const displayItem = getDisplayItem(displayInventoryItems, itemId);
       const item = getItemDefinition(itemRegistry, itemId);
-      const next = useInventoryItem(current, itemId, Date.now(), {
+      const next = useInventoryItem(currentWithPreference, itemId, Date.now(), {
         favoriteFoodIds: getModFavoriteFoodIds(activeMod),
         favoriteText: (amount) => formatFavoriteFoodText(activeMod, amount),
         itemName: displayItem?.displayName,
@@ -571,7 +576,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
   };
 
   const handleUseItem = (itemId: ItemId) => {
-    if (itemId === 'golden_apple') {
+    if (itemId === 'golden_apple' && !petRef.current.suppressGoldenAppleUseConfirm) {
       playAfterUnlock('tap');
       setGoldenAppleUseConfirmOpen(true);
       return;
@@ -579,9 +584,9 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     useItemNow(itemId);
   };
 
-  const handleConfirmGoldenAppleUse = () => {
+  const handleSuppressGoldenAppleUseConfirm = () => {
     setGoldenAppleUseConfirmOpen(false);
-    useItemNow('golden_apple');
+    useItemNow('golden_apple', true);
   };
 
   const handleConfirmPartnerScheduleCancel = () => {
@@ -1376,16 +1381,19 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
           modMessage={modMessage}
           draftName={draftName}
           draftBirthday={draftBirthday}
+          metDate={pet.metDate}
           language={language}
           saveText={saveText}
           importSaveText={importSaveText}
           hasOpenedHelp={pet.hasOpenedHelp}
+          hasClaimedAuthorLinkGift={hasClaimedAuthorLinkGift}
           hasClaimedHelpPageGift={hasClaimedHelpPageGift}
           onDraftNameChange={setDraftName}
           onDraftBirthdayChange={setDraftBirthday}
           onLanguageChange={handleLanguageChange}
           onImportSaveTextChange={setImportSaveText}
           onOpenHelp={handleOpenHelp}
+          onClaimAuthorLinkGift={handleClaimAuthorLinkGift}
           onClaimHelpPageGift={handleClaimHelpPageGift}
           onClose={() => {
             playAfterUnlock('close');
@@ -1440,7 +1448,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
           cancelLabel={t('ui.gacha.appleUseConfirm.cancel')}
           confirmLabel={t('ui.gacha.appleUseConfirm.confirm')}
           onCancel={() => setGoldenAppleUseConfirmOpen(false)}
-          onConfirm={handleConfirmGoldenAppleUse}
+          onConfirm={handleSuppressGoldenAppleUseConfirm}
         />
       )}
       {gardenClearConfirm && (

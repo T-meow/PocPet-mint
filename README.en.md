@@ -2,7 +2,7 @@
 
 [Chinese](README.md)
 
-PocPet is a desktop and mobile virtual pet app built around companionship, Pomodoro sessions, items, pet status, and replaceable pet mods. The project is built with Tauri, React, TypeScript, and Rust, and aims to provide a lightweight, customizable, cross-platform personal desktop pet experience.
+PocPet is a desktop and mobile virtual pet app built around companionship, daily care, Pomodoro sessions, gardening, partner schedules, and replaceable pet mods. The project is built with Tauri, React, TypeScript, and Rust, and aims to provide a lightweight, customizable, cross-platform personal desktop pet experience.
 
 May virtual companionship soothe lonely souls.
 
@@ -20,12 +20,17 @@ The project code is licensed under GPL-3.0-or-later. Pet image assets are genera
 
 ## Feature Overview
 
-- Virtual pet status: hunger, cleanliness, mood, energy, health, and other basic states.
-- Items and shop: stable core item IDs, with support for food, gifts, care items, and utility items.
-- Pomodoro timer: work and rest flows affect pet activity feedback.
-- Mods and neighbors: keep multiple zip character packs in a local Mod Library, switch the active appearance and item content, and let pets from inactive mods appear as neighbors in schedules and offline events.
-- Save import and export: back up and restore current data with a versioned text format.
-- Basic multilingual support: currently includes Chinese and English text.
+- Pet care and growth: hunger, cleanliness, mood, energy, and health change with time and actions; hearts support upgrades and boost-card purchases.
+- Items, inventory, and shop: food, gifts, care, and garden items, plus daily discounts, a free soda biscuit, and heart-to-coin exchange.
+- Pomodoro and daily life: focus/break cycles, daily wishes, return tasks, offline events, weather, and seasons shape the companion experience.
+- Garden: unlock slots, grow multiple tree types, water, fertilize, upgrade tools, and harvest items, coins, and golden apples.
+- Partner schedules and neighbors: choose daily activities, grow four skills to Lv.10 and master them, while pets from other local mods appear as neighbors.
+- Boost cards and Golden Apple Gacha: Friend/Best Friend Passes provide timed bonuses; gacha accepts coins or tickets and includes pity, recent results, and a one-time starter gift.
+- Achievements and Partner Dreams: achievements span care, shop, garden, and schedules; long-term players can complete dreams, collect trophies, and raise legacy levels.
+- Calendar rewards: birthdays, meeting anniversaries, festivals, and monthly gifts follow local calendar dates and support a three-day catch-up window.
+- Author and feedback: the first author-link click in gameplay help grants 10 gacha tickets once per save.
+- Mods and saves: Mod v1/v2 can replace visuals and text and add safe items; versioned text saves support import, export, and legacy migration.
+- Cross-platform and multilingual: supports Windows, Android, and Web, with Chinese and English text.
 
 ## Tech Stack
 
@@ -150,6 +155,10 @@ Guides:
 
 New mods are recommended to use `schemaVersion: 2`. They can replace pet images, item images, default name, default birthday, display text, favorite food, good-ending CG, and can add namespaced safe custom items. Mods do not expose holiday reward pools, core gameplay values, save rules, or Pomodoro rules.
 
+## Developer Documentation
+
+See the [CodeWiki](docs/CODEWIKI.md) for architecture, state flow, save migration, feature entry points, and low-version WebView dialog compatibility rules.
+
 ## Save Compatibility
 
 The project keeps compatibility with the internal legacy save format `pocpet.pet.v1`. External import and export use a versioned text format. During import, the time baseline is reset to avoid immediate offline decay or Pomodoro auto-settlement after restoring an old backup.
@@ -166,5 +175,5 @@ Before contributing, please confirm:
 
 - Your contribution can be released under the GPLv3 license.
 - You do not submit unauthorized assets, fonts, audio, or third-party resources.
-- You do not break compatibility with old saves or the current Mod v1 format.
+- You do not break compatibility with old saves or the currently supported Mod v1/v2 formats.
 - Changes involving user data, saves, and mod parsing need to consider backward compatibility.

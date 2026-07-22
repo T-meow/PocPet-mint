@@ -2,9 +2,13 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   annualDateRewardGachaTickets,
+  authorLinkGiftRewardId,
+  authorLinkGiftTickets,
   buyBoostCard,
   claimAvailableDateRewards,
+  claimAuthorLinkGift,
   claimGoldenAppleGachaStarterGift,
+  classicEndgameSchemaVersion,
   classicEndgameUnlockLevel,
   classicEndgameUnlockSkillLevel,
   classicGoldenAppleHeartExchangeRate,
@@ -25,6 +29,7 @@ import {
   getGoldenAppleGachaCoinExpectedValue,
   getGoldenAppleGachaExpectedValue,
   getGoldenAppleGachaTenExpectedValue,
+  grantDailyGachaTickets,
   getPartnerScheduleClaimPreview,
   getPartnerScheduleOfferPreview,
   getPetEnergyCap,
@@ -61,8 +66,19 @@ const near = (actual: number, expected: number, tolerance: number, label: string
 
 for (const localePath of ['src/i18n/zh-CN.json', 'src/i18n/en-US.json']) {
   const locale = JSON.parse(readFileSync(localePath, 'utf8')) as {
-    ui?: { classicEndgame?: { projects?: Record<string, { stages?: Record<string, string> }>; trophies?: { names?: Record<string, unknown> }; exchange?: { title?: string; confirm?: { title?: string } } } };
-    pet?: { classicEndgame?: { exchangeLocked?: string; exchangeEmpty?: string; exchangeSuccess?: string } };
+    ui?: {
+      settings?: { help?: { other?: unknown[]; authorLinkAvailable?: string; authorLinkClaimed?: string } };
+      classicEndgame?: { projects?: Record<string, { stages?: Record<string, string> }>; trophies?: { names?: Record<string, unknown> }; exchange?: { title?: string; confirm?: { title?: string } } };
+    };
+    pet?: {
+      reward?: { authorLinkGift?: string };
+      classicEndgame?: { exchangeLocked?: string; exchangeEmpty?: string; exchangeSuccess?: string; legacyCurveRefund?: string };
+      dreamTalk?: unknown[];
+      dreamEvent?: Record<string, unknown[]>;
+      sleepSettlement?: Record<string, unknown[]>;
+      offlineDiary?: Record<string, unknown[]>;
+      offlineEvent?: Record<string, unknown>;
+    };
   };
   const classicEndgame = locale.ui?.classicEndgame;
   assert(classicEndgame, `${localePath} must include Classic endgame copy`);
@@ -78,6 +94,46 @@ for (const localePath of ['src/i18n/zh-CN.json', 'src/i18n/en-US.json']) {
   assert(locale.pet?.classicEndgame?.exchangeLocked, `${localePath} missing locked exchange event`);
   assert(locale.pet?.classicEndgame?.exchangeEmpty, `${localePath} missing empty exchange event`);
   assert(locale.pet?.classicEndgame?.exchangeSuccess, `${localePath} missing exchange success event`);
+  assert(locale.pet?.classicEndgame?.legacyCurveRefund, `${localePath} missing legacy curve refund event`);
+  assert.equal(locale.ui?.settings?.help?.other?.length, 9, `${localePath} must describe all current gameplay systems`);
+  assert(locale.ui?.settings?.help?.authorLinkAvailable, `${localePath} missing available author-link reward copy`);
+  assert(locale.ui?.settings?.help?.authorLinkClaimed, `${localePath} missing claimed author-link reward copy`);
+  assert(locale.pet?.reward?.authorLinkGift, `${localePath} missing author-link reward event`);
+  assert.equal(locale.pet?.dreamTalk?.length, 10, `${localePath} must include ten dream-talk lines`);
+  for (const key of ['tooShort', 'bad', 'good', 'normal']) {
+    assert.equal(locale.pet?.sleepSettlement?.[key]?.length, 2, `${localePath} must include two ${key} sleep settlements`);
+  }
+  for (const key of ['cloudNap', 'coinPath', 'sticker', 'biscuit', 'puddleRun']) {
+    assert.equal(locale.pet?.dreamEvent?.[key]?.length, 2, `${localePath} must include two ${key} dream events`);
+  }
+  for (const key of ['sunny', 'cloudy', 'rainy', 'breezy']) {
+    assert.equal(locale.pet?.offlineDiary?.[key]?.length, 3, `${localePath} must include three ${key} offline diaries`);
+  }
+  for (const key of ['coins', 'heart', 'sunnyPlayNamed', 'sunnyPlayGeneric', 'playNamed', 'playGeneric', 'hungryHappy', 'rest', 'mess']) {
+    assert.equal((locale.pet?.offlineEvent?.[key] as unknown[] | undefined)?.length, 2, `${localePath} must include two ${key} offline event lines`);
+  }
+  for (const key of ['ticket', 'tenTickets', 'tenTicketsCapped']) {
+    assert.equal(typeof locale.pet?.offlineEvent?.[key], 'string', `${localePath} missing ${key} offline ticket copy`);
+  }
+}
+
+const localizedEventCopies = ['offlineDiary', 'offlineEvent', 'sleepSettlement', 'dreamTalk', 'dreamEvent'] as const;
+const zhPetCopy = JSON.parse(readFileSync('src/i18n/zh-CN.json', 'utf8')).pet as Record<string, unknown>;
+const enPetCopy = JSON.parse(readFileSync('src/i18n/en-US.json', 'utf8')).pet as Record<string, unknown>;
+const placeholderShape = (value: unknown): unknown => {
+  if (typeof value === 'string') return Array.from(value.matchAll(/\{(\w+)\}/g), (match) => match[1]);
+  if (Array.isArray(value)) return value.map(placeholderShape);
+  if (value && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, placeholderShape(item)]));
+  }
+  return value;
+};
+for (const key of localizedEventCopies) {
+  assert.deepEqual(
+    placeholderShape(enPetCopy[key]),
+    placeholderShape(zhPetCopy[key]),
+    `${key} placeholders must match between English and Chinese`,
+  );
 }
 
 assert.deepEqual(
@@ -214,7 +270,7 @@ assert.equal(ticketDraw.pet.goldenAppleGacha.tickets, 0);
 assert.equal(ticketDraw.pet.goldenAppleGacha.ticketsSpent, 10);
 assert.equal(ticketDraw.pet.coins, ticketPet.coins + ticketDraw.results.reduce((sum, result) => sum + (result.kind === 'coins' ? result.amount : 0), 0));
 
-assert.equal(goldenAppleGachaSchemaVersion, 2);
+assert.equal(goldenAppleGachaSchemaVersion, 3);
 assert.equal(goldenAppleGachaJackpotPityThreshold, 1000);
 const rawV1Gacha = structuredClone(createDefaultPet(now).goldenAppleGacha) as unknown as Record<string, unknown>;
 rawV1Gacha.schemaVersion = 1;
@@ -227,12 +283,37 @@ assert.equal(migratedV1Gacha.jackpotPityMisses, 0, 'v1 saves must not backfill p
 assert.equal(migratedV1Gacha.jackpotPityUsed, false, 'v1 saves must begin with the one-time pity available');
 const malformedV2Gacha = normalizeGoldenAppleGachaState({
   ...createDefaultPet(now).goldenAppleGacha,
+  schemaVersion: 2,
   totalDraws: 5,
   jackpotPityMisses: goldenAppleGachaJackpotPityThreshold,
   jackpotPityUsed: 'false',
 }, createDefaultPet(now).createdAt, now);
 assert.equal(malformedV2Gacha.jackpotPityUsed, false, 'non-boolean pity state must not consume the one-time guarantee');
 assert.equal(malformedV2Gacha.jackpotPityMisses, 5, 'pity misses must not exceed total draws');
+const migratedV2DailyCount = normalizeGoldenAppleGachaState({
+  ...createDefaultPet(now).goldenAppleGacha,
+  schemaVersion: 2,
+  dailyProcessedSources: ['partner_schedule'],
+  dailyGrantedSources: ['partner_schedule'],
+  dailyTicketsGranted: 3,
+}, createDefaultPet(now).createdAt, now);
+assert.equal(migratedV2DailyCount.dailyTicketsGranted, 1, 'v2 saves must derive the daily quota from granted sources');
+const preservedV3DailyCount = normalizeGoldenAppleGachaState({
+  ...createDefaultPet(now).goldenAppleGacha,
+  schemaVersion: 3,
+  dailyProcessedSources: ['partner_schedule'],
+  dailyGrantedSources: ['partner_schedule'],
+  dailyTicketsGranted: 2,
+}, createDefaultPet(now).createdAt, now);
+assert.equal(preservedV3DailyCount.dailyTicketsGranted, 2, 'v3 saves must preserve offline ticket quota usage');
+const clampedV3DailyCount = normalizeGoldenAppleGachaState({
+  ...createDefaultPet(now).goldenAppleGacha,
+  schemaVersion: 3,
+  dailyProcessedSources: ['partner_schedule'],
+  dailyGrantedSources: ['partner_schedule'],
+  dailyTicketsGranted: 99,
+}, createDefaultPet(now).createdAt, now);
+assert.equal(clampedV3DailyCount.dailyTicketsGranted, 3, 'v3 daily quota usage must stay within the daily limit');
 const normalizedUsedPity = normalizeGoldenAppleGachaState({
   ...createDefaultPet(now).goldenAppleGacha,
   totalDraws: 1000,
@@ -373,6 +454,37 @@ const migratedStarterGiftPet = normalizePet({ ...createDefaultPet(now), claimedR
 assert(!migratedStarterGiftPet.claimedRewardIds.includes(goldenAppleGachaStarterGiftRewardId));
 assert.equal(claimGoldenAppleGachaStarterGift(migratedStarterGiftPet).pet.goldenAppleGacha.tickets, 10);
 
+const authorGiftBase = {
+  ...createDefaultPet(now),
+  goldenAppleGacha: { ...createDefaultPet(now).goldenAppleGacha, tickets: 4 },
+};
+const authorGift = claimAuthorLinkGift(authorGiftBase);
+assert.equal(authorGift.claimed, true);
+assert.equal(authorGift.pet.goldenAppleGacha.tickets, 4 + authorLinkGiftTickets);
+assert(authorGift.pet.claimedRewardIds.includes(authorLinkGiftRewardId));
+assert.notEqual(authorGift.pet.recentEvent, authorGiftBase.recentEvent);
+const repeatedAuthorGift = claimAuthorLinkGift(authorGift.pet);
+assert.equal(repeatedAuthorGift.claimed, false);
+assert.strictEqual(repeatedAuthorGift.pet, authorGift.pet, 'author-link gift must be idempotent');
+const migratedAuthorGiftPet = normalizePet({ ...createDefaultPet(now), claimedRewardIds: [] }, now);
+assert(!migratedAuthorGiftPet.claimedRewardIds.includes(authorLinkGiftRewardId));
+assert.equal(claimAuthorLinkGift(migratedAuthorGiftPet).pet.goldenAppleGacha.tickets, authorLinkGiftTickets);
+const cappedAuthorGift = claimAuthorLinkGift({
+  ...createDefaultPet(now),
+  goldenAppleGacha: { ...createDefaultPet(now).goldenAppleGacha, tickets: 9995 },
+});
+assert.equal(cappedAuthorGift.pet.goldenAppleGacha.tickets, 9999);
+assert(cappedAuthorGift.pet.claimedRewardIds.includes(authorLinkGiftRewardId));
+assert.match(cappedAuthorGift.pet.recentEvent, /4/);
+const fullAuthorGift = claimAuthorLinkGift({
+  ...createDefaultPet(now),
+  goldenAppleGacha: { ...createDefaultPet(now).goldenAppleGacha, tickets: 9999 },
+});
+assert.equal(fullAuthorGift.claimed, true);
+assert.equal(fullAuthorGift.pet.goldenAppleGacha.tickets, 9999);
+assert(fullAuthorGift.pet.claimedRewardIds.includes(authorLinkGiftRewardId));
+assert.match(fullAuthorGift.pet.recentEvent, /0/);
+
 let samplePet = { ...createDefaultPet(now), coins: 100_000_000 };
 const sampleCounts = { coins: 0, consumables: 0, garden: 0, saplings: 0, apples: 0 };
 const consumableIds = new Set(['bento', 'nutri_meal', 'energy_drink', 'blanket', 'picture_book']);
@@ -411,6 +523,44 @@ assert.equal(rollback.pet.goldenAppleGacha.dailyDateKey, ticketState.goldenApple
 const nextDay = resolveDailyGachaTicket(ticketState, 'partner_schedule', 100, now + dayMs);
 assert.equal(nextDay.granted, true);
 assert.equal(nextDay.pet.goldenAppleGacha.dailyTicketsGranted, 1);
+let repeatedOfflineTickets = createDefaultPet(now);
+const firstOfflineTicket = grantDailyGachaTickets(repeatedOfflineTickets, 1, now);
+assert.equal(firstOfflineTicket.grantedTickets, 1);
+assert.equal(firstOfflineTicket.quotaConsumed, true);
+repeatedOfflineTickets = firstOfflineTicket.pet;
+const offlineTenPull = grantDailyGachaTickets(repeatedOfflineTickets, 10, now);
+assert.equal(offlineTenPull.grantedTickets, 10);
+assert.equal(offlineTenPull.pet.goldenAppleGacha.tickets, 11);
+assert.equal(offlineTenPull.pet.goldenAppleGacha.dailyTicketsGranted, 2, 'a ten-pull reward must consume one daily slot');
+const thirdOfflineTicket = grantDailyGachaTickets(offlineTenPull.pet, 1, now);
+assert.equal(thirdOfflineTicket.pet.goldenAppleGacha.dailyTicketsGranted, 3);
+const blockedFourthOfflineTicket = grantDailyGachaTickets(thirdOfflineTicket.pet, 10, now);
+assert.equal(blockedFourthOfflineTicket.grantedTickets, 0);
+assert.equal(blockedFourthOfflineTicket.quotaConsumed, false);
+assert.equal(blockedFourthOfflineTicket.pet.goldenAppleGacha.tickets, 12);
+const sharedQuotaBase = grantDailyGachaTickets(createDefaultPet(now), 10, now).pet;
+const sharedQuotaSchedule = resolveDailyGachaTicket(sharedQuotaBase, 'partner_schedule', 100, now);
+const sharedQuotaWish = resolveDailyGachaTicket(sharedQuotaSchedule.pet, 'daily_wish', 100, now);
+const sharedQuotaEncounter = resolveDailyGachaTicket(sharedQuotaWish.pet, 'daily_encounter', 100, now);
+assert.equal(sharedQuotaWish.pet.goldenAppleGacha.dailyTicketsGranted, 3);
+assert.equal(sharedQuotaEncounter.granted, false, 'offline and source rewards must share the same daily quota');
+assert.equal(sharedQuotaEncounter.pet.goldenAppleGacha.tickets, 12);
+const nearCapacityDailyGrant = grantDailyGachaTickets({
+  ...createDefaultPet(now),
+  goldenAppleGacha: { ...createDefaultPet(now).goldenAppleGacha, tickets: 9995 },
+}, 10, now);
+assert.equal(nearCapacityDailyGrant.grantedTickets, 4);
+assert.equal(nearCapacityDailyGrant.pet.goldenAppleGacha.tickets, 9999);
+assert.equal(nearCapacityDailyGrant.pet.goldenAppleGacha.dailyTicketsGranted, 1);
+const fullCapacityDailyGrant = grantDailyGachaTickets({
+  ...createDefaultPet(now),
+  goldenAppleGacha: { ...createDefaultPet(now).goldenAppleGacha, tickets: 9999 },
+}, 10, now);
+assert.equal(fullCapacityDailyGrant.grantedTickets, 0);
+assert.equal(fullCapacityDailyGrant.quotaConsumed, false);
+assert.equal(fullCapacityDailyGrant.pet.goldenAppleGacha.dailyTicketsGranted, 0);
+const resetOfflineQuota = normalizeGoldenAppleGachaState(thirdOfflineTicket.pet.goldenAppleGacha, thirdOfflineTicket.pet.createdAt, now + dayMs);
+assert.equal(resetOfflineQuota.dailyTicketsGranted, 0, 'the offline ticket quota must reset at the next game day');
 const beforeReset = new Date(2026, 6, 23, 4, 59, 0).getTime();
 const afterReset = new Date(2026, 6, 23, 5, 0, 0).getTime();
 assert.notEqual(getDailyResetDateKey(beforeReset), getDailyResetDateKey(afterReset));
@@ -428,6 +578,7 @@ const anniversaryTime = new Date(2026, 7, 12, 12, 0, 0).getTime();
 const anniversaryPet = {
   ...createDefaultPet(anniversaryTime),
   createdAt: new Date(2020, 7, 12, 12, 0, 0).getTime(),
+  metDate: { year: 2020, month: 8, day: 12 },
   birthday: undefined,
 };
 const anniversaryRewards = claimAvailableDateRewards(anniversaryPet, anniversaryTime);
@@ -439,16 +590,17 @@ festivalConfigs.forEach((festival) => {
   const festivalPet = { ...createDefaultPet(festivalTime), birthday: undefined };
   const festivalRewards = claimAvailableDateRewards(festivalPet, festivalTime);
   assert.equal(festivalRewards.rewards.find((reward) => reward.kind === 'festival')?.gachaTickets, 10, `${festival.id} must grant ten tickets`);
-  assert.equal(festivalRewards.pet.goldenAppleGacha.tickets, 10);
+  assert.equal(festivalRewards.pet.goldenAppleGacha.tickets, 10 + (festival.day === 1 ? 3 : 0));
 });
 
 const monthlyTime = new Date(2026, 1, 1, 12, 0, 0).getTime();
 const monthlyRewards = claimAvailableDateRewards({ ...createDefaultPet(monthlyTime), birthday: undefined }, monthlyTime);
-assert.equal(monthlyRewards.rewards.find((reward) => reward.kind === 'monthly_gift')?.gachaTickets, undefined);
+assert.equal(monthlyRewards.rewards.find((reward) => reward.kind === 'monthly_gift')?.gachaTickets, 3);
 assert.equal(monthlyRewards.rewards.find((reward) => reward.kind === 'daily_login')?.gachaTickets, undefined);
-assert.equal(monthlyRewards.pet.goldenAppleGacha.tickets, 0);
+assert.equal(monthlyRewards.pet.goldenAppleGacha.tickets, 3);
+assert.equal(monthlyRewards.pet.inventory.golden_apple, 2);
 
-assert.equal(gardenSchemaVersion, 2);
+assert.equal(gardenSchemaVersion, 3);
 assert.equal(gardenTreeDefinitions.golden_apple_tree.growDurationMs, 4 * dayMs);
 assert.equal(gardenTreeDefinitions.golden_apple_tree.harvestCooldownMs, 48 * 60 * 60 * 1000);
 assert.equal(gardenTreeDefinitions.golden_apple_tree.maxHarvests, 9);
@@ -483,8 +635,26 @@ assert.deepEqual(dreamStageCoinCosts, [2000, 4000, 8000, 16000, 30000]);
 assert.equal(dreamProjectTotalCoinCost, 60000);
 assert.equal(dreamTotalCoinCost, 240000);
 assert.equal(dreamTotalAppleCost, 60);
-assert.deepEqual([1, 2, 3, 4].map(getClassicLegacyLevelCoinCost), [20000, 27000, 36450, 49208]);
-assert.deepEqual([1, 5, 6, 10, 11].map(getClassicLegacyAppleCost), [1, 1, 2, 2, 3]);
+assert.equal(classicEndgameSchemaVersion, 2);
+assert.deepEqual(
+  [1, 5, 10, 20, 50, 100].map(getClassicLegacyLevelCoinCost),
+  [20000, 40000, 87500, 227000, 877500, 2482600],
+);
+const cumulativeLegacyCost = (targetLevel: number) => Array.from(
+  { length: targetLevel },
+  (_, index) => getClassicLegacyLevelCoinCost(index + 1),
+).reduce((sum, cost) => sum + cost, 0);
+assert.deepEqual(
+  [1, 5, 10, 20, 50, 100].map(cumulativeLegacyCost),
+  [20000, 142600, 477700, 2078400, 18237900, 100753300],
+);
+assert.deepEqual([1, 5, 10, 20, 50, 100].map(getClassicLegacyAppleCost), [1, 3, 5, 10, 25, 50]);
+assert.equal(getClassicLegacyLevelCoinCost(0), 20000);
+assert.equal(getClassicLegacyLevelCoinCost(-10), 20000);
+assert.equal(getClassicLegacyLevelCoinCost(1.9), 20000);
+assert.equal(getClassicLegacyLevelCoinCost(Number.MAX_SAFE_INTEGER), Number.MAX_SAFE_INTEGER);
+assert.equal(getClassicLegacyAppleCost(0), 1);
+assert.equal(getClassicLegacyAppleCost(3.9), 2);
 assert.equal(classicEndgameUnlockLevel, 20);
 assert.equal(classicEndgameUnlockSkillLevel, 6);
 
@@ -839,6 +1009,71 @@ const legacyComplete = completeClassicLegacyLevel({ ...fundedLegacy, inventory: 
 assert.equal(legacyComplete.classicEndgame.legacyLevel, 1);
 assert.equal(legacyComplete.classicEndgame.legacyCoinsInvested, 0);
 assert.equal(legacyComplete.inventory.golden_apple ?? 0, 0);
+
+const legacyLevel20Funded: PetState = {
+  ...fundedLegacy,
+  inventory: { golden_apple: 9 },
+  classicEndgame: {
+    ...fundedLegacy.classicEndgame,
+    legacyLevel: 19,
+    legacyCoinsInvested: getClassicLegacyLevelCoinCost(20),
+  },
+};
+const legacyLevel20MissingApple = completeClassicLegacyLevel(legacyLevel20Funded, now);
+assert.equal(legacyLevel20MissingApple.classicEndgame.legacyLevel, 19);
+assert.equal(legacyLevel20MissingApple.classicEndgame.legacyCoinsInvested, 227000);
+assert.equal(legacyLevel20MissingApple.inventory.golden_apple, 9);
+const legacyLevel20Complete = completeClassicLegacyLevel({
+  ...legacyLevel20Funded,
+  inventory: { golden_apple: 10 },
+}, now);
+assert.equal(legacyLevel20Complete.classicEndgame.legacyLevel, 20);
+assert.equal(legacyLevel20Complete.classicEndgame.legacyCoinsInvested, 0);
+assert.equal(legacyLevel20Complete.inventory.golden_apple ?? 0, 0);
+
+const legacyMigrationBase = {
+  ...createDefaultPet(now),
+  coins: 100,
+  achievements: {
+    ...createDefaultPet(now).achievements,
+    counters: {
+      ...createDefaultPet(now).achievements.counters,
+      coinEarnedTotal: 123,
+      maxCoinsHeld: 100,
+    },
+  },
+  classicEndgame: {
+    schemaVersion: 1,
+    projects: completeProjects,
+    completedAt: now,
+    legacyLevel: 19,
+    legacyCoinsInvested: 1000000,
+    lifetimeCoinsInvested: 3000000,
+  },
+};
+const migratedLegacyCurve = normalizePet(legacyMigrationBase, now);
+assert.equal(migratedLegacyCurve.classicEndgame.schemaVersion, 2);
+assert.equal(migratedLegacyCurve.classicEndgame.legacyCoinsInvested, 227000);
+assert.equal(migratedLegacyCurve.classicEndgame.lifetimeCoinsInvested, 3000000);
+assert.equal(migratedLegacyCurve.coins, 773100);
+assert.equal(migratedLegacyCurve.achievements.counters.coinEarnedTotal, 123, 'legacy curve refunds must not count as earned coins');
+assert.equal(migratedLegacyCurve.achievements.counters.maxCoinsHeld, 773100);
+assert.match(migratedLegacyCurve.recentEvent, /773[,.]?000/);
+const migratedLegacyCurveAgain = normalizePet(migratedLegacyCurve, now);
+assert.equal(migratedLegacyCurveAgain.coins, 773100, 'v2 saves must not receive the legacy curve refund twice');
+
+const underfundedLegacyCurve = normalizePet({
+  ...legacyMigrationBase,
+  classicEndgame: { ...legacyMigrationBase.classicEndgame, legacyCoinsInvested: 100000 },
+}, now);
+assert.equal(underfundedLegacyCurve.coins, 100);
+assert.equal(underfundedLegacyCurve.classicEndgame.legacyCoinsInvested, 100000);
+const exactlyFundedLegacyCurve = normalizePet({
+  ...legacyMigrationBase,
+  classicEndgame: { ...legacyMigrationBase.classicEndgame, legacyCoinsInvested: 227000 },
+}, now);
+assert.equal(exactlyFundedLegacyCurve.coins, 100);
+assert.equal(exactlyFundedLegacyCurve.classicEndgame.legacyCoinsInvested, 227000);
 
 const migratedSave = normalizePet({ ...createDefaultPet(now), goldenAppleGacha: undefined, classicEndgame: undefined }, now);
 assert.equal(migratedSave.goldenAppleGacha.tickets, 0);

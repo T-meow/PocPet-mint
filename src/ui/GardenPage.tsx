@@ -10,15 +10,17 @@ import {
   gardenTreeDefinitions,
   gardenTreeIds,
   gardenTreeSaplingItemIds,
+  formatGardenCareDuration,
+  getGardenCarePreview,
   getGardenClearCost,
   getGardenEnvironmentEffects,
   getGardenStage,
   getGardenToolUpgradeCost,
   getGardenView,
-  getGardenWaterReductionPercent,
   getSeasonInfo,
   getDailyResetDateKey,
   weatherInfo,
+  type GardenCarePreview,
   type GardenFertilizerId,
   type GardenToolId,
   type GardenTreeId,
@@ -61,6 +63,15 @@ const formatGardenCountdown = (milliseconds: number) => {
 
 const sameGardenDate = (time: number) => time > 0 && getDailyResetDateKey(time) === getDailyResetDateKey(Date.now());
 
+const getGardenCarePreviewText = (preview: GardenCarePreview, itemCount?: number) => {
+  if (preview.blockedReason === 'minimum_remaining') return t('ui.garden.careMinimumRemaining');
+  if (preview.blockedReason === 'round_limit') return t('ui.garden.careReductionLimitReached');
+  const time = formatGardenCareDuration(preview.actualReductionMs);
+  return itemCount === undefined
+    ? t('ui.garden.waterPreview', { time })
+    : t('ui.garden.fertilizerPreview', { count: itemCount, time });
+};
+
 const weatherIcons: Record<WeatherType, LucideIcon> = {
   sunny: Sun,
   cloudy: Cloud,
@@ -86,6 +97,11 @@ export const GardenPage = ({ pet, itemIconMap, onBack, onSelectSlot, onUnlockSlo
   const wateredToday = sameGardenDate(slot.lastWateredAt);
   const fertilizedToday = sameGardenDate(slot.lastFertilizedAt);
   const boostedToday = sameGardenDate(slot.lastBoostedAt);
+  const normalFertilizerCount = pet.inventory[gardenFertilizerItemIds.normal] ?? 0;
+  const heartFertilizerCount = pet.inventory[gardenFertilizerItemIds.heart] ?? 0;
+  const waterPreview = getGardenCarePreview(view.pet, slot, 'water', now);
+  const normalFertilizerPreview = getGardenCarePreview(view.pet, slot, 'normal', now);
+  const heartFertilizerPreview = getGardenCarePreview(view.pet, slot, 'heart', now);
 
   return (
     <section className="garden-page" aria-label={t('ui.garden.aria')}>
@@ -171,9 +187,9 @@ export const GardenPage = ({ pet, itemIconMap, onBack, onSelectSlot, onUnlockSlo
           </button>
         )}
         {slot.state === 'growing' && <>
-          <button type="button" className="garden-choice" disabled={wateredToday} onClick={() => onWater(slot.slotIndex)}><Droplets size={18} /><span><strong>{t('ui.garden.actions.water')}</strong><small>{t('ui.garden.waterFree', { percent: getGardenWaterReductionPercent(pet.garden.tools, environment.waterReductionBonusPercent) })}</small></span></button>
-          <button type="button" className="garden-choice" disabled={fertilizedToday || (pet.inventory[gardenFertilizerItemIds.normal] ?? 0) <= 0} onClick={() => onFertilize(slot.slotIndex, 'normal')}><Flower2 size={18} /><span><strong>{t('ui.garden.actions.normalFertilizer')}</strong><small>{t('ui.garden.itemOwned', { count: pet.inventory[gardenFertilizerItemIds.normal] ?? 0 })}</small></span></button>
-          <button type="button" className="garden-choice" disabled={fertilizedToday || (pet.inventory[gardenFertilizerItemIds.heart] ?? 0) <= 0} onClick={() => onFertilize(slot.slotIndex, 'heart')}><Sparkles size={18} /><span><strong>{t('ui.garden.actions.heartFertilizer')}</strong><small>{t('ui.garden.itemOwned', { count: pet.inventory[gardenFertilizerItemIds.heart] ?? 0 })}</small></span></button>
+          <button type="button" className="garden-choice" disabled={wateredToday || waterPreview.actualReductionMs <= 0} onClick={() => onWater(slot.slotIndex)}><Droplets size={18} /><span><strong>{t('ui.garden.actions.water')}</strong><small>{getGardenCarePreviewText(waterPreview)}</small></span></button>
+          <button type="button" className="garden-choice" disabled={fertilizedToday || normalFertilizerCount <= 0 || normalFertilizerPreview.actualReductionMs <= 0} onClick={() => onFertilize(slot.slotIndex, 'normal')}><Flower2 size={18} /><span><strong>{t('ui.garden.actions.normalFertilizer')}</strong><small>{getGardenCarePreviewText(normalFertilizerPreview, normalFertilizerCount)}</small></span></button>
+          <button type="button" className="garden-choice" disabled={fertilizedToday || heartFertilizerCount <= 0 || heartFertilizerPreview.actualReductionMs <= 0} onClick={() => onFertilize(slot.slotIndex, 'heart')}><Sparkles size={18} /><span><strong>{t('ui.garden.actions.heartFertilizer')}</strong><small>{getGardenCarePreviewText(heartFertilizerPreview, heartFertilizerCount)}</small></span></button>
           <button type="button" className="garden-choice" disabled={boostedToday || (pet.inventory[gardenNutrientItemId] ?? 0) <= 0} onClick={() => onNutrient(slot.slotIndex)}><Sparkles size={18} /><span><strong>{t('ui.garden.actions.nutrient')}</strong><small>{t('ui.garden.itemOwned', { count: pet.inventory[gardenNutrientItemId] ?? 0 })}</small></span></button>
         </>}
         {slot.state === 'ready' && <button type="button" className="primary-button garden-harvest-button" onClick={() => onHarvest(slot.slotIndex)}>{t('ui.garden.actions.harvest')}</button>}

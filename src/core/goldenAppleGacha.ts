@@ -14,13 +14,16 @@ import type {
 } from './petTypes';
 import { hashString, isNumber } from './utils';
 
-export const goldenAppleGachaSchemaVersion = 2 as const;
+export const goldenAppleGachaSchemaVersion = 3 as const;
+const goldenAppleGachaPitySchemaVersion = 2;
 export const goldenAppleGachaSingleCost = 500;
 export const goldenAppleGachaTenCost = 5000;
 export const goldenAppleGachaDailyTicketLimit = 3;
 export const goldenAppleGachaJackpotPityThreshold = 1000;
 export const goldenAppleGachaStarterGiftRewardId = 'golden-apple-gacha-starter-gift-v1';
 export const goldenAppleGachaStarterGiftTickets = 10;
+export const authorLinkGiftRewardId = 'author-link-gacha-ticket-gift-v1';
+export const authorLinkGiftTickets = 10;
 export const goldenAppleValue = 888;
 export const goldenAppleGachaPoolWeight = 100000;
 
@@ -147,12 +150,18 @@ export const normalizeGoldenAppleGachaState = (
   const isCurrentDay = storedDateKey === effectiveDateKey;
   const processed = isCurrentDay ? normalizeSources(raw.dailyProcessedSources) : [];
   const granted = isCurrentDay ? normalizeSources(raw.dailyGrantedSources).filter((source) => processed.includes(source)) : [];
+  const dailyTicketsGranted = isCurrentDay && sourceSchemaVersion >= 3 && isNumber(raw.dailyTicketsGranted)
+    ? Math.max(
+        granted.length,
+        Math.min(goldenAppleGachaDailyTicketLimit, clampCount(raw.dailyTicketsGranted)),
+      )
+    : granted.length;
   const recentResults = Array.isArray(raw.recentResults)
     ? raw.recentResults.map(normalizeResult).filter((result): result is GachaResult => Boolean(result)).slice(0, 20)
     : [];
   const totalDraws = clampCount(isNumber(raw.totalDraws) ? raw.totalDraws : 0);
-  const jackpotPityUsed = sourceSchemaVersion >= goldenAppleGachaSchemaVersion && raw.jackpotPityUsed === true;
-  const jackpotPityMisses = sourceSchemaVersion >= goldenAppleGachaSchemaVersion && !jackpotPityUsed
+  const jackpotPityUsed = sourceSchemaVersion >= goldenAppleGachaPitySchemaVersion && raw.jackpotPityUsed === true;
+  const jackpotPityMisses = sourceSchemaVersion >= goldenAppleGachaPitySchemaVersion && !jackpotPityUsed
     ? Math.min(
         goldenAppleGachaJackpotPityThreshold,
         totalDraws,
@@ -170,7 +179,7 @@ export const normalizeGoldenAppleGachaState = (
     dailyDateKey: effectiveDateKey,
     dailyProcessedSources: processed,
     dailyGrantedSources: granted,
-    dailyTicketsGranted: granted.length,
+    dailyTicketsGranted,
     jackpotCount: clampCount(isNumber(raw.jackpotCount) ? raw.jackpotCount : 0),
     jackpotPityMisses,
     jackpotPityUsed,
@@ -233,6 +242,28 @@ export const claimGoldenAppleGachaStarterGift = (pet: PetState): GoldenAppleGach
       },
       claimedRewardIds: [...pet.claimedRewardIds, goldenAppleGachaStarterGiftRewardId],
       recentEvent: t('pet.gacha.starterGiftClaimed', { count: goldenAppleGachaStarterGiftTickets }),
+    },
+    claimed: true,
+  };
+};
+
+export const claimAuthorLinkGift = (pet: PetState): GoldenAppleGachaStarterGiftOutcome => {
+  if (pet.claimedRewardIds.includes(authorLinkGiftRewardId)) {
+    return { pet, claimed: false };
+  }
+
+  const tickets = Math.min(9999, pet.goldenAppleGacha.tickets + authorLinkGiftTickets);
+  const grantedTickets = tickets - pet.goldenAppleGacha.tickets;
+
+  return {
+    pet: {
+      ...pet,
+      goldenAppleGacha: {
+        ...pet.goldenAppleGacha,
+        tickets,
+      },
+      claimedRewardIds: [...pet.claimedRewardIds, authorLinkGiftRewardId],
+      recentEvent: t('pet.reward.authorLinkGift', { count: grantedTickets }),
     },
     claimed: true,
   };
@@ -312,6 +343,46 @@ export interface DailyGachaTicketOutcome {
   processed: boolean;
 }
 
+export interface DailyGachaTicketGrantOutcome {
+  pet: PetState;
+  grantedTickets: number;
+  quotaConsumed: boolean;
+}
+
+export const grantDailyGachaTickets = (
+  pet: PetState,
+  requestedTickets: number,
+  now = Date.now(),
+): DailyGachaTicketGrantOutcome => {
+  const state = normalizeGoldenAppleGachaState(pet.goldenAppleGacha, pet.createdAt, now);
+  const requested = isNumber(requestedTickets) ? clampCount(requestedTickets) : 0;
+  const availableCapacity = Math.max(0, 9999 - state.tickets);
+  const grantedTickets = state.dailyTicketsGranted < goldenAppleGachaDailyTicketLimit
+    ? Math.min(requested, availableCapacity)
+    : 0;
+
+  if (grantedTickets <= 0) {
+    return {
+      pet: state === pet.goldenAppleGacha ? pet : { ...pet, goldenAppleGacha: state },
+      grantedTickets: 0,
+      quotaConsumed: false,
+    };
+  }
+
+  return {
+    pet: {
+      ...pet,
+      goldenAppleGacha: {
+        ...state,
+        tickets: state.tickets + grantedTickets,
+        dailyTicketsGranted: state.dailyTicketsGranted + 1,
+      },
+    },
+    grantedTickets,
+    quotaConsumed: true,
+  };
+};
+
 export const resolveDailyGachaTicket = (
   pet: PetState,
   source: GachaTicketSource,
@@ -322,22 +393,30 @@ export const resolveDailyGachaTicket = (
   if (state.dailyProcessedSources.includes(source)) return { pet: { ...pet, goldenAppleGacha: state }, granted: false, processed: false };
   const dailyProcessedSources = [...state.dailyProcessedSources, source];
   const chance = Math.max(0, Math.min(100, Math.floor(chancePercent)));
-  const won = state.dailyTicketsGranted < goldenAppleGachaDailyTicketLimit &&
+  const won = state.dailyTicketsGranted < goldenAppleGachaDailyTicketLimit && state.tickets < 9999 &&
     hashString(`${state.rngSeed}:${state.dailyDateKey}:${source}:ticket`) % 100 < chance;
-  const nextState: GoldenAppleGachaState = {
+  const processedPet: PetState = {
+    ...pet,
+    goldenAppleGacha: {
+      ...state,
+      dailyProcessedSources,
+    },
+  };
+  const grant = won ? grantDailyGachaTickets(processedPet, 1, now) : undefined;
+  const nextState: GoldenAppleGachaState = grant ? {
+    ...grant.pet.goldenAppleGacha,
+    dailyGrantedSources: grant.quotaConsumed ? [...state.dailyGrantedSources, source] : state.dailyGrantedSources,
+  } : {
     ...state,
-    tickets: won ? Math.min(9999, state.tickets + 1) : state.tickets,
     dailyProcessedSources,
-    dailyGrantedSources: won ? [...state.dailyGrantedSources, source] : state.dailyGrantedSources,
-    dailyTicketsGranted: won ? state.dailyTicketsGranted + 1 : state.dailyTicketsGranted,
   };
   return {
     pet: {
       ...pet,
       goldenAppleGacha: nextState,
-      recentEvent: won ? `${pet.recentEvent} ${t('pet.gacha.ticketGranted')}`.trim() : pet.recentEvent,
+      recentEvent: grant?.quotaConsumed ? `${pet.recentEvent} ${t('pet.gacha.ticketGranted')}`.trim() : pet.recentEvent,
     },
-    granted: won,
+    granted: grant?.quotaConsumed ?? false,
     processed: true,
   };
 };

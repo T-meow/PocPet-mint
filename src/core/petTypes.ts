@@ -45,6 +45,18 @@ export type GardenTreeId = 'fruit_tree' | 'care_tree' | 'gift_tree' | 'money_tre
 
 export type GardenFertilizerId = 'normal' | 'heart';
 
+export type GardenCareActionId = 'water' | GardenFertilizerId;
+
+export type GardenCareBlockedReason = 'minimum_remaining' | 'round_limit';
+
+export interface GardenCarePreview {
+  percent: number;
+  nominalReductionMs: number;
+  actualReductionMs: number;
+  remainingAfterMs: number;
+  blockedReason?: GardenCareBlockedReason;
+}
+
 export type GardenToolId = 'watering_can' | 'shovel' | 'fertilizer_box';
 
 export type GardenSlotState = 'empty' | 'growing' | 'ready' | 'withered';
@@ -63,6 +75,8 @@ export interface GardenSlot {
   lastWateredAt: number;
   lastFertilizedAt: number;
   lastBoostedAt: number;
+  naturalReadyAt: number;
+  careReductionMs: number;
   nextReadyAt: number;
   harvestsUsed: number;
   maxHarvests: number;
@@ -81,7 +95,7 @@ export interface GardenTools {
 }
 
 export interface GardenState {
-  schemaVersion: 2;
+  schemaVersion: 3;
   activeSlotIndex: number;
   slots: GardenSlot[];
   dailyCareDateKey: string;
@@ -125,7 +139,7 @@ export interface GachaResult {
 }
 
 export interface GoldenAppleGachaState {
-  schemaVersion: 2;
+  schemaVersion: 3;
   tickets: number;
   totalDraws: number;
   coinsSpent: number;
@@ -149,7 +163,7 @@ export interface DreamProjectProgress {
 }
 
 export interface ClassicEndgameState {
-  schemaVersion: 1;
+  schemaVersion: 2;
   projects: Record<PartnerScheduleCategory, DreamProjectProgress>;
   completedAt?: number;
   legacyLevel: number;
@@ -218,6 +232,10 @@ export interface PomodoroState {
 export interface PetBirthday {
   month: number;
   day: number;
+}
+
+export interface PetCalendarDate extends PetBirthday {
+  year: number;
 }
 
 export type YearlyCareActionKey = Extract<CareActionKey, 'play' | 'clean' | 'work' | 'feed' | 'gift' | 'touch'>;
@@ -397,6 +415,7 @@ export interface PetState {
   energy: number;
   health: number;
   createdAt: number;
+  metDate: PetCalendarDate;
   ageSeconds: number;
   lastUpdatedAt: number;
   isSleeping: boolean;
@@ -432,13 +451,11 @@ export interface PetState {
   lastPetInteractionAt: number;
   pomodoro: PomodoroState;
   hasOpenedHelp: boolean;
+  suppressGoldenAppleUseConfirm: boolean;
   claimedRewardIds: string[];
   birthday?: PetBirthday;
-  lastBirthdayRewardYear?: number;
-  lastAnniversaryRewardYear?: number;
+  claimedDateRewardKeys: string[];
   dailyLoginRewardDateKey?: string;
-  monthlyGiftDateKey?: string;
-  claimedFestivalRewardKeys: string[];
   yearlyStats: YearlyStats;
   pendingYearReview?: YearReview;
   lastYearReviewYear?: number;

@@ -2,7 +2,7 @@
 import { useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
 import { Check, Trash2 } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { defaultPetBirthday, getPetBirthdayMaxDay, type PetBirthday } from '../core/pet';
+import { authorLinkGiftTickets, defaultPetBirthday, getPetBirthdayMaxDay, type PetBirthday, type PetCalendarDate } from '../core/pet';
 import type { ActivePetMod, InstalledPetModSummary } from '../core/mod';
 import { giftBoxIcon } from '../assets';
 import { languages, list, t, type LanguageCode } from '../i18n';
@@ -14,16 +14,19 @@ interface SettingsModalProps {
   modMessage: string;
   draftName: string;
   draftBirthday?: PetBirthday;
+  metDate: PetCalendarDate;
   language: LanguageCode;
   saveText: string;
   importSaveText: string;
   hasOpenedHelp: boolean;
+  hasClaimedAuthorLinkGift: boolean;
   hasClaimedHelpPageGift: boolean;
   onDraftNameChange: (value: string) => void;
   onDraftBirthdayChange: (value: PetBirthday) => void;
   onLanguageChange: (value: LanguageCode) => void;
   onImportSaveTextChange: (value: string) => void;
   onOpenHelp: () => void;
+  onClaimAuthorLinkGift: () => void;
   onClaimHelpPageGift: () => void;
   onClose: () => void;
   onSaveProfile: () => void;
@@ -49,16 +52,19 @@ export const SettingsModal = ({
   modMessage,
   draftName,
   draftBirthday,
+  metDate,
   language,
   saveText,
   importSaveText,
   hasOpenedHelp,
+  hasClaimedAuthorLinkGift,
   hasClaimedHelpPageGift,
   onDraftNameChange,
   onDraftBirthdayChange,
   onLanguageChange,
   onImportSaveTextChange,
   onOpenHelp,
+  onClaimAuthorLinkGift,
   onClaimHelpPageGift,
   onClose,
   onSaveProfile,
@@ -73,7 +79,6 @@ export const SettingsModal = ({
   onImportSaveFileChange,
 }: SettingsModalProps) => {
   const modFileInputRef = useRef<HTMLInputElement>(null);
-  const saveFileInputRef = useRef<HTMLInputElement>(null);
   const [isHelpOpen, setHelpOpen] = useState(false);
   const [page, setPage] = useState<SettingsPage>('main');
   const helpSections = [
@@ -106,6 +111,7 @@ export const SettingsModal = ({
   };
 
   const handleAuthorLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    onClaimAuthorLinkGift();
     if (!('__TAURI_INTERNALS__' in window)) return;
     event.preventDefault();
     void openUrl(authorUrl);
@@ -186,6 +192,14 @@ export const SettingsModal = ({
                     </select>
                   </label>
                 </div>
+              </div>
+
+              <div className="settings-anniversary-field">
+                <div>
+                  <span>{t('ui.settings.petAnniversary')}</span>
+                  <strong>{t('ui.settings.anniversaryValue', { month: metDate.month, day: metDate.day })}</strong>
+                </div>
+                <small>{t('ui.settings.metDateValue', { year: metDate.year, month: metDate.month, day: metDate.day })}</small>
               </div>
 
               <label className="field settings-inline-field settings-language-field" title={t('ui.settings.languageHint')}>
@@ -286,11 +300,11 @@ export const SettingsModal = ({
                   <Download size={18} aria-hidden="true" />
                   {t('ui.settings.save.download')}
                 </button>
-                <button type="button" className="text-button settings-action" onClick={() => saveFileInputRef.current?.click()}>
+                <label className="text-button settings-action settings-file-picker">
                   {t('ui.settings.save.importFile')}
-                </button>
+                  <input className="file-input" type="file" onChange={onImportSaveFileChange} />
+                </label>
               </div>
-              <input ref={saveFileInputRef} className="file-input" type="file" accept=".pocpet,.json,.txt,application/json,text/plain" onChange={onImportSaveFileChange} />
               {saveText && <textarea className="save-textarea" readOnly value={saveText} aria-label={t('ui.settings.save.exportedAria')} />}
               <label className="field">
                 <span>{t('ui.settings.save.pasteText')}</span>
@@ -323,7 +337,12 @@ export const SettingsModal = ({
           </header>
           <p className="help-author-link">
             <a href={authorUrl} target="_blank" rel="noopener noreferrer" onClick={handleAuthorLinkClick}>
-              {t('ui.settings.help.authorLink')}
+              {t(
+                hasClaimedAuthorLinkGift
+                  ? 'ui.settings.help.authorLinkClaimed'
+                  : 'ui.settings.help.authorLinkAvailable',
+                { count: authorLinkGiftTickets },
+              )}
             </a>
           </p>
           <div className="help-content">

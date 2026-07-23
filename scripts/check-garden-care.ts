@@ -3,6 +3,7 @@ import {
   advanceGarden,
   fertilizeTree,
   gardenCareReductionLimitPercent,
+  gardenSchemaVersion,
   gardenMinimumCareRemainingMs,
   gardenWaterReductionMaxMs,
   getGardenCarePreview,
@@ -125,7 +126,7 @@ const legacySlots = legacyGarden.slots as Array<Record<string, unknown>>;
 delete legacySlots[0].naturalReadyAt;
 delete legacySlots[0].careReductionMs;
 const migratedGarden = normalizeGardenState(legacyGarden, migrationNow);
-assert.equal(migratedGarden.schemaVersion, 3);
+assert.equal(migratedGarden.schemaVersion, gardenSchemaVersion);
 assert.equal(migratedGarden.slots[0].nextReadyAt, legacyDeadline);
 assert.equal(migratedGarden.slots[0].naturalReadyAt, legacyDeadline);
 assert.equal(migratedGarden.slots[0].careReductionMs, 0);

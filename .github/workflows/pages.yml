@@ -13,12 +13,11 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     name: Build web site
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-22.04
     env:
       PAGES_TOKEN: ${{ secrets.PAGES_TOKEN }}

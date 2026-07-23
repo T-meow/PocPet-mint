@@ -56,6 +56,8 @@ export const getPetStatScale = (petOrLevel: Pick<PetState, 'level'> | number) =>
 export const scalePetStatDelta = (petOrLevel: Pick<PetState, 'level'> | number, amount: number) =>
   amount * getPetStatScale(petOrLevel);
 
+export const roundPetStatDisplayAmount = (amount: number) => Math.round(amount);
+
 export const getPetStatThreshold = (petOrLevel: Pick<PetState, 'level'> | number, baseThreshold: number) =>
   scalePetStatDelta(petOrLevel, baseThreshold);
 

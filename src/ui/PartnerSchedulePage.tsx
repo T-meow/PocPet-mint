@@ -241,8 +241,8 @@ export const PartnerSchedulePage = ({
 
               <div className="partner-schedule-costs">
                 <span>{t('ui.partnerSchedule.cost.energy', { amount: preview.energyCost })}</span>
-                <span>{t('ui.partnerSchedule.cost.hunger', { amount: preview.hungerCost })}</span>
-                <span>{t('ui.partnerSchedule.cost.mood', { amount: preview.moodCost })}</span>
+                <span>{t('ui.partnerSchedule.cost.hunger', { amount: Math.round(preview.hungerCost) })}</span>
+                <span>{t('ui.partnerSchedule.cost.mood', { amount: Math.round(preview.moodCost) })}</span>
               </div>
 
               <footer className="partner-schedule-item__footer">

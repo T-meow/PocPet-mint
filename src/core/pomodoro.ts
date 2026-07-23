@@ -80,7 +80,11 @@ export const defaultPomodoroState = (now: number): PomodoroState => ({
   hasTriggeredSessionResetEvent: false,
 });
 
-export const normalizePomodoroState = (value: unknown, now: number): PomodoroState => {
+export const normalizePomodoroState = (
+  value: unknown,
+  now: number,
+  effectiveDateKey = getDailyResetDateKey(now),
+): PomodoroState => {
   const fallback = defaultPomodoroState(now);
   if (!value || typeof value !== 'object') return fallback;
 
@@ -97,7 +101,7 @@ export const normalizePomodoroState = (value: unknown, now: number): PomodoroSta
       : isRunning
         ? now + (rawPausedRemainingMs > 0 ? rawPausedRemainingMs : defaultRemainingMs)
         : 0;
-  const currentDailyDateKey = getDailyResetDateKey(now);
+  const currentDailyDateKey = effectiveDateKey;
   const dailyFocusDate = normalizeLegacyDailyDateKey(raw.dailyFocusDate, now) || currentDailyDateKey;
   const round = clampPomodoroInteger(raw.round, fallback.round, 1, settings.targetRounds);
 

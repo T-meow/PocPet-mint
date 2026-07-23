@@ -43,6 +43,8 @@ import {
   isPetLowEnergy,
   markAchievementReviewSeen,
   pausePomodoro,
+  petInteractionHeartHealthThreshold,
+  petInteractionHeartMoodThreshold,
   resetPomodoro,
   pomodoroMinHealthThreshold,
   recordPetInteraction,
@@ -83,7 +85,16 @@ import {
   type BgmMode,
   type SfxId,
 } from '../core/audio';
-import { clearPet, loadPetOrNull, savePet } from '../core/storage';
+import {
+  clearPet,
+  getImportBackup,
+  getPreservedCorruptPetRaw,
+  loadPet,
+  replacePetFromImport,
+  restorePetBackup,
+  savePet,
+  type PetStorageLoadResult,
+} from '../core/storage';
 import {
   formatFavoriteFoodText,
   getModFavoriteFoodIds,
@@ -102,7 +113,7 @@ import {
   loadPetMod,
   setActivePetMod,
 } from '../core/modStorage';
-import { createSaveFileText, parseSaveFileText } from '../core/saveCodec';
+import { createSaveFileText, parseSaveFileText, type PocPetImportedSave } from '../core/saveCodec';
 import { AchievementsPage, type AchievementTabId } from './AchievementsPage';
 import { BoostCardModal } from './BoostCardModal';
 import { CommonDreamsPage } from './CommonDreamsPage';
@@ -204,13 +215,12 @@ const getPetInteractionOutcome = (pet: PetState): SoundOutcome => {
   if (
     pet.isSleeping
     || isPetLowEnergy(pet)
-    || pet.health <= getPetStatThreshold(pet, pomodoroMinHealthThreshold)
-    || pet.hunger <= getPetStatThreshold(pet, 32)
-    || pet.mood <= getPetStatThreshold(pet, 30)
+    || isPetCriticallyHungry(pet)
+    || pet.health < petInteractionHeartHealthThreshold
   ) {
     return 'low_state';
   }
-  return pet.mood >= getPetStatThreshold(pet, 75) && pet.health >= getPetStatThreshold(pet, 40) ? 'heart' : 'success';
+  return pet.mood >= petInteractionHeartMoodThreshold ? 'heart' : 'success';
 };
 
 const createPetForMod = (mod: ActivePetMod | null) => {
@@ -249,7 +259,7 @@ const createNeighborEventContext = (
 let initialAppLoadPromise: Promise<{
   mods: readonly InstalledPetModSummary[];
   mod: ActivePetMod | null;
-  pet: PetState | null;
+  petResult: PetStorageLoadResult;
 }> | undefined;
 
 const loadInitialAppState = () => {
@@ -259,7 +269,7 @@ const loadInitialAppState = () => {
       .then(([mods, mod]) => ({
         mods,
         mod,
-        pet: loadPetOrNull(Date.now(), createNeighborEventContext(mods, mod)),
+        petResult: loadPet(Date.now(), createNeighborEventContext(mods, mod)),
       }));
   }
   return initialAppLoadPromise;
@@ -285,6 +295,11 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
   const [modMessage, setModMessage] = useState('');
   const [saveText, setSaveText] = useState('');
   const [importSaveText, setImportSaveText] = useState('');
+  const [pendingImportedSave, setPendingImportedSave] = useState<PocPetImportedSave | null>(null);
+  const [pendingImportSourceText, setPendingImportSourceText] = useState('');
+  const [isImportingSave, setIsImportingSave] = useState(false);
+  const importInProgressRef = useRef(false);
+  const [hasImportBackup, setHasImportBackup] = useState(() => Boolean(getImportBackup()));
   const [isResetConfirmOpen, setResetConfirmOpen] = useState(false);
   const [modDeleteConfirmId, setModDeleteConfirmId] = useState<string | null>(null);
   const [isPartnerScheduleCancelConfirmOpen, setPartnerScheduleCancelConfirmOpen] = useState(false);
@@ -1017,34 +1032,86 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     }
   };
 
-  const importSaveFromText = async (text: string) => {
+  const prepareImportSaveFromText = (text: string) => {
+    if (importInProgressRef.current) return;
     try {
       const imported = parseSaveFileText(text);
-      const importedMod = imported.activeMod;
+      setPendingImportedSave(imported);
+      setPendingImportSourceText(text);
+      setModMessage(t('ui.settings.save.previewReady'));
+    } catch (error) {
+      setPendingImportedSave(null);
+      setPendingImportSourceText('');
+      setModMessage(error instanceof Error ? error.message : t('ui.settings.save.importFailed'));
+      playSfx('error');
+    }
+  };
+
+  const handleConfirmImportSave = async () => {
+    const preview = pendingImportedSave;
+    const sourceText = pendingImportSourceText;
+    if (!preview || !sourceText || importInProgressRef.current) return;
+
+    importInProgressRef.current = true;
+    setIsImportingSave(true);
+    const previousActiveModId = activeMod?.manifest.id;
+    let activeModResourcesMayHaveChanged = false;
+    let importCommitted = false;
+
+    try {
+      const importedMod = preview.activeMod;
       const hasInstalledMod = importedMod
         ? installedMods.some((mod) => mod.manifest.id === importedMod.id)
         : false;
+      activeModResourcesMayHaveChanged = Boolean(importedMod && hasInstalledMod);
       const matchingMod = importedMod && hasInstalledMod ? await loadPetMod(importedMod.id) : null;
-      setActivePetMod(matchingMod?.manifest.id);
-      setActiveMod(matchingMod);
+      const imported = parseSaveFileText(sourceText, Date.now());
       const nextPet = matchingMod
         ? withPetIdentityBirthday(imported.pet, matchingMod.manifest.birthday)
         : importedMod
           ? imported.pet
           : withBackfilledBirthday(imported.pet, defaultPetBirthday);
+
+      setActivePetMod(matchingMod?.manifest.id);
+      activeModResourcesMayHaveChanged = true;
+      replacePetFromImport(nextPet, createSaveFileText(petRef.current, activeMod?.manifest));
+      importCommitted = true;
+
+      setHasImportBackup(true);
+      setActiveMod(matchingMod);
+      petRef.current = nextPet;
       setPet(nextPet);
       setDraftName(nextPet.name);
       setDraftBirthday(nextPet.birthday);
       setImportSaveText('');
+      setPendingImportedSave(null);
+      setPendingImportSourceText('');
       setModMessage(
         importedMod && !matchingMod
           ? t('ui.settings.save.importedMissingMod', { name: importedMod.name, version: importedMod.version })
           : t('ui.settings.save.imported'),
       );
     } catch (error) {
+      if (!importCommitted && activeModResourcesMayHaveChanged) {
+        try {
+          setActivePetMod(previousActiveModId);
+          setActiveMod(previousActiveModId ? await loadPetMod(previousActiveModId) : null);
+        } catch {
+          // Keep the original import error; persistent pet storage rolls itself back.
+        }
+      }
       setModMessage(error instanceof Error ? error.message : t('ui.settings.save.importFailed'));
       playSfx('error');
+    } finally {
+      importInProgressRef.current = false;
+      setIsImportingSave(false);
     }
+  };
+
+  const handleCancelImportSave = () => {
+    if (importInProgressRef.current) return;
+    setPendingImportedSave(null);
+    setPendingImportSourceText('');
   };
 
   const handleImportSaveFileChange = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -1053,14 +1120,39 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     if (!file) return;
 
     try {
-      await importSaveFromText(await readFileText(file));
+      prepareImportSaveFromText(await readFileText(file));
     } catch (error) {
       setModMessage(error instanceof Error ? error.message : t('ui.settings.save.readFailed'));
     }
   };
 
+  const handleRestoreImportBackup = () => {
+    const backupText = getImportBackup();
+    if (!backupText) {
+      setHasImportBackup(false);
+      setModMessage(t('ui.settings.save.importBackupMissing'));
+      playSfx('error');
+      return;
+    }
+    prepareImportSaveFromText(backupText);
+  };
+
   const modDeleteTarget = installedMods.find((mod) => mod.manifest.id === modDeleteConfirmId);
-  const activeYearReview = !activeRewardPopup && !achievementCgPopup && !utilityDialog && !isResetConfirmOpen && !modDeleteConfirmId && !gardenClearConfirm ? pet.pendingYearReview : undefined;
+  const pendingImportExportTime = pendingImportedSave?.exportedAt
+    ? new Date(pendingImportedSave.exportedAt).toLocaleString(language)
+    : t('ui.settings.save.previewLegacyTime');
+  const pendingImportMod = pendingImportedSave?.activeMod
+    ? `${pendingImportedSave.activeMod.name} v${pendingImportedSave.activeMod.version}`
+    : t('ui.settings.save.previewBuiltinMod');
+  const pendingImportMessage = pendingImportedSave
+    ? t('ui.settings.save.previewMessage', {
+        name: pendingImportedSave.pet.name,
+        level: pendingImportedSave.pet.level,
+        exportedAt: pendingImportExportTime,
+        mod: pendingImportMod,
+      })
+    : '';
+  const activeYearReview = !activeRewardPopup && !achievementCgPopup && !utilityDialog && !isResetConfirmOpen && !modDeleteConfirmId && !gardenClearConfirm && !pendingImportedSave ? pet.pendingYearReview : undefined;
 
   const handleCloseYearReview = () => {
     playAfterUnlock('tap');
@@ -1294,7 +1386,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
         <InventoryModal
           items={ownedItems}
           inventory={pet.inventory}
-          petLevel={pet.level}
+          pet={pet}
           itemIconMap={itemIconMap}
           activeCategory={inventoryController.activeCategory}
           isPetBusy={Boolean(pet.partnerSchedule.active)}
@@ -1394,6 +1486,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
           language={language}
           saveText={saveText}
           importSaveText={importSaveText}
+          hasImportBackup={hasImportBackup}
           hasOpenedHelp={pet.hasOpenedHelp}
           hasClaimedAuthorLinkGift={hasClaimedAuthorLinkGift}
           hasClaimedHelpPageGift={hasClaimedHelpPageGift}
@@ -1415,7 +1508,8 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
           onDeleteMod={setModDeleteConfirmId}
           onExportSave={handleExportSave}
           onDownloadSave={handleDownloadSave}
-          onImportPastedSave={() => void importSaveFromText(importSaveText)}
+          onImportPastedSave={() => prepareImportSaveFromText(importSaveText)}
+          onRestoreImportBackup={handleRestoreImportBackup}
           onModFileChange={handleModFileChange}
           onImportSaveFileChange={handleImportSaveFileChange}
         />
@@ -1428,6 +1522,18 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
           confirmLabel={t('ui.settings.resetDialog.confirm')}
           onCancel={handleCancelReset}
           onConfirm={handleConfirmReset}
+        />
+      )}
+      {pendingImportedSave && (
+        <ConfirmDialog
+          title={t('ui.settings.save.previewTitle')}
+          message={pendingImportMessage}
+          cancelLabel={t('ui.settings.save.previewCancel')}
+          confirmLabel={t('ui.settings.save.previewConfirm')}
+          confirmTone="primary"
+          disabled={isImportingSave}
+          onCancel={handleCancelImportSave}
+          onConfirm={() => void handleConfirmImportSave()}
         />
       )}
       {modDeleteConfirmId && (
@@ -1481,6 +1587,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
 
 export const App = () => {
   const [initialPet, setInitialPet] = useState<PetState | null | undefined>(undefined);
+  const [startupRecovery, setStartupRecovery] = useState<Extract<PetStorageLoadResult, { status: 'corrupt' }> | null>(null);
   const [installedMods, setInstalledMods] = useState<readonly InstalledPetModSummary[]>([]);
   const [activeMod, setActiveMod] = useState<ActivePetMod | null>(null);
   const [modMessage, setModMessage] = useState('');
@@ -1489,21 +1596,63 @@ export const App = () => {
   useEffect(() => {
     let cancelled = false;
     void loadInitialAppState()
-      .then(({ mods, mod, pet }) => {
+      .then(({ mods, mod, petResult }) => {
         if (cancelled) return;
         setInstalledMods(mods);
         setActiveMod(mod);
-        setInitialPet(pet);
+        if (petResult.status === 'corrupt') {
+          setStartupRecovery(petResult);
+          setInitialPet(null);
+        } else {
+          setInitialPet(petResult.status === 'ok' ? petResult.pet : null);
+        }
       })
       .catch((error) => {
         if (cancelled) return;
         setModMessage(error instanceof Error ? error.message : t('ui.settings.mod.loadFailed'));
-        setInitialPet(loadPetOrNull());
+        const petResult = loadPet();
+        if (petResult.status === 'corrupt') {
+          setStartupRecovery(petResult);
+          setInitialPet(null);
+        } else {
+          setInitialPet(petResult.status === 'ok' ? petResult.pet : null);
+        }
       });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  const handleRestoreStoredBackup = () => {
+    const restored = restorePetBackup(Date.now(), createNeighborEventContext(installedMods, activeMod));
+    if (!restored) {
+      setModMessage(t('ui.settings.save.recoveryRestoreFailed'));
+      playSfx('error');
+      return;
+    }
+    setStartupRecovery(null);
+    setInitialPet(restored);
+    setModMessage(t('ui.settings.save.recoveryRestored'));
+  };
+
+  const handleExportCorruptSave = async () => {
+    const raw = getPreservedCorruptPetRaw() ?? startupRecovery?.raw;
+    if (!raw) return;
+    try {
+      const result = await saveTextFile(createSaveFileName(t('ui.settings.save.recoveryFileName')), raw);
+      setModMessage(t(result === 'cancelled' ? 'ui.settings.save.saveCancelled' : 'ui.settings.save.recoveryExported'));
+    } catch (error) {
+      setModMessage(error instanceof Error ? error.message : t('ui.settings.save.saveFailed'));
+      playSfx('error');
+    }
+  };
+
+  const handleResetCorruptSave = () => {
+    clearPet();
+    setStartupRecovery(null);
+    setInitialPet(null);
+    setModMessage(t('ui.settings.save.recoveryReset'));
+  };
 
   const handleAudioToggle = () => {
     const nextEnabled = !isAudioEnabled;
@@ -1564,6 +1713,32 @@ export const App = () => {
       playSfx('error');
     }
   };
+
+  if (startupRecovery) {
+    const hasBackup = Boolean(startupRecovery.backup);
+    return (
+      <>
+        <RolePicker
+          installedMods={installedMods}
+          modMessage={modMessage}
+          isAudioEnabled={isAudioEnabled}
+          isLoading
+          onUseBuiltin={handleUseBuiltin}
+          onUseInstalledMod={() => undefined}
+          onImportMod={handleImportMod}
+          onAudioToggle={handleAudioToggle}
+        />
+        <ConfirmDialog
+          title={t('ui.settings.save.recoveryTitle')}
+          message={t(hasBackup ? 'ui.settings.save.recoveryWithBackup' : 'ui.settings.save.recoveryWithoutBackup')}
+          cancelLabel={t(hasBackup ? 'ui.settings.save.recoveryRestore' : 'ui.settings.save.recoveryExport')}
+          confirmLabel={t('ui.settings.save.recoveryClear')}
+          onCancel={hasBackup ? handleRestoreStoredBackup : () => void handleExportCorruptSave()}
+          onConfirm={handleResetCorruptSave}
+        />
+      </>
+    );
+  }
 
   if (initialPet === undefined) {
     return (

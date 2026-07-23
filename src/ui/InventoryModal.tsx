@@ -1,6 +1,17 @@
 import { useState } from 'react';
 import { PackageOpen, ShoppingBag, Sprout, X } from 'lucide-react';
-import { batchActionUnlockLevel, maxBatchQuantity, shopCategories, type Inventory, type InventoryItemDefinition, type ItemId, type ShopCategory } from '../core/pet';
+import {
+  batchActionUnlockLevel,
+  getPetEnergyCap,
+  getPetStatCap,
+  maxBatchQuantity,
+  shopCategories,
+  type Inventory,
+  type InventoryItemDefinition,
+  type ItemId,
+  type PetState,
+  type ShopCategory,
+} from '../core/pet';
 import { unknownItemIcon } from '../assets';
 import { t } from '../i18n';
 import { DialogShell } from './DialogShell';
@@ -10,7 +21,7 @@ import { getValidQuantityPreset, QuantityPresets } from './QuantityPresets';
 interface InventoryModalProps {
   items: readonly InventoryItemDefinition[];
   inventory: Inventory;
-  petLevel: number;
+  pet: Pick<PetState, 'level' | 'hunger' | 'mood' | 'cleanliness' | 'energy' | 'health' | 'classicEndgame'>;
   itemIconMap: Partial<Record<string, string>>;
   activeCategory: ShopCategory;
   isPetBusy: boolean;
@@ -24,7 +35,7 @@ interface InventoryModalProps {
 export const InventoryModal = ({
   items,
   inventory,
-  petLevel,
+  pet,
   itemIconMap,
   activeCategory,
   isPetBusy,
@@ -36,6 +47,14 @@ export const InventoryModal = ({
 }: InventoryModalProps) => {
   const [quantityByItem, setQuantityByItem] = useState<Record<string, number>>({});
   const visibleItems = items.filter((item) => item.kind === activeCategory);
+  const statCap = getPetStatCap(pet);
+  const stats = [
+    { key: 'hunger', label: t('ui.inventory.statLabels.hunger'), value: pet.hunger, max: statCap },
+    { key: 'mood', label: t('ui.inventory.statLabels.mood'), value: pet.mood, max: statCap },
+    { key: 'cleanliness', label: t('ui.inventory.statLabels.cleanliness'), value: pet.cleanliness, max: statCap },
+    { key: 'energy', label: t('ui.inventory.statLabels.energy'), value: pet.energy, max: getPetEnergyCap(pet) },
+    { key: 'health', label: t('ui.inventory.statLabels.health'), value: pet.health, max: statCap },
+  ] as const;
 
   return (
     <DialogShell
@@ -63,6 +82,30 @@ export const InventoryModal = ({
         </div>
       </header>
 
+      <div className="inventory-modal__stats" role="group" aria-label={t('ui.inventory.currentStats')}>
+        {stats.map((stat) => {
+          const max = Math.max(1, Math.round(stat.max));
+          const value = Math.max(0, Math.min(max, Math.round(stat.value)));
+          const percent = value / max * 100;
+          return (
+            <div className={`inventory-modal__stat inventory-modal__stat--${stat.key}`} key={stat.key}>
+              <span>{stat.label}</span>
+              <strong>{value}/{max}</strong>
+              <span
+                className="inventory-modal__stat-track"
+                role="progressbar"
+                aria-label={`${stat.label} ${value}/${max}`}
+                aria-valuemin={0}
+                aria-valuemax={max}
+                aria-valuenow={value}
+              >
+                <i style={{ width: `${percent}%` }} />
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
       <div className="inventory-tabs" role="tablist" aria-label={t('ui.inventory.tabsAria')}>
         {shopCategories.map((category) => {
           const count = items.filter((item) => item.kind === category.id).length;
@@ -87,7 +130,7 @@ export const InventoryModal = ({
           {visibleItems.map((item) => {
             const icon = itemIconMap[item.id] ?? item.imageUrl ?? unknownItemIcon;
             const isGardenItem = item.kind === 'garden';
-            const canBatch = petLevel >= batchActionUnlockLevel
+            const canBatch = pet.level >= batchActionUnlockLevel
               && !isGardenItem
               && item.usable
               && item.id !== 'golden_apple'

@@ -1,5 +1,6 @@
 import type { CareActionKey, PetState, YearReview, YearlyCareActionKey, YearlyStats } from './petTypes';
 import { getDailyResetDate, getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
+import { getEffectiveDailyDateKey } from './gameClock';
 
 const yearlyCareKeys: readonly YearlyCareActionKey[] = ['play', 'clean', 'work', 'feed', 'gift', 'touch'];
 
@@ -12,16 +13,23 @@ export const defaultYearlyCareActionCounts = (): Record<YearlyCareActionKey, num
   touch: 0,
 });
 
-export const defaultYearlyStats = (time = Date.now()): YearlyStats => ({
-  year: getDailyResetDate(time).getFullYear(),
-  activeDateKeys: [getDailyResetDateKey(time)],
+export const defaultYearlyStats = (
+  time = Date.now(),
+  dateKey = getDailyResetDateKey(time),
+): YearlyStats => ({
+  year: Number.parseInt(dateKey.slice(0, 4), 10) || getDailyResetDate(time).getFullYear(),
+  activeDateKeys: [dateKey],
   careActionCounts: defaultYearlyCareActionCounts(),
   itemUseCount: 0,
   pomodoroFocusCount: 0,
 });
 
-export const normalizeYearlyStats = (value: unknown, now = Date.now()): YearlyStats => {
-  const fallback = defaultYearlyStats(now);
+export const normalizeYearlyStats = (
+  value: unknown,
+  now = Date.now(),
+  effectiveDateKey = getDailyResetDateKey(now),
+): YearlyStats => {
+  const fallback = defaultYearlyStats(now, effectiveDateKey);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
 
   const raw = value as Record<string, unknown>;
@@ -102,10 +110,14 @@ export const createYearReview = (stats: YearlyStats, createdAt: number): YearRev
   };
 };
 
-export const ensureYearlyStatsForDate = (pet: PetState, now = Date.now()): PetState => {
-  const currentYear = getDailyResetDate(now).getFullYear();
-  const today = getDailyResetDateKey(now);
-  let stats = normalizeYearlyStats(pet.yearlyStats, now);
+export const ensureYearlyStatsForDate = (
+  pet: PetState,
+  now = Date.now(),
+  dateKeyOverride?: string,
+): PetState => {
+  const today = dateKeyOverride || getEffectiveDailyDateKey(pet, now);
+  const currentYear = Number.parseInt(today.slice(0, 4), 10) || getDailyResetDate(now).getFullYear();
+  let stats = normalizeYearlyStats(pet.yearlyStats, now, today);
   let pendingYearReview = pet.pendingYearReview;
   let lastYearReviewYear = pet.lastYearReviewYear;
 
@@ -114,11 +126,9 @@ export const ensureYearlyStatsForDate = (pet: PetState, now = Date.now()): PetSt
     if (pet.lastYearReviewYear !== review.year && pet.pendingYearReview?.year !== review.year) {
       pendingYearReview = review;
     }
-    stats = defaultYearlyStats(now);
+    stats = defaultYearlyStats(now, today);
   } else if (stats.year > currentYear) {
-    stats = defaultYearlyStats(now);
-    pendingYearReview = undefined;
-    lastYearReviewYear = undefined;
+    return { ...pet, yearlyStats: stats, pendingYearReview, lastYearReviewYear };
   }
 
   if (!stats.activeDateKeys.includes(today)) {
@@ -155,9 +165,14 @@ export const recordYearlyItemUse = (pet: PetState, now = Date.now(), amount = 1)
   };
 };
 
-export const recordYearlyPomodoroFocus = (pet: PetState, count: number, now = Date.now()): PetState => {
-  if (count <= 0) return ensureYearlyStatsForDate(pet, now);
-  const current = ensureYearlyStatsForDate(pet, now);
+export const recordYearlyPomodoroFocus = (
+  pet: PetState,
+  count: number,
+  now = Date.now(),
+  dateKeyOverride?: string,
+): PetState => {
+  if (count <= 0) return ensureYearlyStatsForDate(pet, now, dateKeyOverride);
+  const current = ensureYearlyStatsForDate(pet, now, dateKeyOverride);
   return {
     ...current,
     yearlyStats: {

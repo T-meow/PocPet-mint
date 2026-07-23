@@ -7,6 +7,7 @@ import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset'
 import { createDailyWish, normalizeDailyWishState, normalizeReturnWelcomeState } from './dailyWishes';
 import { defaultGardenState, normalizeGardenState } from './garden';
 import { defaultGoldenAppleGachaState, normalizeGoldenAppleGachaState } from './goldenAppleGacha';
+import { getDailyDateKeyTime, normalizeTimeGuardState, timeGuardSchemaVersion } from './gameClock';
 import { addInventoryItem } from './items';
 import { dailyBiscuitClaimLimit, dailyHeartExchangeLimit, isBuiltinItemId } from './items';
 import { neighborGiftDailyLimit } from './neighbors';
@@ -113,6 +114,7 @@ export const createDefaultPet = (now = Date.now()): PetState => ({
   inventory: { emergency_biscuit: 1, golden_apple: 1 },
   lastDailyRewardAt: now,
   lastDailyEncounterAt: now,
+  dailyEncounterDateKey: getDailyResetDateKey(now),
   neighborGiftDateKey: getDailyResetDateKey(now),
   neighborGiftCount: 0,
   dailyBiscuitClaimDate: getDailyResetDateKey(now),
@@ -157,6 +159,11 @@ export const createDefaultPet = (now = Date.now()): PetState => ({
     health: 90,
     isSleeping: false,
   }, now),
+  timeGuard: {
+    schemaVersion: timeGuardSchemaVersion,
+    lastObservedAt: now,
+    maxDailyDateKey: getDailyResetDateKey(now),
+  },
 });
 
 export const getPrimaryStatus = (pet: PetState): PetStatus => {
@@ -231,7 +238,10 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   if (!value || typeof value !== 'object') return fallback;
 
   const raw = value as Record<string, unknown>;
-  const currentDailyDateKey = getDailyResetDateKey(now);
+  const actualDailyDateKey = getDailyResetDateKey(now);
+  const timeGuard = normalizeTimeGuardState(raw.timeGuard, raw, now);
+  const currentDailyDateKey = timeGuard.maxDailyDateKey;
+  const effectiveNow = getDailyDateKeyTime(currentDailyDateKey, now);
   const ageSeconds = Math.max(0, isNumber(raw.ageSeconds) ? raw.ageSeconds : fallback.ageSeconds);
   const rawInventory = raw.inventory && typeof raw.inventory === 'object' ? (raw.inventory as Record<string, unknown>) : {};
   const inventory: Inventory = {};
@@ -242,9 +252,15 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   const dailyHeartExchangeDate = normalizeLegacyDailyDateKey(raw.dailyHeartExchangeDate, now) || fallback.dailyHeartExchangeDate;
   const weatherDate = normalizeLegacyDailyDateKey(raw.weatherDate, now) || fallback.weatherDate;
   const weather =
-    weatherDate === currentDailyDateKey && typeof raw.weather === 'string' && weatherTypeSet.has(raw.weather as WeatherType)
+    weatherDate === actualDailyDateKey && typeof raw.weather === 'string' && weatherTypeSet.has(raw.weather as WeatherType)
       ? (raw.weather as WeatherType)
       : getWeatherForDate(now);
+  const storedDailyEncounterDateKey = normalizeLegacyDailyDateKey(raw.dailyEncounterDateKey, now);
+  const legacyDailyEncounterDateKey = isNumber(raw.lastDailyEncounterAt)
+    ? getDailyResetDateKey(raw.lastDailyEncounterAt)
+    : currentDailyDateKey;
+  const dailyEncounterDateKey = storedDailyEncounterDateKey
+    || (legacyDailyEncounterDateKey > currentDailyDateKey ? currentDailyDateKey : legacyDailyEncounterDateKey);
   const rawActionStreak =
     raw.actionStreak && typeof raw.actionStreak === 'object' ? (raw.actionStreak as Record<string, unknown>) : {};
   const claimedRewardIds = Array.isArray(raw.claimedRewardIds)
@@ -279,11 +295,15 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
       : now;
   const metDate = normalizePetCalendarDate(raw.metDate) ?? getLocalCalendarDate(createdAt);
   const pendingYearReview = normalizeYearReview(raw.pendingYearReview);
-  const yearlyStats = normalizeYearlyStats(raw.yearlyStats, now);
+  const yearlyStats = normalizeYearlyStats(raw.yearlyStats, now, currentDailyDateKey);
   const normalizedName = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 32) : fallback.name;
   const normalizedEnergy = clampPetEnergy({ level, classicEndgame }, isNumber(raw.energy) ? raw.energy : fallback.energy);
   const normalizedHealth = clampHealth(isNumber(raw.health) ? raw.health : fallback.health, statCap);
   const normalizedIsSleeping = Boolean(raw.isSleeping);
+  const hasValidSleepSnapshot = normalizedIsSleeping
+    && isNumber(raw.sleepStartedAt)
+    && raw.sleepStartedAt > 0
+    && raw.sleepStartedAt <= now;
   const dailyWish = normalizeDailyWishState(raw.dailyWish, {
     level,
     createdAt,
@@ -291,10 +311,10 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
     energy: normalizedEnergy,
     health: normalizedHealth,
     isSleeping: normalizedIsSleeping,
-  }, now);
+  }, now, currentDailyDateKey);
   const hasAchievementState = Boolean(raw.achievements && typeof raw.achievements === 'object' && !Array.isArray(raw.achievements));
   const baseCoins = clampCoins(isNumber(raw.coins) ? raw.coins : fallback.coins);
-  const garden = normalizeGardenState(raw.garden, now);
+  const garden = normalizeGardenState(raw.garden, now, currentDailyDateKey);
   const achievements = normalizeAchievementState(
     raw.achievements,
     now,
@@ -302,6 +322,7 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
     yearlyStats,
     !hasAchievementState,
     baseCoins,
+    currentDailyDateKey,
   );
   const shouldBackfillLegacySave13Bonus = !claimedRewardIds.includes(legacySave13BonusRewardId);
   if (shouldBackfillLegacySave13Bonus) {
@@ -325,7 +346,7 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   const v2GoldenAppleBackfillIds = shouldBackfillGoldenApplesV2
     ? goldenAppleBackfillAchievementIds.filter((id) => {
       if (v1GoldenAppleBackfillIds.includes(id)) return false;
-      return achievements.claimedOneTimeRewardIds.includes(id) || Boolean(achievements.unlockedAtById[id]) || isGoldenAppleAchievementCompleteByHistory(id, achievements, createdAt, now);
+      return achievements.claimedOneTimeRewardIds.includes(id) || Boolean(achievements.unlockedAtById[id]) || isGoldenAppleAchievementCompleteByHistory(id, achievements, createdAt, effectiveNow);
     })
     : [];
   if (shouldBackfillGoldenApplesV2) {
@@ -362,6 +383,7 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
     { level, createdAt },
     now,
     !options.preserveExpiredPartnerSchedule,
+    currentDailyDateKey,
   );
   const partnerScheduleClaimCountsByCategory = { ...countersWithMigration.partnerScheduleClaimCountsByCategory };
   partnerScheduleCategories.forEach((category) => {
@@ -414,6 +436,7 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
       : isNumber(raw.lastDailyRewardAt)
         ? raw.lastDailyRewardAt
         : now,
+    dailyEncounterDateKey,
     neighborGiftDateKey: currentDailyDateKey,
     neighborGiftCount: normalizeLegacyDailyDateKey(raw.neighborGiftDateKey, now) === currentDailyDateKey
       ? Math.min(neighborGiftDailyLimit, clampCount(isNumber(raw.neighborGiftCount) ? raw.neighborGiftCount : 0))
@@ -431,15 +454,21 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
       dailyHeartExchangeDate === currentDailyDateKey
         ? Math.min(dailyHeartExchangeLimit, clampCount(isNumber(raw.dailyHeartExchangeCount) ? raw.dailyHeartExchangeCount : 0))
         : 0,
-    weatherDate: currentDailyDateKey,
+    weatherDate: actualDailyDateKey,
     weather,
     lastEnergyRecoveryAt: isNumber(raw.lastEnergyRecoveryAt) ? raw.lastEnergyRecoveryAt : now,
-    sleepStartedAt: isNumber(raw.sleepStartedAt) ? raw.sleepStartedAt : 0,
-    sleepStartMood: clampStat(isNumber(raw.sleepStartMood) ? raw.sleepStartMood : 0, statCap),
-    sleepStartHunger: clampStat(isNumber(raw.sleepStartHunger) ? raw.sleepStartHunger : 0, statCap),
-    sleepStartCleanliness: clampStat(isNumber(raw.sleepStartCleanliness) ? raw.sleepStartCleanliness : 0, statCap),
+    sleepStartedAt: normalizedIsSleeping ? hasValidSleepSnapshot ? raw.sleepStartedAt as number : now : 0,
+    sleepStartMood: normalizedIsSleeping
+      ? clampStat(hasValidSleepSnapshot && isNumber(raw.sleepStartMood) ? raw.sleepStartMood : isNumber(raw.mood) ? raw.mood : fallback.mood, statCap)
+      : 0,
+    sleepStartHunger: normalizedIsSleeping
+      ? clampStat(hasValidSleepSnapshot && isNumber(raw.sleepStartHunger) ? raw.sleepStartHunger : isNumber(raw.hunger) ? raw.hunger : fallback.hunger, statCap)
+      : 0,
+    sleepStartCleanliness: normalizedIsSleeping
+      ? clampStat(hasValidSleepSnapshot && isNumber(raw.sleepStartCleanliness) ? raw.sleepStartCleanliness : isNumber(raw.cleanliness) ? raw.cleanliness : fallback.cleanliness, statCap)
+      : 0,
     lowCleanlinessSleepConfirmCount: Math.min(lowCleanlinessSleepConfirmClicks - 1, clampCount(isNumber(raw.lowCleanlinessSleepConfirmCount) ? raw.lowCleanlinessSleepConfirmCount : 0)),
-    lastDreamTalkAt: isNumber(raw.lastDreamTalkAt) ? raw.lastDreamTalkAt : 0,
+    lastDreamTalkAt: normalizedIsSleeping && isNumber(raw.lastDreamTalkAt) ? raw.lastDreamTalkAt : 0,
     actionStreak: {
       key: actionStreakKey,
       count: clampCount(isNumber(rawActionStreak.count) ? rawActionStreak.count : 0),
@@ -452,7 +481,7 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
         ? raw.lastUpdatedAt
         : now,
     lastPetInteractionAt: isNumber(raw.lastPetInteractionAt) ? raw.lastPetInteractionAt : 0,
-    pomodoro: normalizePomodoroState(raw.pomodoro, now),
+    pomodoro: normalizePomodoroState(raw.pomodoro, now, currentDailyDateKey),
     hasOpenedHelp: Boolean(raw.hasOpenedHelp),
     suppressGoldenAppleUseConfirm: Boolean(raw.suppressGoldenAppleUseConfirm),
     claimedRewardIds,
@@ -467,10 +496,11 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
     achievements: normalizedAchievements,
     lastCleanActionAt: isNumber(raw.lastCleanActionAt) ? Math.max(0, Math.floor(raw.lastCleanActionAt)) : 0,
     garden,
-    boostCards: normalizeBoostCardState(raw.boostCards, now),
+    boostCards: normalizeBoostCardState(raw.boostCards, now, currentDailyDateKey),
     partnerSchedule,
-    goldenAppleGacha: normalizeGoldenAppleGachaState(raw.goldenAppleGacha, createdAt, now),
+    goldenAppleGacha: normalizeGoldenAppleGachaState(raw.goldenAppleGacha, createdAt, now, currentDailyDateKey),
     classicEndgame,
+    timeGuard,
   };
 };
 

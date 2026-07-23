@@ -15,7 +15,9 @@ import {
   completeClassicLegacyLevel,
   completeDreamProjectStage,
   dreamProjectCategories,
+  dreamProjectTotalAppleCost,
   dreamProjectTotalCoinCost,
+  dreamStageAppleCosts,
   dreamStageCoinCosts,
   dreamTotalAppleCost,
   dreamTotalCoinCost,
@@ -600,7 +602,7 @@ assert.equal(monthlyRewards.rewards.find((reward) => reward.kind === 'daily_logi
 assert.equal(monthlyRewards.pet.goldenAppleGacha.tickets, 3);
 assert.equal(monthlyRewards.pet.inventory.golden_apple, 2);
 
-assert.equal(gardenSchemaVersion, 3);
+assert.equal(gardenSchemaVersion, 4);
 assert.equal(gardenTreeDefinitions.golden_apple_tree.growDurationMs, 4 * dayMs);
 assert.equal(gardenTreeDefinitions.golden_apple_tree.harvestCooldownMs, 48 * 60 * 60 * 1000);
 assert.equal(gardenTreeDefinitions.golden_apple_tree.maxHarvests, 9);
@@ -632,9 +634,11 @@ assert.equal(blockedPlant.garden.slots[4].state, 'empty');
 assert.equal(blockedPlant.inventory.golden_apple_tree_sapling, 1);
 
 assert.deepEqual(dreamStageCoinCosts, [2000, 4000, 8000, 16000, 30000]);
+assert.deepEqual(dreamStageAppleCosts, [1, 3, 5, 15, 30]);
 assert.equal(dreamProjectTotalCoinCost, 60000);
+assert.equal(dreamProjectTotalAppleCost, 54);
 assert.equal(dreamTotalCoinCost, 240000);
-assert.equal(dreamTotalAppleCost, 60);
+assert.equal(dreamTotalAppleCost, 216);
 assert.equal(classicEndgameSchemaVersion, 2);
 assert.deepEqual(
   [1, 5, 10, 20, 50, 100].map(getClassicLegacyLevelCoinCost),
@@ -725,6 +729,26 @@ const endgameBase: PetState = {
     lifetimeCoinsInvested: 30000,
   },
 };
+
+dreamStageAppleCosts.forEach((appleCost, stageIndex) => {
+  const stagePet: PetState = {
+    ...endgameBase,
+    inventory: { golden_apple: appleCost },
+    classicEndgame: {
+      ...endgameBase.classicEndgame,
+      projects: {
+        ...endgameBase.classicEndgame.projects,
+        study: {
+          completedStages: stageIndex,
+          currentStageCoins: dreamStageCoinCosts[stageIndex],
+        },
+      },
+    },
+  };
+  const completed = completeDreamProjectStage(stagePet, 'study', now);
+  assert.equal(completed.classicEndgame.projects.study.completedStages, stageIndex + 1);
+  assert.equal(completed.inventory.golden_apple ?? 0, 0, `dream stage ${stageIndex + 1} must spend ${appleCost} apples`);
+});
 
 const withGoalStages = (
   pet: PetState,
@@ -973,7 +997,7 @@ assert.equal(getPetEnergyCap(exerciseBronzeUnlocked), 220);
 const missingApples = completeDreamProjectStage(endgameBase, 'study', now);
 assert.equal(missingApples.classicEndgame.projects.study.completedStages, 3);
 assert.equal(missingApples.inventory.golden_apple, 4);
-const stageFour = completeDreamProjectStage({ ...endgameBase, inventory: { golden_apple: 5 } }, 'study', now);
+const stageFour = completeDreamProjectStage({ ...endgameBase, inventory: { golden_apple: 15 } }, 'study', now);
 assert.equal(stageFour.classicEndgame.projects.study.completedStages, 4);
 assert.equal(stageFour.inventory.golden_apple ?? 0, 0);
 

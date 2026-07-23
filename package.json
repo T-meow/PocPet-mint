@@ -1,6 +1,6 @@
 {
   "name": "pocpet-mint",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -12,6 +12,12 @@
     "check:stat-scaling-batch": "tsx scripts/check-stat-scaling-batch.ts",
     "check:save-migration": "tsx scripts/check-save-migration.ts",
     "check:gacha": "tsx scripts/check-golden-apple-gacha.ts",
+    "check:partner-schedule": "tsx scripts/check-partner-schedule.ts",
+    "check:offline-lifecycle": "tsx scripts/check-offline-lifecycle.ts",
+    "check:time-guard": "tsx scripts/check-time-guard.ts",
+    "check:sleep-settlement": "tsx scripts/check-sleep-settlement.ts",
+    "check:achievement-good-ending": "tsx scripts/check-achievement-good-ending.ts",
+    "check:save-recovery": "tsx scripts/check-save-recovery.ts",
     "preview": "vite preview --host 127.0.0.1",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",

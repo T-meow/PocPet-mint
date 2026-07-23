@@ -2,6 +2,7 @@ import { t } from '../i18n';
 import { addInventoryItem } from './items';
 import { applyHeartGain, claimAchievementDailyStipendWithResult, getAchievementEffects, incrementAchievementDateReward, recordEarnedCoins, recordEarnedHearts } from './achievements';
 import { getDailyResetDateKey } from './dailyReset';
+import { getDailyDateKeyTime, getEffectiveDailyDateKey } from './gameClock';
 import { clampCoins } from './petStats';
 import type { ItemId, PetBirthday, PetCalendarDate, PetState } from './petTypes';
 import { hashString } from './utils';
@@ -344,7 +345,7 @@ const claimMonthlyGiftReward = (pet: PetState, date: RecentCalendarDate): { pet:
 };
 
 const claimDailyLoginReward = (pet: PetState, now: number): { pet: PetState; reward?: ClaimedDateReward } => {
-  const resetDateKey = getDailyResetDateKey(now);
+  const resetDateKey = getEffectiveDailyDateKey(pet, now);
   if (pet.dailyLoginRewardDateKey === resetDateKey) return { pet };
 
   const picked = pickWeightedRandom(dailyLoginRewardPool);
@@ -376,8 +377,12 @@ export const claimAvailableDateRewards = (pet: PetState, now = Date.now()) => {
   const rewards: ClaimedDateReward[] = [];
   let next = pet;
   const metDateKey = getCalendarDateKey(pet.metDate);
+  const effectiveCalendarNow = Math.max(
+    now,
+    getDailyDateKeyTime(getEffectiveDailyDateKey(pet, now), now),
+  );
 
-  for (const date of getRecentCalendarDates(now)) {
+  for (const date of getRecentCalendarDates(effectiveCalendarNow)) {
     if (date.dateKey < metDateKey) continue;
     for (const claim of [claimBirthdayReward, claimAnniversaryReward, claimFestivalReward, claimMonthlyGiftReward]) {
       const result = claim(next, date);
@@ -398,7 +403,7 @@ export const claimAvailableDateRewards = (pet: PetState, now = Date.now()) => {
     });
     const dailyLoginReward = rewards.find((reward) => reward.kind === 'daily_login');
     if (dailyLoginReward) {
-      const stipend = claimAchievementDailyStipendWithResult(next, now, getDailyResetDateKey(now));
+      const stipend = claimAchievementDailyStipendWithResult(next, now, getEffectiveDailyDateKey(next, now));
       next = stipend.pet;
       if (stipend.coins > 0) {
         dailyLoginReward.coins = (dailyLoginReward.coins ?? 0) + stipend.coins;

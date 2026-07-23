@@ -1,5 +1,6 @@
 import { t } from '../i18n';
 import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
+import { getEffectiveDailyDateKey } from './gameClock';
 import { addInventoryItem } from './items';
 import { createNeighborGift } from './neighborGifts';
 import { neighborGiftDailyLimit } from './neighbors';
@@ -85,23 +86,30 @@ const backfillPurchasedDaysFromExpiresAt = (value: unknown, now: number) => {
   return Math.min(90, Math.ceil((expiresAt - now) / boostCardDurationMs) * 30);
 };
 
-export const defaultBoostCardState = (now = Date.now()): BoostCardState => ({
+export const defaultBoostCardState = (
+  now = Date.now(),
+  dailyDateKey = getDailyResetDateKey(now),
+): BoostCardState => ({
   schemaVersion: boostCardSchemaVersion,
   friendPassExpiresAt: 0,
   bestFriendPassExpiresAt: 0,
   bestFriendPassPurchasedDays: 0,
-  dailyDateKey: getDailyResetDateKey(now),
+  dailyDateKey,
   dailyRewardClaimed: false,
   dailyWorkBonusCoinsUsed: 0,
   dailyGardenExtraDrops: 0,
 });
 
-export const normalizeBoostCardState = (value: unknown, now = Date.now()): BoostCardState => {
-  const fallback = defaultBoostCardState(now);
+export const normalizeBoostCardState = (
+  value: unknown,
+  now = Date.now(),
+  effectiveDateKey = getDailyResetDateKey(now),
+): BoostCardState => {
+  const fallback = defaultBoostCardState(now, effectiveDateKey);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
 
   const raw = value as Record<string, unknown>;
-  const resetDateKey = getDailyResetDateKey(now);
+  const resetDateKey = effectiveDateKey;
   const rawDailyDateKey = normalizeLegacyDailyDateKey(raw.dailyDateKey, now) || fallback.dailyDateKey;
   const isCurrentDailyState = rawDailyDateKey === resetDateKey;
   const dailyRewardClaimed = isCurrentDailyState && (
@@ -123,7 +131,7 @@ export const normalizeBoostCardState = (value: unknown, now = Date.now()): Boost
 };
 
 export const getActiveBoostCard = (pet: PetState, now = Date.now()): BoostCardId | undefined => {
-  const boostCards = normalizeBoostCardState(pet.boostCards, now);
+  const boostCards = normalizeBoostCardState(pet.boostCards, now, getEffectiveDailyDateKey(pet, now));
   if (boostCards.bestFriendPassExpiresAt > now) return 'best_friend_pass';
   if (boostCards.friendPassExpiresAt > now) return 'friend_pass';
   return undefined;
@@ -135,7 +143,7 @@ export const getBoostCardEffects = (pet: PetState, now = Date.now()): BoostCardE
 };
 
 export const canClaimBoostCardDailyReward = (pet: PetState, now = Date.now()) => {
-  const boostCards = normalizeBoostCardState(pet.boostCards, now);
+  const boostCards = normalizeBoostCardState(pet.boostCards, now, getEffectiveDailyDateKey(pet, now));
   const activeCardId = getActiveBoostCard({ ...pet, boostCards }, now);
   return Boolean(activeCardId && !boostCards.dailyRewardClaimed);
 };
@@ -145,7 +153,7 @@ const passExpiresAtKey = (cardId: BoostCardId) =>
 
 export const buyBoostCard = (pet: PetState, cardId: BoostCardId, now = Date.now()): PetState => {
   const definition = boostCardDefinitions[cardId];
-  const currentBoostCards = normalizeBoostCardState(pet.boostCards, now);
+  const currentBoostCards = normalizeBoostCardState(pet.boostCards, now, getEffectiveDailyDateKey(pet, now));
   if (cardId === 'friend_pass' && currentBoostCards.bestFriendPassExpiresAt > now) {
     return { ...pet, boostCards: currentBoostCards, recentEvent: t('pet.boostCards.bestFriendBlocksFriend') };
   }
@@ -190,7 +198,7 @@ export const claimBoostCardDailyReward = (
   eventContext?: NeighborEventContext,
   now = Date.now(),
 ): { pet: PetState; coins: number; gift?: BoostCardDailyRewardGift } => {
-  const boostCards = normalizeBoostCardState(pet.boostCards, now);
+  const boostCards = normalizeBoostCardState(pet.boostCards, now, getEffectiveDailyDateKey(pet, now));
   const activeCardId = getActiveBoostCard({ ...pet, boostCards }, now);
   if (!activeCardId) {
     return { pet: { ...pet, boostCards, recentEvent: t('pet.boostCards.noActiveCard') }, coins: 0 };
@@ -201,7 +209,7 @@ export const claimBoostCardDailyReward = (
   }
 
   const coins = boostCardDefinitions[activeCardId].dailyCoins;
-  const dailyDateKey = getDailyResetDateKey(now);
+  const dailyDateKey = getEffectiveDailyDateKey(pet, now);
   const storedGiftDateKey = normalizeLegacyDailyDateKey(pet.neighborGiftDateKey, now);
   const currentGiftCount = storedGiftDateKey === dailyDateKey
     ? Math.min(neighborGiftDailyLimit, clampCount(pet.neighborGiftCount))
@@ -241,7 +249,7 @@ export const claimBoostCardDailyReward = (
 };
 
 export const applyBoostCardWorkBonus = (pet: PetState, now = Date.now()) => {
-  const boostCards = normalizeBoostCardState(pet.boostCards, now);
+  const boostCards = normalizeBoostCardState(pet.boostCards, now, getEffectiveDailyDateKey(pet, now));
   const effects = getBoostCardEffects({ ...pet, boostCards }, now);
   const remaining = Math.max(0, effects.workBonusDailyLimit - boostCards.dailyWorkBonusCoinsUsed);
   const bonusCoins = Math.min(effects.workBonusCoins, remaining);
@@ -255,7 +263,7 @@ export const applyBoostCardWorkBonus = (pet: PetState, now = Date.now()) => {
 };
 
 export const applyBoostCardHeartBonus = (pet: PetState, gainedHearts: number, now = Date.now()) => {
-  const boostCards = normalizeBoostCardState(pet.boostCards, now);
+  const boostCards = normalizeBoostCardState(pet.boostCards, now, getEffectiveDailyDateKey(pet, now));
   const effects = getBoostCardEffects({ ...pet, boostCards }, now);
   const extraHearts = gainedHearts > 0 && effects.extraHeartChancePercent > 0 && Math.random() * 100 < effects.extraHeartChancePercent ? 1 : 0;
 
@@ -266,7 +274,7 @@ export const applyBoostCardHeartBonus = (pet: PetState, gainedHearts: number, no
 };
 
 export const spendBoostCardGardenExtraDrop = (pet: PetState, now = Date.now()) => {
-  const boostCards = normalizeBoostCardState(pet.boostCards, now);
+  const boostCards = normalizeBoostCardState(pet.boostCards, now, getEffectiveDailyDateKey(pet, now));
   const effects = getBoostCardEffects({ ...pet, boostCards }, now);
   const remaining = Math.max(0, effects.gardenExtraDropDailyLimit - boostCards.dailyGardenExtraDrops);
   const didSpend = remaining > 0;

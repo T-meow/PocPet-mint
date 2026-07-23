@@ -18,7 +18,7 @@ import {
   getGardenToolUpgradeCost,
   getGardenView,
   getSeasonInfo,
-  getDailyResetDateKey,
+  getEffectiveDailyDateKey,
   weatherInfo,
   type GardenCarePreview,
   type GardenFertilizerId,
@@ -61,8 +61,6 @@ const formatGardenCountdown = (milliseconds: number) => {
   return hours > 0 ? `${hours}h ${String(minutes).padStart(2, '0')}m` : `${minutes}m`;
 };
 
-const sameGardenDate = (time: number) => time > 0 && getDailyResetDateKey(time) === getDailyResetDateKey(Date.now());
-
 const getGardenCarePreviewText = (preview: GardenCarePreview, itemCount?: number) => {
   if (preview.blockedReason === 'minimum_remaining') return t('ui.garden.careMinimumRemaining');
   if (preview.blockedReason === 'round_limit') return t('ui.garden.careReductionLimitReached');
@@ -84,6 +82,7 @@ type GardenActionDialog = 'plant' | 'tools' | null;
 export const GardenPage = ({ pet, itemIconMap, onBack, onSelectSlot, onUnlockSlot, onPlantTree, onWater, onFertilize, onNutrient, onHarvest, onClear, onUpgradeTool, onOpenShop, compensationCoins = 0, onClaimCompensation }: GardenPageProps) => {
   const [actionDialog, setActionDialog] = useState<GardenActionDialog>(null);
   const now = Date.now();
+  const effectiveDateKey = getEffectiveDailyDateKey(pet, now);
   const view = getGardenView(pet, now);
   const environment = getGardenEnvironmentEffects(pet, now);
   const currentWeather = weatherInfo[environment.weather];
@@ -94,9 +93,9 @@ export const GardenPage = ({ pet, itemIconMap, onBack, onSelectSlot, onUnlockSlo
   const treeImage = treeStageImages[Math.max(0, Math.min(4, (slotView?.stage ?? getGardenStage(slot)) - 1))];
   const unlockCost = gardenSlotUnlockCosts[slot.slotIndex] ?? 0;
   const clearCost = getGardenClearCost(pet.garden.tools);
-  const wateredToday = sameGardenDate(slot.lastWateredAt);
-  const fertilizedToday = sameGardenDate(slot.lastFertilizedAt);
-  const boostedToday = sameGardenDate(slot.lastBoostedAt);
+  const wateredToday = slot.lastWateredDateKey === effectiveDateKey;
+  const fertilizedToday = slot.lastFertilizedDateKey === effectiveDateKey;
+  const boostedToday = slot.lastBoostedDateKey === effectiveDateKey;
   const normalFertilizerCount = pet.inventory[gardenFertilizerItemIds.normal] ?? 0;
   const heartFertilizerCount = pet.inventory[gardenFertilizerItemIds.heart] ?? 0;
   const waterPreview = getGardenCarePreview(view.pet, slot, 'water', now);

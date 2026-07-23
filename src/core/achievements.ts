@@ -1,6 +1,7 @@
 import { t } from '../i18n';
 import { applyBoostCardHeartBonus } from './boostCards';
 import { getDailyResetDate, getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
+import { getDailyDateKeyTime, getEffectiveDailyDateKey } from './gameClock';
 import { addInventoryItem, getInventoryItem, shopItems } from './items';
 import { clampCoins, clampCount } from './petStats';
 import type { AchievementCounters, AchievementId, AchievementState, CareActionKey, GardenTreeId, ItemId, PartnerScheduleCategory, PartnerScheduleRewardChoice, PartnerScheduleSize, PetState, YearlyCareActionKey, YearlyStats } from './petTypes';
@@ -19,8 +20,6 @@ export interface AchievementReward {
   extraHeartChancePercent?: number;
   gardenExtraDropChancePercent?: number;
   partnerScheduleExtraRewardChancePercent?: number;
-  globalCoinFlatBonus?: number;
-  globalHeartFlatBonus?: number;
   dailyStipendCoins?: number;
   dailyLoginItemBonus?: number;
   careStatBonus?: number;
@@ -49,8 +48,6 @@ export interface AchievementEffects {
   guaranteedExtraHearts: number;
   gardenExtraDropChancePercent: number;
   partnerScheduleExtraRewardChancePercent: number;
-  globalCoinFlatBonus: number;
-  globalHeartFlatBonus: number;
   dailyStipendCoins: number;
   dailyLoginItemBonus: number;
   careStatBonus: number;
@@ -91,6 +88,8 @@ export interface AchievementSummary {
 
 export const baseCleanCooldownMs = 30 * 1000;
 export const goodEndingCgId = 'good_ending_year_1';
+export const goodEndingDailyStipendCoinsPerYear = 30;
+export const goodEndingExtraHeartChancePercentPerYear = 30;
 
 const careKeys: readonly YearlyCareActionKey[] = ['play', 'clean', 'work', 'feed', 'gift', 'touch'];
 const dayMs = 24 * 60 * 60 * 1000;
@@ -207,8 +206,10 @@ export const normalizeAchievementState = (
   yearlyStats?: YearlyStats,
   pendingReviewNotice = false,
   currentCoins = 0,
+  effectiveDateKey = getDailyResetDateKey(now),
 ): AchievementState => {
-  const fallback = backfillAchievementCountersFromYearlyStats(defaultAchievementState(now, createdAt, pendingReviewNotice, currentCoins), yearlyStats);
+  const effectiveNow = Math.max(now, getDailyDateKeyTime(effectiveDateKey, now));
+  const fallback = backfillAchievementCountersFromYearlyStats(defaultAchievementState(effectiveNow, createdAt, pendingReviewNotice, currentCoins), yearlyStats);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
   const raw = value as Record<string, unknown>;
   const rawCounters = raw.counters && typeof raw.counters === 'object' && !Array.isArray(raw.counters)
@@ -269,8 +270,8 @@ export const normalizeAchievementState = (
         .map((key) => normalizeLegacyDailyDateKey(key, now) || key),
     ));
   });
-  const currentYear = String(getCompanionActivityYear(createdAt, now));
-  const today = getDailyResetDateKey(now);
+  const currentYear = String(getCompanionActivityYear(createdAt, effectiveNow));
+  const today = effectiveDateKey;
   const currentKeys = companionYearActiveDateKeysByYear[currentYear] ?? [];
   companionYearActiveDateKeysByYear[currentYear] = currentKeys.includes(today) ? currentKeys : [...currentKeys, today].slice(-370);
   const rawUnlocked = raw.unlockedAtById && typeof raw.unlockedAtById === 'object'
@@ -323,7 +324,10 @@ const minItemUses = (pet: PetState, ids: readonly ItemId[]) => Math.min(...ids.m
 const usedItemKinds = (pet: PetState, ids: readonly ItemId[]) => ids.filter((id) => getItemUseCount(pet, id) > 0).length;
 const minCareUses = (pet: PetState, keys: readonly YearlyCareActionKey[]) => Math.min(...keys.map((key) => getCareCount(pet, key)));
 const getDateRewardCount = (pet: PetState, kind: string) => pet.achievements.counters.dateRewardClaimCountsByKind[kind] ?? 0;
-const getCompanionDays = (pet: PetState, now = Date.now()) => Math.max(1, Math.floor(Math.max(0, now - pet.createdAt) / dayMs) + 1);
+const getCompanionDays = (pet: PetState, now = Date.now()) => {
+  const effectiveNow = Math.max(now, getDailyDateKeyTime(getEffectiveDailyDateKey(pet, now), now));
+  return Math.max(1, Math.floor(Math.max(0, effectiveNow - pet.createdAt) / dayMs) + 1);
+};
 const getActiveDaysTotal = (pet: PetState) => {
   const keys = new Set<string>();
   Object.values(pet.achievements.counters.companionYearActiveDateKeysByYear).forEach((items) => {
@@ -431,7 +435,7 @@ const baseAchievementDefinitionConfigs: readonly Omit<AchievementDefinition, 'ti
   { id: 'rare_gentle_caretaker', category: 'care', rarity: 'rare', target: 50, progress: (pet) => minCareUses(pet, gentleCareKeys), reward: { careStatBonus: 1 } },
   { id: 'rare_level_10', category: 'growth', rarity: 'rare', target: 10, progress: (pet) => pet.level, reward: { dailyStipendCoins: 5 } },
   { id: 'rare_level_20', category: 'growth', rarity: 'rare', target: 20, progress: (pet) => pet.level, reward: { coins: 1500, items: [{ itemId: 'golden_apple', amount: 2 }], extraHeartChancePercent: 20, gardenExtraDropChancePercent: 20 } },
-  { id: 'hidden_good_ending_year_1', category: 'hidden', rarity: 'hidden', target: 1, progress: (pet) => pet.achievements.completedGoodEndingYears.includes(1) ? 1 : 0, reward: { globalCoinFlatBonus: 1, globalHeartFlatBonus: 1, cgId: goodEndingCgId }, hiddenUntilUnlocked: true },
+  { id: 'hidden_good_ending_year_1', category: 'hidden', rarity: 'hidden', target: 1, progress: (pet) => pet.achievements.completedGoodEndingYears.includes(1) ? 1 : 0, reward: { dailyStipendCoins: goodEndingDailyStipendCoinsPerYear, extraHeartChancePercent: goodEndingExtraHeartChancePercentPerYear, cgId: goodEndingCgId }, hiddenUntilUnlocked: true },
   { id: 'hidden_never_give_you_up', category: 'hidden', rarity: 'hidden', target: 3, progress: getCompanionMarkCount, reward: { coins: 100, items: [{ itemId: 'golden_apple', amount: 1 }] }, hiddenUntilUnlocked: true },
   { id: 'hidden_never_let_you_down', category: 'hidden', rarity: 'hidden', target: 10, progress: getCompanionMarkCount, reward: { coins: 100, hearts: 10 }, hiddenUntilUnlocked: true },
   { id: 'hidden_quiet_companion', category: 'hidden', rarity: 'hidden', target: 100, progress: getActiveDaysTotal, reward: { dailyStipendCoins: 2 }, hiddenUntilUnlocked: true },
@@ -470,8 +474,9 @@ export const achievementDefinitions: readonly AchievementDefinition[] = achievem
 }));
 
 export const recordCompanionYearActivity = (pet: PetState, now = Date.now()): PetState => {
-  const year = String(getCompanionActivityYear(pet.createdAt, now));
-  const dateKey = getDailyResetDateKey(now);
+  const dateKey = getEffectiveDailyDateKey(pet, now);
+  const effectiveNow = Math.max(now, getDailyDateKeyTime(dateKey, now));
+  const year = String(getCompanionActivityYear(pet.createdAt, effectiveNow));
   const keys = pet.achievements.counters.companionYearActiveDateKeysByYear[year] ?? [];
   if (keys.includes(dateKey)) return pet;
   return {
@@ -492,12 +497,27 @@ export const recordCompanionYearActivity = (pet: PetState, now = Date.now()): Pe
 const unlockedDefinitions = (pet: PetState) => achievementDefinitions.filter((definition) => Boolean(pet.achievements.unlockedAtById[definition.id]));
 const sumUnlockedReward = (pet: PetState, pick: (reward: AchievementReward) => number | undefined) =>
   unlockedDefinitions(pet).reduce((sum, definition) => sum + (pick(definition.reward) ?? 0), 0);
+const sumStandardUnlockedReward = (pet: PetState, pick: (reward: AchievementReward) => number | undefined) =>
+  unlockedDefinitions(pet)
+    .filter((definition) => definition.id !== 'hidden_good_ending_year_1')
+    .reduce((sum, definition) => sum + (pick(definition.reward) ?? 0), 0);
+
+const getCompletedGoodEndingYearCount = (pet: PetState) =>
+  new Set(
+    pet.achievements.completedGoodEndingYears
+      .filter((year) => Number.isFinite(year) && year > 0)
+      .map((year) => Math.floor(year)),
+  ).size;
 
 export const getAchievementEffects = (pet: PetState): AchievementEffects => {
-  const extraHeartChancePercent = Math.max(0, sumUnlockedReward(pet, (reward) => reward.extraHeartChancePercent));
+  const goodEndingCount = getCompletedGoodEndingYearCount(pet);
+  const extraHeartChancePercent = Math.max(
+    0,
+    sumStandardUnlockedReward(pet, (reward) => reward.extraHeartChancePercent)
+      + goodEndingCount * goodEndingExtraHeartChancePercentPerYear,
+  );
   const gardenExtraDropChancePercent = Math.max(0, sumUnlockedReward(pet, (reward) => reward.gardenExtraDropChancePercent));
   const partnerScheduleExtraRewardChancePercent = Math.max(0, sumUnlockedReward(pet, (reward) => reward.partnerScheduleExtraRewardChancePercent));
-  const goodEndingCount = pet.achievements.completedGoodEndingYears.length;
   return {
     workCoinBonus: Math.min(3, sumUnlockedReward(pet, (reward) => reward.workCoinBonus)),
     pomodoroCoinBonus: Math.min(3, sumUnlockedReward(pet, (reward) => reward.pomodoroCoinBonus)),
@@ -506,9 +526,11 @@ export const getAchievementEffects = (pet: PetState): AchievementEffects => {
     guaranteedExtraHearts: Math.floor(extraHeartChancePercent / 100),
     gardenExtraDropChancePercent,
     partnerScheduleExtraRewardChancePercent,
-    globalCoinFlatBonus: goodEndingCount,
-    globalHeartFlatBonus: goodEndingCount,
-    dailyStipendCoins: Math.max(0, sumUnlockedReward(pet, (reward) => reward.dailyStipendCoins)),
+    dailyStipendCoins: Math.max(
+      0,
+      sumStandardUnlockedReward(pet, (reward) => reward.dailyStipendCoins)
+        + goodEndingCount * goodEndingDailyStipendCoinsPerYear,
+    ),
     dailyLoginItemBonus: Math.max(0, sumUnlockedReward(pet, (reward) => reward.dailyLoginItemBonus)),
     careStatBonus: Math.min(1, sumUnlockedReward(pet, (reward) => reward.careStatBonus)),
     unlockedCgIds: pet.achievements.unlockedCgIds,
@@ -518,7 +540,7 @@ export const getAchievementEffects = (pet: PetState): AchievementEffects => {
 
 export const applyCoinGain = (pet: PetState, coins: number): { coins: number; amount: number } => {
   const base = Math.max(0, Math.floor(coins));
-  const amount = base > 0 ? base + getAchievementEffects(pet).globalCoinFlatBonus : 0;
+  const amount = base;
   return { coins: clampCoins(pet.coins + amount), amount };
 };
 
@@ -527,7 +549,7 @@ export const applyHeartGain = (pet: PetState, hearts: number): { hearts: number;
   const effects = getAchievementEffects(pet);
   const chance = effects.extraHeartChancePercent % 100;
   const extraHearts = base > 0 ? effects.guaranteedExtraHearts + (chance > 0 && Math.random() * 100 < chance ? 1 : 0) : 0;
-  const achievementAmount = base > 0 ? base + effects.globalHeartFlatBonus + extraHearts : 0;
+  const achievementAmount = base > 0 ? base + extraHearts : 0;
   const boost = applyBoostCardHeartBonus(pet, achievementAmount);
   const amount = achievementAmount + boost.extraHearts;
   return { hearts: clampCount(pet.hearts + amount), amount, boostCards: boost.boostCards };
@@ -771,7 +793,9 @@ const applyOneTimeAchievementReward = (pet: PetState, definition: AchievementDef
 };
 
 export const maybeUnlockGoodEnding = (pet: PetState, now = Date.now()): PetState => {
-  const companionYear = getCompanionYear(pet.createdAt, now);
+  const effectiveDateKey = getEffectiveDailyDateKey(pet, now);
+  const effectiveNow = Math.max(now, getDailyDateKeyTime(effectiveDateKey, now));
+  const companionYear = getCompanionYear(pet.createdAt, effectiveNow);
   if (companionYear < 2 || pet.level < 10) return pet;
   const completedYear = companionYear - 1;
   if (pet.achievements.completedGoodEndingYears.includes(completedYear)) return pet;
@@ -828,7 +852,6 @@ export const formatAchievementReward = (reward: AchievementReward) => {
   if (reward.extraHeartChancePercent) parts.push(t('pet.achievements.rewards.extraHeartChance', { percent: reward.extraHeartChancePercent }));
   if (reward.gardenExtraDropChancePercent) parts.push(t('pet.achievements.rewards.gardenExtraDropChance', { percent: reward.gardenExtraDropChancePercent }));
   if (reward.partnerScheduleExtraRewardChancePercent) parts.push(t('pet.achievements.rewards.partnerScheduleExtraRewardChance', { percent: reward.partnerScheduleExtraRewardChancePercent }));
-  if (reward.globalCoinFlatBonus || reward.globalHeartFlatBonus) parts.push(t('pet.achievements.rewards.globalFlatBonus', { amount: reward.globalCoinFlatBonus ?? reward.globalHeartFlatBonus ?? 1 }));
   if (reward.dailyStipendCoins) parts.push(t('pet.achievements.rewards.dailyStipend', { coins: reward.dailyStipendCoins }));
   if (reward.dailyLoginItemBonus) parts.push(t('pet.achievements.rewards.dailyLoginItemBonus', { amount: reward.dailyLoginItemBonus }));
   if (reward.careStatBonus) parts.push(t('pet.achievements.rewards.careStatBonus', { amount: reward.careStatBonus }));
@@ -847,29 +870,35 @@ export const getAchievementViews = (pet: PetState): AchievementView[] => {
       const unlocked = Boolean(unlockedAt);
       const hasReward = Boolean(definition.reward.coins || definition.reward.hearts || definition.reward.items?.length);
       const claimed = !hasReward || pet.achievements.claimedOneTimeRewardIds.includes(definition.id);
-      const effectActive = unlocked && Boolean(definition.reward.workCoinBonus || definition.reward.pomodoroCoinBonus || definition.reward.cleanCooldownMs || definition.reward.extraHeartChancePercent || definition.reward.gardenExtraDropChancePercent || definition.reward.partnerScheduleExtraRewardChancePercent || definition.reward.globalCoinFlatBonus || definition.reward.globalHeartFlatBonus || definition.reward.dailyStipendCoins || definition.reward.dailyLoginItemBonus || definition.reward.careStatBonus || definition.reward.cgId || definition.reward.revealsHiddenAchievements);
+      const effectActive = unlocked && Boolean(definition.reward.workCoinBonus || definition.reward.pomodoroCoinBonus || definition.reward.cleanCooldownMs || definition.reward.extraHeartChancePercent || definition.reward.gardenExtraDropChancePercent || definition.reward.partnerScheduleExtraRewardChancePercent || definition.reward.dailyStipendCoins || definition.reward.dailyLoginItemBonus || definition.reward.careStatBonus || definition.reward.cgId || definition.reward.revealsHiddenAchievements);
       return { ...definition, progressValue, unlocked, unlockedAt, rewardText: formatAchievementReward(definition.reward), claimed, claimable: unlocked && hasReward && !claimed, effectActive };
     });
   const extraYears = pet.achievements.completedGoodEndingYears.filter((year) => year > 1);
   return [
     ...views,
-    ...extraYears.map((year) => ({
-      id: 'hidden_together_year_' + year,
-      title: t('pet.achievements.extraYear.title', { year }),
-      description: t('pet.achievements.extraYear.description'),
-      category: 'hidden' as const,
-      rarity: 'hidden' as const,
-      target: 1,
-      progress: () => 1,
-      progressValue: 1,
-      unlocked: true,
-      unlockedAt: pet.achievements.unlockedAtById['hidden_together_year_' + year],
-      reward: { globalCoinFlatBonus: 1, globalHeartFlatBonus: 1 },
-      rewardText: t('pet.achievements.rewards.globalFlatBonus', { amount: 1 }),
-      claimed: true,
-      claimable: false,
-      effectActive: true,
-    })),
+    ...extraYears.map((year) => {
+      const reward: AchievementReward = {
+        dailyStipendCoins: goodEndingDailyStipendCoinsPerYear,
+        extraHeartChancePercent: goodEndingExtraHeartChancePercentPerYear,
+      };
+      return {
+        id: 'hidden_together_year_' + year,
+        title: t('pet.achievements.extraYear.title', { year }),
+        description: t('pet.achievements.extraYear.description'),
+        category: 'hidden' as const,
+        rarity: 'hidden' as const,
+        target: 1,
+        progress: () => 1,
+        progressValue: 1,
+        unlocked: true,
+        unlockedAt: pet.achievements.unlockedAtById['hidden_together_year_' + year],
+        reward,
+        rewardText: formatAchievementReward(reward),
+        claimed: true,
+        claimable: false,
+        effectActive: true,
+      };
+    }),
   ];
 };
 
@@ -902,7 +931,7 @@ export const claimAllAchievementRewards = (pet: PetState, now = Date.now()): Ach
   };
 };
 
-export const claimAchievementDailyStipendWithResult = (pet: PetState, now = Date.now(), dateKey = getDailyResetDateKey(now)): { pet: PetState; coins: number } => {
+export const claimAchievementDailyStipendWithResult = (pet: PetState, now = Date.now(), dateKey = getEffectiveDailyDateKey(pet, now)): { pet: PetState; coins: number } => {
   const coins = getAchievementEffects(pet).dailyStipendCoins;
   if (coins <= 0 || pet.achievements.dailyStipendClaimDateKey === dateKey) return { pet, coins: 0 };
   const gain = applyCoinGain(pet, coins);
@@ -925,7 +954,7 @@ export const getAchievementSummary = (pet: PetState, now = Date.now()): Achievem
   const views = getAchievementViews(pet);
   const effects = getAchievementEffects(pet);
   const dailyStipendCoins = effects.dailyStipendCoins;
-  const dateKey = getDailyResetDateKey(now);
+  const dateKey = getEffectiveDailyDateKey(pet, now);
   return {
     total: views.length,
     unlocked: views.filter((view) => view.unlocked).length,

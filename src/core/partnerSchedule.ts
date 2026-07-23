@@ -2,7 +2,8 @@ import { t } from '../i18n';
 import { getAchievementEffects, incrementAchievementPartnerScheduleClaim, recordEarnedCoins } from './achievements';
 import { getBoostCardEffects } from './boostCards';
 import { getClassicTrophyEffects } from './classicTrophies';
-import { getDailyResetDateKey } from './dailyReset';
+import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
+import { getEffectiveDailyDateKey } from './gameClock';
 import { addInventoryItem } from './items';
 import { resolveDailyGachaTicket } from './goldenAppleGacha';
 import {
@@ -185,8 +186,8 @@ type PartnerSchedulePetSnapshot = Pick<PetState, 'level' | 'createdAt'>;
 export const defaultPartnerScheduleState = (
   pet: PartnerSchedulePetSnapshot,
   now = Date.now(),
+  boardDateKey = getDailyResetDateKey(now),
 ): PartnerScheduleState => {
-  const boardDateKey = getDailyResetDateKey(now);
   const boardOfferCount = pet.level < partnerScheduleUnlockLevel ? 0 : 3;
   const offers = generateOffers(pet.level, pet.createdAt, boardDateKey, boardOfferCount);
   return {
@@ -309,8 +310,9 @@ export const normalizePartnerScheduleState = (
   pet: PartnerSchedulePetSnapshot,
   now = Date.now(),
   settleExpired = true,
+  effectiveDateKey = getDailyResetDateKey(now),
 ): PartnerScheduleState => {
-  const fallback = defaultPartnerScheduleState(pet, now);
+  const fallback = defaultPartnerScheduleState(pet, now, effectiveDateKey);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
   const raw = value as Record<string, unknown>;
   const sourceSchemaVersion = isNumber(raw.schemaVersion) ? Math.floor(raw.schemaVersion) : 0;
@@ -321,8 +323,8 @@ export const normalizePartnerScheduleState = (
   categories.forEach((category) => {
     skills[category] = normalizeSkill(rawSkills[category]);
   });
-  const boardDateKey = getDailyResetDateKey(now);
-  const savedDateKey = typeof raw.boardDateKey === 'string' ? raw.boardDateKey : '';
+  const boardDateKey = effectiveDateKey;
+  const savedDateKey = normalizeLegacyDailyDateKey(raw.boardDateKey, now);
   const rawOffersLength = Array.isArray(raw.offers) ? raw.offers.length : 0;
   const savedBoardOfferCount = Math.max(3, Math.min(5, clampCount(
     isNumber(raw.boardOfferCount) ? raw.boardOfferCount : rawOffersLength,
@@ -380,7 +382,7 @@ export const normalizePartnerScheduleState = (
 };
 
 const refreshBoard = (pet: PetState, now: number): PetState => {
-  const dateKey = getDailyResetDateKey(now);
+  const dateKey = getEffectiveDailyDateKey(pet, now);
   const isCurrentBoard = pet.partnerSchedule.boardDateKey === dateKey;
   const hasValidCurrentBoard = pet.level < partnerScheduleUnlockLevel
     ? pet.partnerSchedule.boardOfferCount === 0 && pet.partnerSchedule.offers.length === 0

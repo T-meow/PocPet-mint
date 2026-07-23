@@ -285,9 +285,10 @@ assert(completed.hunger < started.hunger, 'post-schedule offline time should dec
 assert(completed.hunger > started.hunger - 5, 'only post-schedule offline time should decay hunger');
 assert(completed.lastEnergyRecoveryAt >= completedAt, 'energy recovery baseline should resume at schedule end');
 const loadedAfterCompletion = loadStoredPetJson(JSON.stringify(started), completedAt + 30 * minuteMs);
-assert.equal(loadedAfterCompletion.partnerSchedule.active, undefined);
-assert(loadedAfterCompletion.partnerSchedule.pendingResult, 'stored expired activity should become claimable on load');
-assert(Math.abs(loadedAfterCompletion.hunger - completed.hunger) < 0.01, 'load should preserve the same frozen activity interval');
+assert.equal(loadedAfterCompletion.status, 'ok');
+assert.equal(loadedAfterCompletion.status === 'ok' ? loadedAfterCompletion.pet.partnerSchedule.active : undefined, undefined);
+assert(loadedAfterCompletion.status === 'ok' && loadedAfterCompletion.pet.partnerSchedule.pendingResult, 'stored expired activity should become claimable on load');
+assert(loadedAfterCompletion.status === 'ok' && Math.abs(loadedAfterCompletion.pet.hunger - completed.hunger) < 0.01, 'load should preserve the same frozen activity interval');
 
 const pendingAdvanced = advancePet(completed, completedAt + 60 * minuteMs);
 assert(pendingAdvanced.hunger < completed.hunger, 'pending rewards must not freeze natural decay');
@@ -1113,8 +1114,15 @@ const atFive = new Date(2026, 6, 21, 5, 0, 0, 0).getTime();
 assert.equal(getDailyResetDateKey(beforeFive), '2026-07-20');
 assert.equal(getDailyResetDateKey(atFive), '2026-07-21');
 
+const legacyMidnightBase = createDefaultPet(beforeFive);
+const legacyMidnightBoard = normalizePartnerScheduleState(
+  undefined,
+  { level: 3, createdAt: legacyMidnightBase.createdAt },
+  beforeFive,
+);
 const legacyMidnightPet = {
-  ...createDefaultPet(beforeFive),
+  ...legacyMidnightBase,
+  level: 3,
   neighborGiftDateKey: '2026-07-21',
   neighborGiftCount: 2,
   dailyBiscuitClaimDate: '2026-07-21',
@@ -1152,6 +1160,11 @@ const legacyMidnightPet = {
     dailyExtraHeartCount: 9,
     dailyGardenExtraDrops: 0,
   } as unknown as PetState['boostCards'],
+  partnerSchedule: {
+    ...legacyMidnightBoard,
+    boardDateKey: '2026-07-21',
+    completedOfferIds: [legacyMidnightBoard.offers[0].id],
+  },
 };
 const normalizedBeforeFive = normalizePet(legacyMidnightPet, beforeFive);
 assert.equal(normalizedBeforeFive.neighborGiftDateKey, '2026-07-20');
@@ -1168,6 +1181,7 @@ assert.equal(normalizedBeforeFive.boostCards.schemaVersion, 2);
 assert.equal(normalizedBeforeFive.boostCards.dailyRewardClaimed, true, 'a v1 card coin claim should migrate to the shared reward flag');
 assert.equal(normalizedBeforeFive.boostCards.dailyWorkBonusCoinsUsed, 24);
 assert.equal('dailyExtraHeartCount' in normalizedBeforeFive.boostCards, false, 'obsolete extra-heart counters should be discarded');
+assert.equal(normalizedBeforeFive.partnerSchedule.completedOfferIds.length, 1, 'a legacy midnight board should remain on the same 05:00 game day');
 
 const normalizedAtFive = normalizePet(normalizedBeforeFive, atFive);
 assert.equal(normalizedAtFive.neighborGiftCount, 0);

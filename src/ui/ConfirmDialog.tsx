@@ -5,6 +5,8 @@ interface ConfirmDialogProps {
   message: string;
   cancelLabel: string;
   confirmLabel: string;
+  confirmTone?: 'danger' | 'primary';
+  disabled?: boolean;
   onCancel: () => void;
   onConfirm: () => void;
 }
@@ -14,6 +16,8 @@ export const ConfirmDialog = ({
   message,
   cancelLabel,
   confirmLabel,
+  confirmTone = 'danger',
+  disabled = false,
   onCancel,
   onConfirm,
 }: ConfirmDialogProps) => (
@@ -33,10 +37,15 @@ export const ConfirmDialog = ({
         <p id="confirm-dialog-message">{message}</p>
       </div>
       <div className="confirm-modal__actions">
-        <button type="button" className="text-button confirm-modal__cancel" onClick={onCancel}>
+        <button type="button" className="text-button confirm-modal__cancel" disabled={disabled} onClick={onCancel}>
           {cancelLabel}
         </button>
-        <button type="button" className="danger-button confirm-modal__confirm" onClick={onConfirm}>
+        <button
+          type="button"
+          className={`${confirmTone === 'danger' ? 'danger-button' : 'primary-button'} confirm-modal__confirm`}
+          disabled={disabled}
+          onClick={onConfirm}
+        >
           {confirmLabel}
         </button>
       </div>

@@ -1,10 +1,10 @@
 import { pick, t } from '../i18n';
 import { applyHeartGain, recordEarnedCoins, recordEarnedHearts } from './achievements';
-import { getDailyResetDateKey } from './dailyReset';
 import { grantDailyGachaTickets } from './goldenAppleGacha';
+import { getEffectiveDailyDateKey } from './gameClock';
 import { addInventoryItem } from './items';
 import { createNeighborGift, getNeighborEventRandom, pickNeighborEventValue, pickNeighborName } from './neighborGifts';
-import { clampCoins, clampCount, clampPetEnergy, clampPetHealth, clampPetStat, getPetStatThreshold, scalePetStatDelta } from './petStats';
+import { clampCoins, clampCount, clampPetEnergy, clampPetHealth, clampPetStat, getPetStatThreshold, roundPetStatDisplayAmount, scalePetStatDelta } from './petStats';
 import type { ItemEffect, ItemId, NeighborEventContext, PetState, WeatherType } from './petTypes';
 import { hashString, pickRandom } from './utils';
 import { neighborGiftDailyLimit } from './neighbors';
@@ -47,7 +47,7 @@ const getTimedEventEffectText = (effect: ItemEffect) => {
   ] as const).filter((entry): entry is readonly [keyof ItemEffect, number] => Boolean(entry[1]));
   if (entries.length === 0) return '';
   const effects = entries.map(([key, amount]) => {
-    const rounded = Math.round(amount * 10) / 10;
+    const rounded = roundPetStatDisplayAmount(amount);
     return t(`pet.effectSummary.${key}`, { amount: rounded > 0 ? `+${rounded}` : rounded });
   }).join(t('common.comma'));
   return t('pet.effectSummary.wrap', { effects });
@@ -202,7 +202,7 @@ export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, p
     health: scalePetStatDelta(current, effect.health ?? 0),
   };
   const heartGain = applyHeartGain(current, event.hearts ?? 0);
-  const neighborGiftDateKey = getDailyResetDateKey(now);
+  const neighborGiftDateKey = getEffectiveDailyDateKey(current, now);
   const currentNeighborGiftCount = current.neighborGiftDateKey === neighborGiftDateKey
     ? Math.min(neighborGiftDailyLimit, clampCount(current.neighborGiftCount))
     : 0;
@@ -232,6 +232,7 @@ export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, p
       : current.recentEvent,
     lastDailyRewardAt: prefix === t('pet.prefix.dailyEncounter') ? now : pet.lastDailyRewardAt,
     lastDailyEncounterAt: prefix === t('pet.prefix.dailyEncounter') ? now : pet.lastDailyEncounterAt,
+    dailyEncounterDateKey: prefix === t('pet.prefix.dailyEncounter') ? neighborGiftDateKey : pet.dailyEncounterDateKey,
     neighborGiftDateKey,
     neighborGiftCount: Math.min(
       neighborGiftDailyLimit,
@@ -268,9 +269,9 @@ const addDreamEvent = (event: TimedEvent, pet: PetState, sleptMinutes: number): 
 
 const getSleepSettlement = (pet: PetState, now: number): TimedEvent => {
   const sleptMinutes = pet.sleepStartedAt > 0 ? Math.floor((now - pet.sleepStartedAt) / 60000) : 0;
-  const startMood = pet.sleepStartMood || pet.mood;
-  const startHunger = pet.sleepStartHunger || pet.hunger;
-  const startCleanliness = pet.sleepStartCleanliness || pet.cleanliness;
+  const startMood = Number.isFinite(pet.sleepStartMood) ? pet.sleepStartMood : pet.mood;
+  const startHunger = Number.isFinite(pet.sleepStartHunger) ? pet.sleepStartHunger : pet.hunger;
+  const startCleanliness = Number.isFinite(pet.sleepStartCleanliness) ? pet.sleepStartCleanliness : pet.cleanliness;
 
   if (sleptMinutes < 10) {
     return {
@@ -319,15 +320,20 @@ export const resetSleepSnapshot = (pet: PetState): PetState => ({
 
 export const startSleepSnapshot = (pet: PetState, now: number): PetState => ({
   ...pet,
-  sleepStartedAt: pet.sleepStartedAt > 0 ? pet.sleepStartedAt : now,
-  sleepStartMood: pet.sleepStartedAt > 0 ? pet.sleepStartMood : pet.mood,
-  sleepStartHunger: pet.sleepStartedAt > 0 ? pet.sleepStartHunger : pet.hunger,
-  sleepStartCleanliness: pet.sleepStartedAt > 0 ? pet.sleepStartCleanliness : pet.cleanliness,
-  lastDreamTalkAt: pet.sleepStartedAt > 0 ? pet.lastDreamTalkAt : 0,
+  sleepStartedAt: now,
+  sleepStartMood: pet.mood,
+  sleepStartHunger: pet.hunger,
+  sleepStartCleanliness: pet.cleanliness,
+  lastDreamTalkAt: 0,
 });
 
 export const settleSleep = (pet: PetState, now: number): PetState =>
   resetSleepSnapshot(applyTimedEvent(pet, getSleepSettlement(pet, now), now, t('pet.prefix.sleepSettlement')));
+
+export const wakePet = (pet: PetState, now: number): PetState =>
+  pet.isSleeping || pet.sleepStartedAt > 0
+    ? settleSleep({ ...pet, isSleeping: false }, now)
+    : resetSleepSnapshot(pet);
 
 export const maybeApplyDreamTalk = (pet: PetState, now: number): PetState => {
   if (!pet.isSleeping || pet.sleepStartedAt <= 0) return pet;

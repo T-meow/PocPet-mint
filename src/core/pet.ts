@@ -66,6 +66,7 @@ export type {
   YearReview,
   YearlyCareActionKey,
   YearlyStats,
+  TimeGuardState,
 } from './petTypes';
 export type {
   DailyGachaTicketGrantOutcome,
@@ -270,6 +271,7 @@ export type { ScaledPetStatKey } from './petStats';
 export { getWeatherForDate, weatherInfo, weatherTypeSet, weatherTypes } from './weather';
 export { getSeasonForDate, getSeasonInfo } from './season';
 export { DAILY_RESET_HOUR, getDailyResetDateKey, isSameDailyResetDay } from './dailyReset';
+export { getDailyDateKeyTime, getEffectiveDailyDateKey } from './gameClock';
 export {
   defaultPomodoroState,
   getDefaultPomodoroRemainingMs,
@@ -366,11 +368,13 @@ export {
   startPomodoro,
   updatePomodoroSettings,
   upgradePet,
+  getWorkEnergyCost,
   getWorkReward,
   getEffectiveBatchQuantity,
   getItemPurchaseQuote,
   maxBatchQuantity,
   normalizeBatchQuantity,
+  standardWorkEnergyCost,
   useInventoryItem,
 } from './petActions';
 export type { ItemPurchaseQuote, ItemPurchaseQuoteReason } from './petActions';

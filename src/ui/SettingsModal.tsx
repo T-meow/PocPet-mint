@@ -18,6 +18,7 @@ interface SettingsModalProps {
   language: LanguageCode;
   saveText: string;
   importSaveText: string;
+  hasImportBackup: boolean;
   hasOpenedHelp: boolean;
   hasClaimedAuthorLinkGift: boolean;
   hasClaimedHelpPageGift: boolean;
@@ -37,6 +38,7 @@ interface SettingsModalProps {
   onExportSave: () => void;
   onDownloadSave: () => void;
   onImportPastedSave: () => void;
+  onRestoreImportBackup: () => void;
   onModFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
   onImportSaveFileChange: (event: ChangeEvent<HTMLInputElement>) => void;
 }
@@ -56,6 +58,7 @@ export const SettingsModal = ({
   language,
   saveText,
   importSaveText,
+  hasImportBackup,
   hasOpenedHelp,
   hasClaimedAuthorLinkGift,
   hasClaimedHelpPageGift,
@@ -75,6 +78,7 @@ export const SettingsModal = ({
   onExportSave,
   onDownloadSave,
   onImportPastedSave,
+  onRestoreImportBackup,
   onModFileChange,
   onImportSaveFileChange,
 }: SettingsModalProps) => {
@@ -304,6 +308,12 @@ export const SettingsModal = ({
                   {t('ui.settings.save.importFile')}
                   <input className="file-input" type="file" onChange={onImportSaveFileChange} />
                 </label>
+                {hasImportBackup && (
+                  <button type="button" className="text-button settings-action" onClick={onRestoreImportBackup}>
+                    <RotateCcw size={18} aria-hidden="true" />
+                    {t('ui.settings.save.restoreImportBackup')}
+                  </button>
+                )}
               </div>
               {saveText && <textarea className="save-textarea" readOnly value={saveText} aria-label={t('ui.settings.save.exportedAria')} />}
               <label className="field">

@@ -1,6 +1,7 @@
 import { t } from '../i18n';
 import { recordEarnedCoins } from './achievements';
 import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
+import { getEffectiveDailyDateKey } from './gameClock';
 import { addInventoryItem, isBuiltinItemId } from './items';
 import { clampCoins, clampCount } from './petStats';
 import type {
@@ -90,7 +91,11 @@ const ticketSources = new Set<GachaTicketSource>(['partner_schedule', 'daily_wis
 
 const createSeed = (createdAt: number) => `golden-apple-gacha:${Math.max(0, Math.floor(createdAt)).toString(36)}:v1`;
 
-export const defaultGoldenAppleGachaState = (createdAt: number, now = Date.now()): GoldenAppleGachaState => ({
+export const defaultGoldenAppleGachaState = (
+  createdAt: number,
+  now = Date.now(),
+  dailyDateKey = getDailyResetDateKey(now),
+): GoldenAppleGachaState => ({
   schemaVersion: goldenAppleGachaSchemaVersion,
   tickets: 0,
   totalDraws: 0,
@@ -98,7 +103,7 @@ export const defaultGoldenAppleGachaState = (createdAt: number, now = Date.now()
   ticketsSpent: 0,
   rngSeed: createSeed(createdAt),
   rngCounter: 0,
-  dailyDateKey: getDailyResetDateKey(now),
+  dailyDateKey,
   dailyProcessedSources: [],
   dailyGrantedSources: [],
   dailyTicketsGranted: 0,
@@ -139,12 +144,13 @@ export const normalizeGoldenAppleGachaState = (
   value: unknown,
   createdAt: number,
   now = Date.now(),
+  requestedDateKey = getDailyResetDateKey(now),
 ): GoldenAppleGachaState => {
-  const fallback = defaultGoldenAppleGachaState(createdAt, now);
+  const fallback = defaultGoldenAppleGachaState(createdAt, now, requestedDateKey);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
   const raw = value as Record<string, unknown>;
   const sourceSchemaVersion = isNumber(raw.schemaVersion) ? Math.max(0, Math.floor(raw.schemaVersion)) : 0;
-  const currentDateKey = getDailyResetDateKey(now);
+  const currentDateKey = requestedDateKey;
   const storedDateKey = normalizeLegacyDailyDateKey(raw.dailyDateKey, now);
   const effectiveDateKey = storedDateKey && storedDateKey > currentDateKey ? storedDateKey : currentDateKey;
   const isCurrentDay = storedDateKey === effectiveDateKey;
@@ -276,7 +282,7 @@ export const drawGoldenAppleGacha = (
   now = Date.now(),
 ): GoldenAppleGachaDrawOutcome => {
   if (count !== 1 && count !== 10) return { pet, results: [], error: 'invalid_count' };
-  const state = normalizeGoldenAppleGachaState(pet.goldenAppleGacha, pet.createdAt, now);
+  const state = normalizeGoldenAppleGachaState(pet.goldenAppleGacha, pet.createdAt, now, getEffectiveDailyDateKey(pet, now));
   const coinCost = count === 10 ? goldenAppleGachaTenCost : goldenAppleGachaSingleCost;
   const ticketCost = count;
   if (payment === 'coins' && pet.coins < coinCost) return { pet, results: [], error: 'not_enough_coins' };
@@ -354,7 +360,7 @@ export const grantDailyGachaTickets = (
   requestedTickets: number,
   now = Date.now(),
 ): DailyGachaTicketGrantOutcome => {
-  const state = normalizeGoldenAppleGachaState(pet.goldenAppleGacha, pet.createdAt, now);
+  const state = normalizeGoldenAppleGachaState(pet.goldenAppleGacha, pet.createdAt, now, getEffectiveDailyDateKey(pet, now));
   const requested = isNumber(requestedTickets) ? clampCount(requestedTickets) : 0;
   const availableCapacity = Math.max(0, 9999 - state.tickets);
   const grantedTickets = state.dailyTicketsGranted < goldenAppleGachaDailyTicketLimit
@@ -389,7 +395,7 @@ export const resolveDailyGachaTicket = (
   chancePercent: number,
   now = Date.now(),
 ): DailyGachaTicketOutcome => {
-  const state = normalizeGoldenAppleGachaState(pet.goldenAppleGacha, pet.createdAt, now);
+  const state = normalizeGoldenAppleGachaState(pet.goldenAppleGacha, pet.createdAt, now, getEffectiveDailyDateKey(pet, now));
   if (state.dailyProcessedSources.includes(source)) return { pet: { ...pet, goldenAppleGacha: state }, granted: false, processed: false };
   const dailyProcessedSources = [...state.dailyProcessedSources, source];
   const chance = Math.max(0, Math.min(100, Math.floor(chancePercent)));

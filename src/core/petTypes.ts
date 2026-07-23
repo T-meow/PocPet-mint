@@ -75,6 +75,9 @@ export interface GardenSlot {
   lastWateredAt: number;
   lastFertilizedAt: number;
   lastBoostedAt: number;
+  lastWateredDateKey: string;
+  lastFertilizedDateKey: string;
+  lastBoostedDateKey: string;
   naturalReadyAt: number;
   careReductionMs: number;
   nextReadyAt: number;
@@ -95,7 +98,7 @@ export interface GardenTools {
 }
 
 export interface GardenState {
-  schemaVersion: 3;
+  schemaVersion: 4;
   activeSlotIndex: number;
   slots: GardenSlot[];
   dailyCareDateKey: string;
@@ -406,6 +409,13 @@ export interface AchievementState {
   pendingReviewNotice: boolean;
   counters: AchievementCounters;
 }
+
+export interface TimeGuardState {
+  schemaVersion: 1;
+  lastObservedAt: number;
+  maxDailyDateKey: string;
+}
+
 export interface PetState {
   name: string;
   level: number;
@@ -427,6 +437,7 @@ export interface PetState {
   inventory: Inventory;
   lastDailyRewardAt: number;
   lastDailyEncounterAt: number;
+  dailyEncounterDateKey: string;
   neighborGiftDateKey: string;
   neighborGiftCount: number;
   dailyBiscuitClaimDate: string;
@@ -468,6 +479,7 @@ export interface PetState {
   partnerSchedule: PartnerScheduleState;
   goldenAppleGacha: GoldenAppleGachaState;
   classicEndgame: ClassicEndgameState;
+  timeGuard: TimeGuardState;
 }
 
 export type PetAction = 'play' | 'clean' | 'sleep' | 'work';

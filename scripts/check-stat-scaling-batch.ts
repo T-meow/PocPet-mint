@@ -5,6 +5,7 @@ import {
   applyPetAction,
   buyItem,
   getItemPurchaseQuote,
+  getWorkReward,
   interactWithPet,
   maxBatchQuantity,
   useInventoryItem,
@@ -17,7 +18,7 @@ import {
   partnerScheduleDefinitions,
 } from '../src/core/partnerSchedule';
 import { createDefaultPet, getPrimaryStatus } from '../src/core/petState';
-import { getPetStatCap, getPetStatThreshold, scalePetStatDelta } from '../src/core/petStats';
+import { getPetStatCap, getPetStatThreshold, roundPetStatDisplayAmount, scalePetStatDelta } from '../src/core/petStats';
 import type { ItemDefinition, PetState } from '../src/core/petTypes';
 import { getValidQuantityPreset } from '../src/ui/QuantityPresets';
 
@@ -49,6 +50,8 @@ assert.equal(getPetStatCap(50), 345);
 assert.equal(getPetStatCap(99), 590);
 closeTo(scalePetStatDelta(50, 10), 34.5, 'level 50 stat delta');
 closeTo(getPetStatThreshold(99, 10), 59, 'level 99 ratio threshold');
+assert.equal(roundPetStatDisplayAmount(34.5), 35, 'scaled positive values display as integers');
+assert.equal(roundPetStatDisplayAmount(-20.7), -21, 'scaled costs display as integers');
 
 const lowRatioPet = atLevel(50, { hunger: 110 });
 assert.equal(getPrimaryStatus(lowRatioPet), 'hungry');
@@ -95,6 +98,15 @@ closeTo(
 assert.equal(levelOneClean.energy, 97);
 assert.equal(levelFiftyClean.energy, 342, 'energy action cost must remain fixed at 3');
 
+const standardWorkReward = getWorkReward(atLevel(20, { weather: 'sunny' }), now, 12);
+const extraEnergyWorkReward = getWorkReward(atLevel(20, { weather: 'sunny' }), now, 18);
+assert.equal(standardWorkReward.energyAdjustedOutputCoins, 24);
+assert.equal(standardWorkReward.levelBonusCoins, 19);
+assert.equal(standardWorkReward.baseCoins, 43);
+assert.equal(extraEnergyWorkReward.energyOutputMultiplier, 1.5);
+assert.equal(extraEnergyWorkReward.energyAdjustedOutputCoins, 36, 'extra energy scales the work output before level rewards');
+assert.equal(extraEnergyWorkReward.baseCoins, 55, 'the fixed level reward must not be multiplied by extra energy');
+
 for (const [level, expectedHearts] of [[1, 1], [20, 2], [50, 3], [99, 6]] as const) {
   const pet = atLevel(level, { hearts: 0 });
   const interacted = interactWithPet(pet, now);
@@ -118,7 +130,7 @@ try {
     },
   });
   const bonusInteraction = interactWithPet(bonusPet, now);
-  assert.equal(bonusInteraction.hearts, 5, 'scaled base, global flat bonus, and Boost Card bonus apply once per interaction');
+  assert.equal(bonusInteraction.hearts, 5, 'scaled base, good-ending chance bonus, and Boost Card bonus apply once per interaction');
   assert.equal(bonusInteraction.achievements.counters.heartEarnedTotal, 5, 'bonus hearts are recorded once');
 } finally {
   Math.random = originalRandom;

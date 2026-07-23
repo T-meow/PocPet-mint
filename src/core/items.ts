@@ -1,5 +1,5 @@
 import { t } from '../i18n';
-import { getDailyResetDateKey } from './dailyReset';
+import { getEffectiveDailyDateKey } from './gameClock';
 import type { ActivePetMod, PetModCustomItem, PetModItemOverride } from './mod';
 import type { BuiltinItemId, Inventory, InventoryItemDefinition, ItemDefinition, ItemId, ItemRegistry, PetState, ShopCategory, ShopItem } from './petTypes';
 import { hashString } from './utils';
@@ -445,11 +445,10 @@ export const dailyShopDiscountCount = 3;
 
 const getEligibleDailyDiscountItems = () => shopItems.filter((item) => item.price > 0 && item.id !== 'emergency_biscuit');
 
-const getGeneratedDailyDiscountItems = (now: number) => {
+const getGeneratedDailyDiscountItems = (dateKey: string) => {
   const pool = [...getEligibleDailyDiscountItems()];
   if (pool.length === 0) return [];
 
-  const dateKey = getDailyResetDateKey(now);
   const picks: ShopItem[] = [];
   for (let index = 0; index < dailyShopDiscountCount && pool.length > 0; index += 1) {
     const hashKey = index === 0 ? dateKey : dateKey + ':' + index;
@@ -461,17 +460,17 @@ const getGeneratedDailyDiscountItems = (now: number) => {
 };
 
 const getStoredDailyDiscountItems = (pet: PetState, now: number) => {
-  const dateKey = getDailyResetDateKey(now);
+  const dateKey = getEffectiveDailyDateKey(pet, now);
   const eligibleItems = getEligibleDailyDiscountItems();
   const eligibleById = new Map(eligibleItems.map((item) => [item.id, item]));
   const stored = pet.dailyDiscountDate === dateKey
     ? (pet.dailyDiscountItemIds ?? []).map((id) => eligibleById.get(id)).filter((item): item is ShopItem => Boolean(item))
     : [];
-  return stored.length === Math.min(dailyShopDiscountCount, eligibleItems.length) ? stored : getGeneratedDailyDiscountItems(now);
+  return stored.length === Math.min(dailyShopDiscountCount, eligibleItems.length) ? stored : getGeneratedDailyDiscountItems(dateKey);
 };
 
 export const getDailyHeartExchangeInfo = (pet: PetState, now = Date.now()) => {
-  const dateKey = getDailyResetDateKey(now);
+  const dateKey = getEffectiveDailyDateKey(pet, now);
   const count =
     pet.dailyHeartExchangeDate === dateKey
       ? Math.min(dailyHeartExchangeLimit, Math.max(0, Math.floor(pet.dailyHeartExchangeCount)))
@@ -487,7 +486,7 @@ export const getDailyHeartExchangeInfo = (pet: PetState, now = Date.now()) => {
 };
 
 export const getDailyShopDiscountInfo = (pet: PetState, now = Date.now()) => {
-  const dateKey = getDailyResetDateKey(now);
+  const dateKey = getEffectiveDailyDateKey(pet, now);
   const items = getStoredDailyDiscountItems(pet, now);
   if (items.length === 0) return undefined;
 

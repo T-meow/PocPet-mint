@@ -1,5 +1,5 @@
 ﻿import { list, pick, t } from '../i18n';
-import { clampPetEnergy, clampPetHealth, clampPetStat, scalePetStatDelta } from './petStats';
+import { clampPetEnergy, clampPetHealth, clampPetStat, roundPetStatDisplayAmount, scalePetStatDelta } from './petStats';
 import type { ActionStreak, CareActionKey, PetState, RecentActivity } from './petTypes';
 import { randomInt } from './utils';
 
@@ -61,7 +61,7 @@ export const getRandomHealthIncident = (kind: ActionIncidentKind, pet: PetState)
 
   const amount = scalePetStatDelta(pet, kind === 'play' ? randomInt(1, 3) : randomInt(2, 5));
   const text = pick(kind === 'play' ? 'pet.incident.play' : 'pet.incident.work', {
-    amount: Math.round(amount * 10) / 10,
+    amount: roundPetStatDisplayAmount(amount),
   });
 
   return { amount, text };
@@ -121,7 +121,7 @@ export const applyActionStreak = (pet: PetState, key: CareActionKey, now: number
   const mood = scalePetStatDelta(base, reaction.effect.mood ?? 0);
   const cleanliness = scalePetStatDelta(base, reaction.effect.cleanliness ?? 0);
   const health = scalePetStatDelta(base, reaction.effect.health ?? 0);
-  const displayAmount = (amount: number) => Math.round(Math.abs(amount) * 10) / 10;
+  const displayAmount = (amount: number) => Math.abs(roundPetStatDisplayAmount(amount));
   return {
     pet: {
       ...base,

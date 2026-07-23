@@ -3,6 +3,7 @@ import { getDailyResetDateKey } from './dailyReset';
 import { incrementDailyWishClaim, incrementReturnWelcomeClaim, recordEarnedCoins } from './achievements';
 import { addInventoryItem, allItemIds } from './items';
 import { resolveDailyGachaTicket } from './goldenAppleGacha';
+import { getEffectiveDailyDateKey } from './gameClock';
 import { getPartnerScheduleCrossSystemEffects } from './partnerScheduleEffects';
 import { clampCoins, clampCount, getPetStatThreshold } from './petStats';
 import type {
@@ -76,8 +77,11 @@ const getAvailableDailyWishConfigs = (pet: DailyWishSnapshot) => {
   return configs.length > 0 ? configs : dailyWishConfigs.slice(0, 3);
 };
 
-export const createDailyWish = (pet: DailyWishSnapshot, now = Date.now()): DailyWishState => {
-  const dateKey = getDailyResetDateKey(now);
+export const createDailyWish = (
+  pet: DailyWishSnapshot,
+  now = Date.now(),
+  dateKey = getDailyResetDateKey(now),
+): DailyWishState => {
   const configs = getAvailableDailyWishConfigs(pet);
   const index = hashString(dateKey + ':' + Math.floor(pet.createdAt) + ':' + pet.name) % configs.length;
   const config = configs[index];
@@ -92,15 +96,20 @@ export const createDailyWish = (pet: DailyWishSnapshot, now = Date.now()): Daily
   };
 };
 
-export const normalizeDailyWishState = (value: unknown, pet: DailyWishSnapshot, now = Date.now()): DailyWishState => {
-  const fallback = createDailyWish(pet, now);
+export const normalizeDailyWishState = (
+  value: unknown,
+  pet: DailyWishSnapshot,
+  now = Date.now(),
+  effectiveDateKey = getDailyResetDateKey(now),
+): DailyWishState => {
+  const fallback = createDailyWish(pet, now, effectiveDateKey);
   if (!value || typeof value !== 'object' || Array.isArray(value)) return fallback;
 
   const raw = value as Record<string, unknown>;
   if (!isDailyWishId(raw.id)) return fallback;
   const config = getDailyWishConfig(raw.id);
   const dateKey = typeof raw.dateKey === 'string' ? raw.dateKey : '';
-  if (dateKey !== getDailyResetDateKey(now)) return fallback;
+  if (dateKey !== effectiveDateKey) return fallback;
 
   const progress = Math.min(config.target, clampCount(isNumber(raw.progress) ? raw.progress : 0));
   const completedAt = isNumber(raw.completedAt) && progress >= config.target
@@ -174,7 +183,7 @@ export const normalizeReturnWelcomeState = (value: unknown): ReturnWelcomeState 
 };
 
 export const ensureDailyWishForDate = (pet: PetState, now = Date.now()): PetState => {
-  const dailyWish = normalizeDailyWishState(pet.dailyWish, pet, now);
+  const dailyWish = normalizeDailyWishState(pet.dailyWish, pet, now, getEffectiveDailyDateKey(pet, now));
   return dailyWish === pet.dailyWish ? pet : { ...pet, dailyWish };
 };
 

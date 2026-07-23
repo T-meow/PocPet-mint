@@ -208,7 +208,7 @@
         "otherTitle": "Other systems",
         "stats": [
           "Very low hunger makes your pet hungry. Use food items to recover it.",
-          "Mood affects sleep and interaction rewards. When mood is high and health is stable, tap your companion to earn hearts.",
+          "Mood affects sleep and interaction rewards. Tap your companion with at least 75 mood and 40 health to earn hearts.",
           "Low cleanliness adds stress. Use cleaning actions or care items to recover it.",
           "Energy limits play, work, and focus. Sleep or some items can restore it.",
           "Low health blocks Pomodoro and some actions. Use care actions or medicine to recover."
@@ -1184,6 +1184,7 @@
       "sleeping": "{name} is sleeping soundly. Better not wake it.",
       "lowEnergy": "{name}'s energy is too low. Rest before interacting.",
       "lowHunger": "{name} is too hungry to interact. Feed your pet first.",
+      "lowHealth": "{name} can give hearts after health reaches {health}.",
       "heart": "{name} is in a great mood and gives you {hearts} heart(s).",
       "touch": "You pet {name}, and it relaxes a little."
     },

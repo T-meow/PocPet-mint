@@ -43,6 +43,8 @@ import {
   isPetLowEnergy,
   markAchievementReviewSeen,
   pausePomodoro,
+  petInteractionHeartHealthThreshold,
+  petInteractionHeartMoodThreshold,
   resetPomodoro,
   pomodoroMinHealthThreshold,
   recordPetInteraction,
@@ -213,13 +215,12 @@ const getPetInteractionOutcome = (pet: PetState): SoundOutcome => {
   if (
     pet.isSleeping
     || isPetLowEnergy(pet)
-    || pet.health <= getPetStatThreshold(pet, pomodoroMinHealthThreshold)
-    || pet.hunger <= getPetStatThreshold(pet, 32)
-    || pet.mood <= getPetStatThreshold(pet, 30)
+    || isPetCriticallyHungry(pet)
+    || pet.health < petInteractionHeartHealthThreshold
   ) {
     return 'low_state';
   }
-  return pet.mood >= getPetStatThreshold(pet, 75) && pet.health >= getPetStatThreshold(pet, 40) ? 'heart' : 'success';
+  return pet.mood >= petInteractionHeartMoodThreshold ? 'heart' : 'success';
 };
 
 const createPetForMod = (mod: ActivePetMod | null) => {

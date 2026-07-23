@@ -1,12 +1,21 @@
 ﻿import { list, pick, t } from '../i18n';
-import { clampPetEnergy, clampPetHealth, clampPetStat, roundPetStatDisplayAmount, scalePetStatDelta } from './petStats';
+import { clampPetEnergy, clampPetHealth, clampPetStat, getPetEnergyCap, roundPetStatDisplayAmount, scalePetStatDelta } from './petStats';
 import type { ActionStreak, CareActionKey, PetState, RecentActivity } from './petTypes';
 import { randomInt } from './utils';
 
 export const lowSleepMoodWarningThreshold = 25;
 
 export const petInteractionCooldownMs = 1000;
-export const petInteractionOveruseCooldownMs = 12 * 1000;
+export const petInteractionOveruseCooldownMs = 4 * 1000;
+export const petInteractionHeartMoodThreshold = 75;
+export const petInteractionHeartHealthThreshold = 40;
+export const basePlayMoodGain = 18;
+export const playEnergyCost = 3;
+export const petInteractionMoodPerEnergy = basePlayMoodGain / playEnergyCost;
+export const petInteractionEnergyCostRatio = 0.01;
+
+export const getPetInteractionEnergyCost = (pet: PetState) =>
+  Math.max(1, Math.round(getPetEnergyCap(pet) * petInteractionEnergyCostRatio));
 
 
 const overuseWindowMs = 10 * 60 * 1000;
@@ -23,29 +32,30 @@ const overuseThresholds: Partial<Record<CareActionKey, number>> = {
 export const getRandomPetInteractionCost = (pet: PetState) => {
   const name = pet.name;
   const texts = list('pet.interaction.cost', { name });
+  const energy = getPetInteractionEnergyCost(pet);
   const options = [
     {
       hunger: scalePetStatDelta(pet, 2),
       cleanliness: 0,
-      energy: 1,
+      energy,
       text: texts[0] ?? '',
     },
     {
       hunger: 0,
       cleanliness: scalePetStatDelta(pet, 3),
-      energy: 0,
+      energy,
       text: texts[1] ?? '',
     },
     {
       hunger: scalePetStatDelta(pet, 1),
       cleanliness: scalePetStatDelta(pet, 2),
-      energy: 0,
+      energy,
       text: texts[2] ?? '',
     },
     {
       hunger: scalePetStatDelta(pet, 1),
       cleanliness: 0,
-      energy: 2,
+      energy,
       text: texts[3] ?? '',
     },
   ];

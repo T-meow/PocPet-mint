@@ -333,7 +333,18 @@ export {
   helpStarterGiftRewardId,
   normalizePet,
 } from './petState';
-export { lowSleepMoodWarningThreshold } from './petCommon';
+export {
+  basePlayMoodGain,
+  getPetInteractionEnergyCost,
+  lowSleepMoodWarningThreshold,
+  petInteractionCooldownMs,
+  petInteractionEnergyCostRatio,
+  petInteractionHeartHealthThreshold,
+  petInteractionHeartMoodThreshold,
+  petInteractionMoodPerEnergy,
+  petInteractionOveruseCooldownMs,
+  playEnergyCost,
+} from './petCommon';
 export {
   claimDailyWishReward,
   claimReturnWelcomeReward,

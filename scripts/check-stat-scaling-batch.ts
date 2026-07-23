@@ -11,6 +11,14 @@ import {
   useInventoryItem,
 } from '../src/core/petActions';
 import { advancePet, isPetCriticallyHungry, isPetLowEnergy } from '../src/core/petLifecycle';
+import {
+  getPetInteractionEnergyCost,
+  petInteractionCooldownMs,
+  petInteractionHeartHealthThreshold,
+  petInteractionHeartMoodThreshold,
+  petInteractionMoodPerEnergy,
+  petInteractionOveruseCooldownMs,
+} from '../src/core/petCommon';
 import { applyTimedEvent } from '../src/core/petEvents';
 import {
   getPartnerScheduleClaimPreview,
@@ -114,6 +122,55 @@ for (const [level, expectedHearts] of [[1, 1], [20, 2], [50, 3], [99, 6]] as con
   closeTo(interacted.mood, getPetStatCap(level) - scalePetStatDelta(level, 12), `level ${level} interaction mood cost`);
   assert.equal(interacted.achievements.counters.heartEarnedTotal, expectedHearts, `level ${level} earned-heart counter`);
 }
+
+const fixedThresholdHeart = interactWithPet(atLevel(50, {
+  hearts: 0,
+  mood: petInteractionHeartMoodThreshold,
+  health: petInteractionHeartHealthThreshold,
+}), now);
+assert.equal(fixedThresholdHeart.hearts, 3, 'interaction heart thresholds stay fixed at high levels');
+const belowMoodThreshold = interactWithPet(atLevel(50, {
+  hearts: 0,
+  mood: petInteractionHeartMoodThreshold - 0.01,
+  health: petInteractionHeartHealthThreshold,
+}), now);
+assert.equal(belowMoodThreshold.hearts, 0, 'mood below the fixed threshold does not grant hearts');
+const belowHealthThreshold = interactWithPet(atLevel(50, {
+  hearts: 0,
+  mood: petInteractionHeartMoodThreshold,
+  health: petInteractionHeartHealthThreshold - 0.01,
+}), now);
+assert.equal(belowHealthThreshold.hearts, 0, 'health below the fixed threshold does not grant hearts');
+assert(belowHealthThreshold.recentEvent.includes(String(petInteractionHeartHealthThreshold)), 'low health interaction explains the heart requirement');
+
+for (const level of [1, 20, 50, 99]) {
+  const pet = atLevel(level, { mood: 0 });
+  const interacted = interactWithPet(pet, now);
+  const expectedEnergyCost = getPetInteractionEnergyCost(pet);
+  assert.equal(pet.energy - interacted.energy, expectedEnergyCost, `level ${level} interaction consumes one percent energy`);
+  closeTo(interacted.mood, expectedEnergyCost * petInteractionMoodPerEnergy, `level ${level} interaction mood follows actual energy cost`);
+}
+
+const overuseStart = atLevel(1, {
+  mood: 0,
+  lastPetInteractionAt: now - petInteractionCooldownMs,
+  actionStreak: {
+    key: 'touch',
+    count: 5,
+    windowStartedAt: now - 5_000,
+    lastAt: now - petInteractionCooldownMs,
+  },
+});
+const overusedInteraction = interactWithPet(overuseStart, now);
+assert.equal(
+  overusedInteraction.lastPetInteractionAt,
+  now + petInteractionOveruseCooldownMs - petInteractionCooldownMs,
+  'overuse cooldown anchor accounts for the normal interaction cooldown',
+);
+const stillCoolingDown = interactWithPet(overusedInteraction, now + petInteractionOveruseCooldownMs - 1);
+assert.equal(stillCoolingDown.lastPetInteractionAt, overusedInteraction.lastPetInteractionAt, 'overuse cooldown blocks until the configured duration');
+const cooldownComplete = interactWithPet(overusedInteraction, now + petInteractionOveruseCooldownMs);
+assert.equal(cooldownComplete.lastPetInteractionAt, now + petInteractionOveruseCooldownMs, 'overuse cooldown ends at the configured duration');
 
 const originalRandom = Math.random;
 Math.random = () => 0;

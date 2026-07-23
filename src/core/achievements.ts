@@ -539,9 +539,10 @@ export const rollExtraHearts = (pet: PetState) => {
   return effects.guaranteedExtraHearts + (chance > 0 && Math.random() * 100 < chance ? 1 : 0);
 };
 
-export const incrementAchievementCareAction = (pet: PetState, action: CareActionKey): PetState => {
+export const incrementAchievementCareAction = (pet: PetState, action: CareActionKey, amount = 1): PetState => {
   if (!careKeys.includes(action as YearlyCareActionKey)) return pet;
   const key = action as YearlyCareActionKey;
+  const increment = Math.max(0, Math.floor(amount));
   return {
     ...pet,
     achievements: {
@@ -550,14 +551,14 @@ export const incrementAchievementCareAction = (pet: PetState, action: CareAction
         ...pet.achievements.counters,
         careActionCounts: {
           ...pet.achievements.counters.careActionCounts,
-          [key]: (pet.achievements.counters.careActionCounts[key] ?? 0) + 1,
+          [key]: (pet.achievements.counters.careActionCounts[key] ?? 0) + increment,
         },
       },
     },
   };
 };
 
-export const incrementAchievementItemUse = (pet: PetState, itemId: ItemId): PetState => ({
+export const incrementAchievementItemUse = (pet: PetState, itemId: ItemId, amount = 1): PetState => ({
   ...pet,
   achievements: {
     ...pet.achievements,
@@ -565,9 +566,9 @@ export const incrementAchievementItemUse = (pet: PetState, itemId: ItemId): PetS
       ...pet.achievements.counters,
       itemUseCountsById: {
         ...pet.achievements.counters.itemUseCountsById,
-        [itemId]: (pet.achievements.counters.itemUseCountsById[itemId] ?? 0) + 1,
+        [itemId]: (pet.achievements.counters.itemUseCountsById[itemId] ?? 0) + Math.max(0, Math.floor(amount)),
       },
-      totalItemUseCount: pet.achievements.counters.totalItemUseCount + 1,
+      totalItemUseCount: pet.achievements.counters.totalItemUseCount + Math.max(0, Math.floor(amount)),
     },
   },
 });
@@ -595,14 +596,14 @@ export const incrementAchievementPomodoroFocus = (
       };
 
 
-export const incrementAchievementPurchase = (pet: PetState, paid = true): PetState => ({
+export const incrementAchievementPurchase = (pet: PetState, paid = true, amount = 1): PetState => ({
   ...pet,
   achievements: {
     ...pet.achievements,
     counters: {
       ...pet.achievements.counters,
-      purchaseCount: pet.achievements.counters.purchaseCount + 1,
-      paidPurchaseCount: pet.achievements.counters.paidPurchaseCount + (paid ? 1 : 0),
+      purchaseCount: pet.achievements.counters.purchaseCount + Math.max(0, Math.floor(amount)),
+      paidPurchaseCount: pet.achievements.counters.paidPurchaseCount + (paid ? Math.max(0, Math.floor(amount)) : 0),
     },
   },
 });

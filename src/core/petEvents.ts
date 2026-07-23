@@ -4,7 +4,7 @@ import { getDailyResetDateKey } from './dailyReset';
 import { grantDailyGachaTickets } from './goldenAppleGacha';
 import { addInventoryItem } from './items';
 import { createNeighborGift, getNeighborEventRandom, pickNeighborEventValue, pickNeighborName } from './neighborGifts';
-import { clampCoins, clampCount, clampPetEnergy, clampPetHealth, clampPetStat } from './petStats';
+import { clampCoins, clampCount, clampPetEnergy, clampPetHealth, clampPetStat, getPetStatThreshold, scalePetStatDelta } from './petStats';
 import type { ItemEffect, ItemId, NeighborEventContext, PetState, WeatherType } from './petTypes';
 import { hashString, pickRandom } from './utils';
 import { neighborGiftDailyLimit } from './neighbors';
@@ -36,6 +36,22 @@ export interface OfflineEventOptions {
 }
 
 const dreamEventMinSleepMinutes = 15;
+
+const getTimedEventEffectText = (effect: ItemEffect) => {
+  const entries = ([
+    ['hunger', effect.hunger],
+    ['mood', effect.mood],
+    ['cleanliness', effect.cleanliness],
+    ['energy', effect.energy],
+    ['health', effect.health],
+  ] as const).filter((entry): entry is readonly [keyof ItemEffect, number] => Boolean(entry[1]));
+  if (entries.length === 0) return '';
+  const effects = entries.map(([key, amount]) => {
+    const rounded = Math.round(amount * 10) / 10;
+    return t(`pet.effectSummary.${key}`, { amount: rounded > 0 ? `+${rounded}` : rounded });
+  }).join(t('common.comma'));
+  return t('pet.effectSummary.wrap', { effects });
+};
 
 export const dreamTalkStartDelayMs = 8 * 60 * 1000;
 
@@ -178,6 +194,13 @@ export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, p
     : { pet, grantedTickets: 0, quotaConsumed: false };
   const current = ticketGrant.pet;
   const effect = event.effect ?? {};
+  const scaledEffect: ItemEffect = {
+    hunger: scalePetStatDelta(current, effect.hunger ?? 0),
+    mood: scalePetStatDelta(current, effect.mood ?? 0),
+    cleanliness: scalePetStatDelta(current, effect.cleanliness ?? 0),
+    energy: effect.energy ?? 0,
+    health: scalePetStatDelta(current, effect.health ?? 0),
+  };
   const heartGain = applyHeartGain(current, event.hearts ?? 0);
   const neighborGiftDateKey = getDailyResetDateKey(now);
   const currentNeighborGiftCount = current.neighborGiftDateKey === neighborGiftDateKey
@@ -190,13 +213,14 @@ export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, p
   const eventText = event.gachaTickets === 10 && ticketGrant.grantedTickets < event.gachaTickets
     ? t('pet.offlineEvent.tenTicketsCapped', { tickets: ticketGrant.grantedTickets })
     : event.text.replace(/\{tickets\}/g, String(ticketGrant.grantedTickets));
+  const effectText = getTimedEventEffectText(scaledEffect);
   const withEvent: PetState = {
     ...current,
-    hunger: clampPetStat(current, current.hunger + (effect.hunger ?? 0)),
-    mood: clampPetStat(current, current.mood + (effect.mood ?? 0)),
-    cleanliness: clampPetStat(current, current.cleanliness + (effect.cleanliness ?? 0)),
-    energy: clampPetEnergy(current, current.energy + (effect.energy ?? 0)),
-    health: clampPetHealth(current, current.health + (effect.health ?? 0)),
+    hunger: clampPetStat(current, current.hunger + (scaledEffect.hunger ?? 0)),
+    mood: clampPetStat(current, current.mood + (scaledEffect.mood ?? 0)),
+    cleanliness: clampPetStat(current, current.cleanliness + (scaledEffect.cleanliness ?? 0)),
+    energy: clampPetEnergy(current, current.energy + (scaledEffect.energy ?? 0)),
+    health: clampPetHealth(current, current.health + (scaledEffect.health ?? 0)),
     coins: clampCoins(current.coins + (event.coins ?? 0)),
     hearts: heartGain.hearts,
     boostCards: heartGain.boostCards,
@@ -204,7 +228,7 @@ export const applyTimedEvent = (pet: PetState, event: TimedEvent, now: number, p
       ? addInventoryItem(current.inventory, event.itemId, event.itemAmount ?? 1)
       : current.inventory,
     recentEvent: canSettleEvent
-      ? `${prefix}${eventText.replace(/\{hearts\}/g, String(heartGain.amount))}`
+      ? `${prefix}${eventText.replace(/\{hearts\}/g, String(heartGain.amount))}${effectText}`
       : current.recentEvent,
     lastDailyRewardAt: prefix === t('pet.prefix.dailyEncounter') ? now : pet.lastDailyRewardAt,
     lastDailyEncounterAt: prefix === t('pet.prefix.dailyEncounter') ? now : pet.lastDailyEncounterAt,
@@ -255,14 +279,23 @@ const getSleepSettlement = (pet: PetState, now: number): TimedEvent => {
     };
   }
 
-  if (startMood <= 25 || startHunger <= 25 || startCleanliness <= 25) {
+  if (
+    startMood <= getPetStatThreshold(pet, 25)
+    || startHunger <= getPetStatThreshold(pet, 25)
+    || startCleanliness <= getPetStatThreshold(pet, 25)
+  ) {
     return addDreamEvent({
       effect: { mood: -3, health: -1 },
       text: pick('pet.sleepSettlement.bad', { name: pet.name }),
     }, pet, sleptMinutes);
   }
 
-  if (startMood >= 60 && startHunger >= 45 && startCleanliness >= 45 && sleptMinutes >= 20) {
+  if (
+    startMood >= getPetStatThreshold(pet, 60)
+    && startHunger >= getPetStatThreshold(pet, 45)
+    && startCleanliness >= getPetStatThreshold(pet, 45)
+    && sleptMinutes >= 20
+  ) {
     return addDreamEvent({
       effect: { mood: 4, energy: 5 },
       text: pick('pet.sleepSettlement.good', { name: pet.name }),

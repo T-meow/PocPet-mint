@@ -1,7 +1,6 @@
 ﻿import { list, pick, t } from '../i18n';
-import { clampPetEnergy, clampPetHealth, clampPetStat } from './petStats';
+import { clampPetEnergy, clampPetHealth, clampPetStat, scalePetStatDelta } from './petStats';
 import type { ActionStreak, CareActionKey, PetState, RecentActivity } from './petTypes';
-import type { TimedEvent } from './petEvents';
 import { randomInt } from './utils';
 
 export const lowSleepMoodWarningThreshold = 25;
@@ -21,29 +20,30 @@ const overuseThresholds: Partial<Record<CareActionKey, number>> = {
 
 
 
-export const getRandomPetInteractionCost = (name: string) => {
+export const getRandomPetInteractionCost = (pet: PetState) => {
+  const name = pet.name;
   const texts = list('pet.interaction.cost', { name });
   const options = [
     {
-      hunger: 2,
+      hunger: scalePetStatDelta(pet, 2),
       cleanliness: 0,
       energy: 1,
       text: texts[0] ?? '',
     },
     {
       hunger: 0,
-      cleanliness: 3,
+      cleanliness: scalePetStatDelta(pet, 3),
       energy: 0,
       text: texts[1] ?? '',
     },
     {
-      hunger: 1,
-      cleanliness: 2,
+      hunger: scalePetStatDelta(pet, 1),
+      cleanliness: scalePetStatDelta(pet, 2),
       energy: 0,
       text: texts[2] ?? '',
     },
     {
-      hunger: 1,
+      hunger: scalePetStatDelta(pet, 1),
       cleanliness: 0,
       energy: 2,
       text: texts[3] ?? '',
@@ -55,12 +55,14 @@ export const getRandomPetInteractionCost = (name: string) => {
 
 export type ActionIncidentKind = 'play' | 'work';
 
-export const getRandomHealthIncident = (kind: ActionIncidentKind) => {
+export const getRandomHealthIncident = (kind: ActionIncidentKind, pet: PetState) => {
   const triggered = Math.random() < (kind === 'play' ? 0.2 : 0.3);
   if (!triggered) return undefined;
 
-  const amount = kind === 'play' ? randomInt(1, 3) : randomInt(2, 5);
-  const text = pick(kind === 'play' ? 'pet.incident.play' : 'pet.incident.work', { amount });
+  const amount = scalePetStatDelta(pet, kind === 'play' ? randomInt(1, 3) : randomInt(2, 5));
+  const text = pick(kind === 'play' ? 'pet.incident.play' : 'pet.incident.work', {
+    amount: Math.round(amount * 10) / 10,
+  });
 
   return { amount, text };
 };
@@ -87,45 +89,57 @@ export const applyActionStreak = (pet: PetState, key: CareActionKey, now: number
     lastAt: now,
   };
 
-  const reactions: Record<CareActionKey, TimedEvent> = {
+  const reactions: Record<CareActionKey, { effect: { hunger?: number; mood?: number; cleanliness?: number; energy?: number; health?: number }; textKey: string }> = {
     play: {
       effect: { energy: -2, hunger: -2 },
-      text: t('pet.streak.play', { name: pet.name }),
+      textKey: 'pet.streak.play',
     },
     clean: {
       effect: { mood: -4, hunger: -1 },
-      text: t('pet.streak.clean', { name: pet.name }),
+      textKey: 'pet.streak.clean',
     },
     work: {
       effect: { mood: -2, health: -2 },
-      text: t('pet.streak.work', { name: pet.name }),
+      textKey: 'pet.streak.work',
     },
     feed: {
       effect: { mood: -3, cleanliness: -1 },
-      text: t('pet.streak.feed', { name: pet.name }),
+      textKey: 'pet.streak.feed',
     },
     gift: {
       effect: { mood: -2 },
-      text: t('pet.streak.gift', { name: pet.name }),
+      textKey: 'pet.streak.gift',
     },
     touch: {
       effect: { mood: -3, energy: -1 },
-      text: t('pet.streak.touch', { name: pet.name }),
+      textKey: 'pet.streak.touch',
     },
   };
 
   const reaction = reactions[key];
+  const hunger = scalePetStatDelta(base, reaction.effect.hunger ?? 0);
+  const mood = scalePetStatDelta(base, reaction.effect.mood ?? 0);
+  const cleanliness = scalePetStatDelta(base, reaction.effect.cleanliness ?? 0);
+  const health = scalePetStatDelta(base, reaction.effect.health ?? 0);
+  const displayAmount = (amount: number) => Math.round(Math.abs(amount) * 10) / 10;
   return {
     pet: {
       ...base,
       actionStreak: resetStreak,
-      hunger: clampPetStat(base, base.hunger + (reaction.effect?.hunger ?? 0)),
-      mood: clampPetStat(base, base.mood + (reaction.effect?.mood ?? 0)),
-      cleanliness: clampPetStat(base, base.cleanliness + (reaction.effect?.cleanliness ?? 0)),
-      energy: clampPetEnergy(base, base.energy + (reaction.effect?.energy ?? 0)),
-      health: clampPetHealth(base, base.health + (reaction.effect?.health ?? 0)),
+      hunger: clampPetStat(base, base.hunger + hunger),
+      mood: clampPetStat(base, base.mood + mood),
+      cleanliness: clampPetStat(base, base.cleanliness + cleanliness),
+      energy: clampPetEnergy(base, base.energy + (reaction.effect.energy ?? 0)),
+      health: clampPetHealth(base, base.health + health),
     },
-    text: reaction.text,
+    text: t(reaction.textKey, {
+      name: pet.name,
+      hunger: displayAmount(hunger),
+      mood: displayAmount(mood),
+      cleanliness: displayAmount(cleanliness),
+      health: displayAmount(health),
+      energy: displayAmount(reaction.effect.energy ?? 0),
+    }),
     triggered: true,
   };
 };

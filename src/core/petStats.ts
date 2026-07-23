@@ -33,7 +33,9 @@ export const breezyEnergyRecoveryMs = 4 * 60 * 1000;
 
 export const sleepEnergyRecoveryMs = 3 * 60 * 1000;
 
-export const clampStat = (value: number, max = baseStatCap) => Math.max(0, Math.min(max, Math.round(value)));
+export type ScaledPetStatKey = 'hunger' | 'mood' | 'cleanliness' | 'health';
+
+export const clampStat = (value: number, max = baseStatCap) => Math.max(0, Math.min(max, value));
 
 export const clampHealth = (value: number, max = baseStatCap) => Math.max(1, clampStat(value, max));
 
@@ -48,6 +50,20 @@ export const getPetStatCap = (petOrLevel: Pick<PetState, 'level'> | number) => {
   return baseStatCap + (clampLevel(level) - 1) * statCapPerLevel;
 };
 
+export const getPetStatScale = (petOrLevel: Pick<PetState, 'level'> | number) =>
+  getPetStatCap(petOrLevel) / baseStatCap;
+
+export const scalePetStatDelta = (petOrLevel: Pick<PetState, 'level'> | number, amount: number) =>
+  amount * getPetStatScale(petOrLevel);
+
+export const getPetStatThreshold = (petOrLevel: Pick<PetState, 'level'> | number, baseThreshold: number) =>
+  scalePetStatDelta(petOrLevel, baseThreshold);
+
+export const getPetStatRatio = (pet: PetState, key: ScaledPetStatKey) => {
+  const statCap = getPetStatCap(pet);
+  return statCap > 0 ? Math.max(0, Math.min(1, pet[key] / statCap)) : 0;
+};
+
 export const clampPetStat = (pet: PetState, value: number) => clampStat(value, getPetStatCap(pet));
 
 export const clampPetHealth = (pet: PetState, value: number) => clampHealth(value, getPetStatCap(pet));
@@ -56,7 +72,7 @@ export const getPetEnergyCap = (pet: Pick<PetState, 'level' | 'classicEndgame'>)
   getPetStatCap(pet) + getClassicTrophyEffects(pet).energyCapBonus;
 
 export const clampPetEnergy = (pet: Pick<PetState, 'level' | 'classicEndgame'>, value: number) =>
-  clampStat(value, getPetEnergyCap(pet));
+  Math.round(clampStat(value, getPetEnergyCap(pet)));
 
 export const getUpgradeHeartCost = (targetLevel: number) => {
   const level = clampLevel(targetLevel);

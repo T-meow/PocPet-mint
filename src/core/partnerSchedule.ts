@@ -12,7 +12,7 @@ import {
   partnerScheduleCategories,
   partnerScheduleDailyCompletionLimit,
 } from './partnerScheduleEffects';
-import { clampCoins, clampCount, clampPetEnergy, clampPetHealth, clampPetStat } from './petStats';
+import { clampCoins, clampCount, clampPetEnergy, clampPetHealth, clampPetStat, getPetStatThreshold, scalePetStatDelta } from './petStats';
 import { getWorkSeasonCoinBonus } from './season';
 import type {
   ActivePartnerSchedule,
@@ -492,8 +492,8 @@ export const getPartnerScheduleOfferPreview = (
   return {
     durationMs: Math.max(minuteMs, Math.round(definition.durationMinutes * minuteMs * effects.durationMultiplier)),
     energyCost: Math.max(1, Math.round(definition.energyCost * effects.energyCostMultiplier)),
-    hungerCost: Math.max(1, Math.round(definition.hungerCost * effects.hungerMoodCostMultiplier)),
-    moodCost: Math.max(1, Math.round(definition.moodCost * effects.hungerMoodCostMultiplier)),
+    hungerCost: scalePetStatDelta(pet, Math.max(1, Math.round(definition.hungerCost * effects.hungerMoodCostMultiplier))),
+    moodCost: scalePetStatDelta(pet, Math.max(1, Math.round(definition.moodCost * effects.hungerMoodCostMultiplier))),
     coinReward: Math.max(1, Math.round(storedCoinReward * trophyRewardMultiplier)),
     skillXp: storedSkillXp > 0 ? Math.max(1, Math.round(storedSkillXp * trophyRewardMultiplier)) : 0,
     trophyRewardMultiplier,
@@ -529,7 +529,7 @@ export const getPartnerScheduleStartCheck = (
   if (current.energy < preview.energyCost) return { canStart: false, reason: 'energy' };
   if (current.hunger < preview.hungerCost) return { canStart: false, reason: 'hunger' };
   if (current.mood < preview.moodCost) return { canStart: false, reason: 'mood' };
-  if (current.health < definition.requiredHealth) return { canStart: false, reason: 'health' };
+  if (current.health < getPetStatThreshold(current, definition.requiredHealth)) return { canStart: false, reason: 'health' };
   return { canStart: true };
 };
 
@@ -625,6 +625,7 @@ export const getPartnerScheduleClaimPreview = (
   result: PartnerScheduleResult,
   choice: PartnerScheduleRewardChoice,
   extraRewardCopies = 0,
+  pet?: PetState,
 ): PartnerScheduleClaimPreview => {
   const rewardMultiplier = result.trophyRewardMultiplier * (1 + Math.max(0, Math.floor(extraRewardCopies)));
   const scaleReward = (value: number) => value > 0 ? Math.max(1, Math.round(value * rewardMultiplier)) : 0;
@@ -635,10 +636,10 @@ export const getPartnerScheduleClaimPreview = (
   const baseSkillXp = result.skillXp * 1.5;
   const base: PartnerScheduleClaimPreview = { coins: scaleReward(baseCoins), skillXp: scaleReward(baseSkillXp) };
   const amount = result.size === 'long' ? 2 : 1;
-  if (result.category === 'study') return { ...base, skillXp: scaleReward(result.skillXp * 2), mood: scaleReward(8 * amount) };
+  if (result.category === 'study') return { ...base, skillXp: scaleReward(result.skillXp * 2), mood: pet ? scalePetStatDelta(pet, scaleReward(8 * amount)) : scaleReward(8 * amount) };
   if (result.category === 'cooking') return { ...base, itemId: 'bento', itemAmount: scaleReward(amount) };
   if (result.category === 'garden') return { ...base, itemId: 'fruit_tree_sapling', itemAmount: scaleReward(amount) };
-  return { ...base, energy: scaleReward(10 * amount), health: scaleReward(6 * amount) };
+  return { ...base, energy: scaleReward(10 * amount), health: pet ? scalePetStatDelta(pet, scaleReward(6 * amount)) : scaleReward(6 * amount) };
 };
 
 export const getPartnerScheduleExtraRewardCopies = (
@@ -674,7 +675,7 @@ export const claimPartnerScheduleResult = (
   if (!result) return { ...current, recentEvent: t('pet.partnerSchedule.noResult') };
   const safeChoice = result.size === 'short' ? 'coins' : choice;
   const extraRewardCopies = getPartnerScheduleExtraRewardCopies(current, result);
-  const reward = getPartnerScheduleClaimPreview(result, safeChoice, extraRewardCopies);
+  const reward = getPartnerScheduleClaimPreview(result, safeChoice, extraRewardCopies, current);
   const rewardCoins = reward.coins;
   const rewardSkillXp = reward.skillXp;
   const currentSkill = current.partnerSchedule.skills[result.category];

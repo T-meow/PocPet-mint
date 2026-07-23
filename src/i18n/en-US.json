@@ -3,6 +3,14 @@
     "comma": ", "
   },
   "ui": {
+    "quantity": {
+      "aria": "Choose quantity",
+      "decrease": "Decrease quantity",
+      "increase": "Increase quantity",
+      "value": "Quantity",
+      "presetsAria": "Choose how many items to use",
+      "preset": "Use {count} item(s)"
+    },
     "brand": {
       "eyebrow": "Pocket Pet"
     },
@@ -69,10 +77,12 @@
       "tabsAria": "Shop categories",
       "claimedOut": "Claimed out",
       "freeClaim": "Claim free {claimed}/{limit}",
+      "freeClaimBatch": "Claim x{count}",
       "price": "{price} coins",
       "discountToday": "Today only",
       "discountUsed": "Used",
       "priceNote": "Original {originalPrice} coins, {label} today",
+      "priceNoteBatch": "First item: original {originalPrice} coins, {label} today",
       "exchange": {
         "aria": "Heart exchange",
         "rate": "1 heart = {coins} coins",
@@ -1052,7 +1062,7 @@
     "weather": {
       "sunny": {
         "label": "Sunny",
-        "summary": "Good sunlight slows mood decay a little, and play gives mood +2."
+        "summary": "Good sunlight slows mood decay a little, and the extra play mood scales with the stat cap."
       },
       "cloudy": {
         "label": "Cloudy",
@@ -1060,7 +1070,7 @@
       },
       "rainy": {
         "label": "Rainy",
-        "summary": "Rain makes messes easier; cleaning gets +5, work earns -4 coins."
+        "summary": "Rain makes messes easier; the extra cleaning effect scales with the stat cap, and work earns 4 fewer coins."
       },
       "breezy": {
         "label": "Breezy",
@@ -1126,6 +1136,14 @@
       "dreamTalk": "Dream talk: ",
       "dreamEvent": "Dream: "
     },
+    "effectSummary": {
+      "hunger": "Hunger {amount}",
+      "mood": "Mood {amount}",
+      "cleanliness": "Cleanliness {amount}",
+      "energy": "Energy {amount}",
+      "health": "Health {amount}",
+      "wrap": " ({effects})"
+    },
     "interaction": {
       "cost": [
         "{name} played hard and got a little hungry.",
@@ -1158,10 +1176,10 @@
       "biscuit": "A neighbor brought a soda biscuit, inventory +1.",
       "neighborGiftNamed": "Your neighbor {neighbor} visited and left {item}, inventory +1.",
       "neighborGiftGeneric": "A neighbor visited and left {item}, inventory +1.",
-      "sun": "{name} basked in the sun, mood +8, cleanliness -2.",
-      "rest": "{name} woke up refreshed, energy +10.",
-      "snack": "{name} secretly found a snack, hunger +10, cleanliness -3.",
-      "nightmare": "{name} had a tiny bad dream, mood -5.",
+      "sun": "{name} basked in the sun.",
+      "rest": "{name} woke up refreshed.",
+      "snack": "{name} secretly found a snack.",
+      "nightmare": "{name} had a tiny bad dream.",
       "heart": "{name} received a small sticker, hearts +{hearts}."
     },
     "offlineDiary": {
@@ -1198,35 +1216,35 @@
         "{name} hid a small sticker for your return, hearts +{hearts}.",
         "{name} carefully prepared a welcome-home card, hearts +{hearts}."
       ],
-      "sunnyPlay": "{name} secretly basked in the sun, mood +6, cleanliness -2.",
-      "play": "{name} played alone for a while, mood +6, cleanliness -2.",
+      "sunnyPlay": "{name} secretly basked in the sun.",
+      "play": "{name} played alone for a while.",
       "sunnyPlayNamed": [
-        "{name} played in the sun with {neighbor}, mood +6, cleanliness -2.",
-        "{name} chased sunbeams by the window with {neighbor}, mood +6, cleanliness -2."
+        "{name} played in the sun with {neighbor}.",
+        "{name} chased sunbeams by the window with {neighbor}."
       ],
       "sunnyPlayGeneric": [
-        "{name} played in the sun with a neighbor, mood +6, cleanliness -2.",
-        "{name} chased patches of sunlight with a visiting neighbor, mood +6, cleanliness -2."
+        "{name} played in the sun with a neighbor.",
+        "{name} chased patches of sunlight with a visiting neighbor."
       ],
       "playNamed": [
-        "{name} played with {neighbor} for a while, mood +6, cleanliness -2.",
-        "{name} rolled a toy back and forth with {neighbor}, mood +6, cleanliness -2."
+        "{name} played with {neighbor} for a while.",
+        "{name} rolled a toy back and forth with {neighbor}."
       ],
       "playGeneric": [
-        "{name} played with a neighbor for a while, mood +6, cleanliness -2.",
-        "{name} shared the toys with a visiting neighbor, mood +6, cleanliness -2."
+        "{name} played with a neighbor for a while.",
+        "{name} shared the toys with a visiting neighbor."
       ],
       "hungryHappy": [
-        "{name} got a little hungry waiting, but was happy to see you, hunger -4, mood +4.",
-        "{name} forgot to eat while guarding the door, then brightened up when you returned, hunger -4, mood +4."
+        "{name} got a little hungry waiting, but was happy to see you.",
+        "{name} forgot to eat while guarding the door, then brightened up when you returned."
       ],
       "rest": [
-        "{name} rested calmly for a while, energy +8.",
-        "{name} found a cozy spot for a nap, energy +8."
+        "{name} rested calmly for a while.",
+        "{name} found a cozy spot for a nap."
       ],
       "mess": [
-        "{name} turned the corner into a mess, cleanliness -5.",
-        "{name} scattered the cushions while looking for a small toy, cleanliness -5."
+        "{name} turned the corner into a mess.",
+        "{name} scattered the cushions while looking for a small toy."
       ],
       "ticket": "{name} found a gacha ticket beneath the mat, gacha tickets +{tickets}.",
       "tenTickets": "{name} found a shining ten-pull ticket, gacha tickets +{tickets}!",
@@ -1234,29 +1252,29 @@
     },
     "sleepSettlement": {
       "tooShort": [
-        "{name} woke soon after lying down, a little groggy, mood -1.",
-        "{name} opened its eyes after only a brief rest and still looked sleepy, mood -1."
+        "{name} woke soon after lying down, a little groggy.",
+        "{name} opened its eyes after only a brief rest and still looked sleepy."
       ],
       "bad": [
-        "{name} slept poorly and seemed to have a small bad dream, mood -3, health -1.",
-        "{name} tossed and turned, then woke up looking uncomfortable, mood -3, health -1."
+        "{name} slept poorly and seemed to have a small bad dream.",
+        "{name} tossed and turned, then woke up looking uncomfortable."
       ],
       "good": [
-        "{name} slept deeply and nuzzled the blanket after waking, mood +4, energy +5.",
-        "{name} enjoyed a very comfortable sleep and woke with a long stretch, mood +4, energy +5."
+        "{name} slept deeply and nuzzled the blanket after waking.",
+        "{name} enjoyed a very comfortable sleep and woke with a long stretch."
       ],
       "normal": [
-        "{name} woke up feeling steadier, mood +2.",
-        "{name} woke after a quiet rest, mood +2."
+        "{name} woke up feeling steadier.",
+        "{name} woke after a quiet rest."
       ]
     },
     "streak": {
-      "play": "{name} played several times in a row and slowed down, energy -2, hunger -2.",
-      "clean": "{name} was washed too often and shook off water in protest, mood -4, hunger -1.",
-      "work": "{name} struggled with too much work in a row, mood -2, health -2.",
-      "feed": "{name} got a little too full and dirtied its mouth, mood -3, cleanliness -1.",
-      "gift": "{name} received too many gifts and did not know which one to hug first, mood -2.",
-      "touch": "{name} got shy from too much interaction and rested by your hand, mood -3, energy -1."
+      "play": "{name} played several times in a row and slowed down, energy -{energy}, hunger -{hunger}.",
+      "clean": "{name} was washed too often and shook off water in protest, mood -{mood}, hunger -{hunger}.",
+      "work": "{name} struggled with too much work in a row, mood -{mood}, health -{health}.",
+      "feed": "{name} got a little too full and dirtied its mouth, mood -{mood}, cleanliness -{cleanliness}.",
+      "gift": "{name} received too many gifts and did not know which one to hug first, mood -{mood}.",
+      "touch": "{name} got shy from too much interaction and rested by your hand, mood -{mood}, energy -{energy}."
     },
     "advance": {
       "wokeUp": "{name} woke up feeling great.",
@@ -1269,7 +1287,7 @@
       "lowEnergyPlay": "{name}'s energy is too low. Sleep or use an item to recover first.",
       "lowHungerBlocked": "{name} is too hungry to do that. Feed your pet first.",
       "play": "{name} had a great time playing.",
-      "clean": "{name} got clean and relaxed a little. Hunger -3, mood +1, energy -3.",
+      "clean": "{name} got clean and relaxed a little. Hunger -{hunger}, mood +{mood}, energy -{energy}.",
       "lowEnergyWork": "Not enough energy. Sleep or use an item before working.",
       "work": "{name} worked with you and earned {coins} coins.",
       "sleep": {
@@ -1285,11 +1303,16 @@
     "buy": {
       "missing": "This shop item does not exist.",
       "biscuitClaimedOut": "Today's soda biscuits are all claimed. Come back tomorrow.",
+      "biscuitLimitInsufficient": "You can claim at most {remaining} more soda biscuit(s) today.",
       "freeClaim": "Got a free {item} ({claimed}/{limit}).",
+      "freeClaimBatch": "Got {count} free {item} ({claimed}/{limit}).",
       "notEnoughCoins": "Not enough coins. {item} costs {price} coins.",
       "discount": "Bought {item} at today's discount for {price} coins.",
+      "discountBatch": "Bought {count} {item}; the first used today's discount. Total: {price} coins.",
       "free": "Got a free {item}.",
-      "paid": "Bought {item}."
+      "freeBatch": "Got {count} free {item}.",
+      "paid": "Bought {item}.",
+      "paidBatch": "Bought {count} {item} for {price} coins."
     },
     "item": {
       "missing": "This item does not exist.",
@@ -1297,9 +1320,14 @@
       "use": {
         "food": "{name} enjoyed {item}.",
         "foodWoke": "{name} woke up and enjoyed {item}.",
+        "foodBatch": "{name} enjoyed {count} {item}.",
+        "foodBatchWoke": "{name} woke up and enjoyed {count} {item}.",
         "gift": "You gave {name} {item}.",
+        "giftBatch": "You gave {name} {count} {item}.",
         "care": "{name} used {item}.",
         "careWoke": "{name} woke up and used {item}.",
+        "careBatch": "{name} used {count} {item}.",
+        "careBatchWoke": "{name} woke up and used {count} {item}.",
         "favorite": "This is Furo's favorite flavor, mood +{amount} extra.",
         "giftHeart": "The gift brought {hearts} heart(s).",
         "birthdayCake": "{name} enjoyed {item}. All stats are full.",
@@ -1337,8 +1365,8 @@
     ],
     "dreamEvent": {
       "cloudNap": [
-        "{name} dreamed of lying on soft clouds, mood +3 after waking.",
-        "{name} dreamed of riding a cloud on a slow journey, mood +3 after waking."
+        "{name} dreamed of lying on soft clouds.",
+        "{name} dreamed of riding a cloud on a slow journey."
       ],
       "coinPath": [
         "{name} dreamed of collecting coins on a star path, coins +10.",
@@ -1353,8 +1381,8 @@
         "{name} brought a soda biscuit back from a dream picnic, inventory +1."
       ],
       "puddleRun": [
-        "{name} dreamed of running through puddles, energy +4, cleanliness -1.",
-        "{name} dreamed of chasing splashes after the rain, energy +4, cleanliness -1."
+        "{name} dreamed of running through puddles.",
+        "{name} dreamed of chasing splashes after the rain."
       ]
     },
     "reward": {

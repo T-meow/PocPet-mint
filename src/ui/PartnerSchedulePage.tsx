@@ -84,8 +84,8 @@ export const PartnerSchedulePage = ({
   const activeDefinition = active ? getPartnerScheduleDefinition(active.templateId) : undefined;
   const activeProgress = active ? getPartnerScheduleProgress(active) : undefined;
   const resultDefinition = pendingResult ? getPartnerScheduleDefinition(pendingResult.templateId) : undefined;
-  const coinClaim = pendingResult ? getPartnerScheduleClaimPreview(pendingResult, 'coins') : undefined;
-  const categoryClaim = pendingResult ? getPartnerScheduleClaimPreview(pendingResult, 'category') : undefined;
+  const coinClaim = pendingResult ? getPartnerScheduleClaimPreview(pendingResult, 'coins', 0, pet) : undefined;
+  const categoryClaim = pendingResult ? getPartnerScheduleClaimPreview(pendingResult, 'category', 0, pet) : undefined;
   const skills = categories.map((category) => schedule.skills[category]);
   const level3Count = skills.filter((skill) => skill.level >= 3).length;
   const level6Count = skills.filter((skill) => skill.level >= 6).length;

@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "check:date-rewards": "tsx scripts/check-date-rewards.ts",
     "check:garden-care": "tsx scripts/check-garden-care.ts",
+    "check:stat-scaling-batch": "tsx scripts/check-stat-scaling-batch.ts",
     "check:gacha": "tsx scripts/check-golden-apple-gacha.ts",
     "preview": "vite preview --host 127.0.0.1",
     "tauri": "tauri",

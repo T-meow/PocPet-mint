@@ -1460,10 +1460,19 @@ h1 {
   word-break: break-word;
 }
 
-.shop-item button {
+.shop-item > .shop-item__actions {
+  display: flex;
+  width: 112px;
   align-self: center;
-  min-width: 88px;
-  max-width: 128px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shop-item__actions > button[data-buy-item] {
+  align-self: center;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   min-height: 40px;
   overflow: hidden;
   border: 0;
@@ -1476,7 +1485,7 @@ h1 {
   white-space: nowrap;
 }
 
-.shop-item button:disabled {
+.shop-item__actions > button[data-buy-item]:disabled {
   cursor: not-allowed;
   color: #7a8799;
   background: #e5eaf1;
@@ -1594,6 +1603,66 @@ h1 {
   font-size: 0.76rem;
   font-weight: 800;
   white-space: nowrap;
+}
+
+.quantity-stepper {
+  display: flex;
+  width: 112px;
+  height: 34px;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid #c8d3e1;
+  border-radius: 8px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.quantity-stepper .quantity-stepper__button {
+  display: inline-flex;
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #2b527f;
+  background: #edf4fc;
+  box-sizing: border-box;
+}
+
+.quantity-stepper .quantity-stepper__button:disabled {
+  color: #9aa7b7;
+  background: #f2f5f8;
+}
+
+.quantity-stepper__input {
+  width: 42px;
+  min-width: 42px;
+  height: 32px;
+  padding: 0 2px;
+  border: 0;
+  border-right: 1px solid #d6dee9;
+  border-left: 1px solid #d6dee9;
+  border-radius: 0;
+  outline: 0;
+  color: #172034;
+  background: #fff;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 850;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.quantity-stepper__input::-webkit-inner-spin-button,
+.quantity-stepper__input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
 }
 
 .settings-anniversary-field {
@@ -1948,10 +2017,23 @@ h1 {
     font-size: 0.84rem;
   }
 
-  .shop-item button {
+  .shop-item__actions {
     grid-column: 1 / -1;
     width: 100%;
-    max-width: none;
+    align-items: stretch;
+  }
+
+  .shop-item__actions .quantity-stepper {
+    width: 100%;
+  }
+
+  .shop-item__actions .quantity-stepper__input {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .shop-item__actions > button[data-buy-item] {
     padding: 8px 10px;
     overflow-wrap: anywhere;
     text-overflow: clip;

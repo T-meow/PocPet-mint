@@ -14,7 +14,7 @@ import { getDailyResetDateKey } from '../src/core/dailyReset';
 import { claimDailyWishReward, getDailyWishView } from '../src/core/dailyWishes';
 import { advancePet, advancePomodoro } from '../src/core/petLifecycle';
 import { plantTree, selectGardenSlot } from '../src/core/garden';
-import { getEnergyRecoveryIntervalMs } from '../src/core/petStats';
+import { getEnergyRecoveryIntervalMs, scalePetStatDelta } from '../src/core/petStats';
 import { getSeasonForDate } from '../src/core/season';
 import {
   advancePartnerSchedule,
@@ -174,8 +174,8 @@ const basePreview = getPartnerScheduleOfferPreview(level3, definition, now);
 const level2Preview = getPartnerScheduleOfferPreview(withCategorySkill(level3, definition.category, skill(2)), definition, now);
 assert.equal(level2Preview.energyCost, Math.max(1, Math.round(definition.energyCost * 0.9)));
 const level4Preview = getPartnerScheduleOfferPreview(withCategorySkill(level3, definition.category, skill(4)), definition, now);
-assert.equal(level4Preview.hungerCost, Math.max(1, Math.round(definition.hungerCost * 0.9)));
-assert.equal(level4Preview.moodCost, Math.max(1, Math.round(definition.moodCost * 0.9)));
+assert.equal(level4Preview.hungerCost, scalePetStatDelta(level3, Math.max(1, Math.round(definition.hungerCost * 0.9))));
+assert.equal(level4Preview.moodCost, scalePetStatDelta(level3, Math.max(1, Math.round(definition.moodCost * 0.9))));
 const level5Preview = getPartnerScheduleOfferPreview(withCategorySkill(level3, definition.category, skill(5)), definition, now);
 assert.equal(level5Preview.durationMs, Math.round(definition.durationMinutes * minuteMs * 0.95));
 const level7Preview = getPartnerScheduleOfferPreview(withCategorySkill(level3, definition.category, skill(7)), definition, now);
@@ -517,7 +517,6 @@ for (const category of ['study', 'cooking', 'garden', 'exercise'] as const) {
     templateId: categoryDefinition.id,
     category,
   }, 1);
-  const categoryPreview = getPartnerScheduleClaimPreview(categoryResult, 'category');
   const categoryBonusState: PetState = {
     ...combinedScheduleBonusPet,
     coins: 100,
@@ -536,6 +535,7 @@ for (const category of ['study', 'cooking', 'garden', 'exercise'] as const) {
       skills: { ...combinedScheduleBonusPet.partnerSchedule.skills, [category]: skill(1) },
     },
   };
+  const categoryPreview = getPartnerScheduleClaimPreview(categoryResult, 'category', 0, categoryBonusState);
   const categoryBonusClaimed = claimPartnerScheduleResult(categoryBonusState, 'category', now);
   assert.equal(categoryBonusClaimed.coins - categoryBonusState.coins, categoryPreview.coins * 2, `${category} should duplicate category coins`);
   assert.equal(categoryBonusClaimed.partnerSchedule.skills[category].xp, categoryPreview.skillXp * 2, `${category} should duplicate category skill XP`);

@@ -1,13 +1,16 @@
+import { useState } from 'react';
 import { PackageOpen, ShoppingBag, Sprout, X } from 'lucide-react';
-import { shopCategories, type Inventory, type InventoryItemDefinition, type ItemId, type ShopCategory } from '../core/pet';
+import { batchActionUnlockLevel, maxBatchQuantity, shopCategories, type Inventory, type InventoryItemDefinition, type ItemId, type ShopCategory } from '../core/pet';
 import { unknownItemIcon } from '../assets';
 import { t } from '../i18n';
 import { DialogShell } from './DialogShell';
 import { getItemEffectBadges, getItemEffectTitle } from './itemEffectBadges';
+import { getValidQuantityPreset, QuantityPresets } from './QuantityPresets';
 
 interface InventoryModalProps {
   items: readonly InventoryItemDefinition[];
   inventory: Inventory;
+  petLevel: number;
   itemIconMap: Partial<Record<string, string>>;
   activeCategory: ShopCategory;
   isPetBusy: boolean;
@@ -15,12 +18,13 @@ interface InventoryModalProps {
   onClose: () => void;
   onOpenShop: (category: ShopCategory) => void;
   onOpenGarden: () => void;
-  onUseItem: (itemId: ItemId) => void;
+  onUseItem: (itemId: ItemId, quantity: number) => void;
 }
 
 export const InventoryModal = ({
   items,
   inventory,
+  petLevel,
   itemIconMap,
   activeCategory,
   isPetBusy,
@@ -30,6 +34,7 @@ export const InventoryModal = ({
   onOpenGarden,
   onUseItem,
 }: InventoryModalProps) => {
+  const [quantityByItem, setQuantityByItem] = useState<Record<string, number>>({});
   const visibleItems = items.filter((item) => item.kind === activeCategory);
 
   return (
@@ -80,14 +85,24 @@ export const InventoryModal = ({
       {visibleItems.length > 0 ? (
         <div className="inventory-modal__list">
           {visibleItems.map((item) => {
-            const effectBadges = getItemEffectBadges(item.effect);
             const icon = itemIconMap[item.id] ?? item.imageUrl ?? unknownItemIcon;
             const isGardenItem = item.kind === 'garden';
+            const canBatch = petLevel >= batchActionUnlockLevel
+              && !isGardenItem
+              && item.usable
+              && item.id !== 'golden_apple'
+              && item.id !== 'birthday_cake';
+            const ownedCount = inventory[item.id] ?? 0;
+            const maxQuantity = Math.min(maxBatchQuantity, ownedCount);
+            const quantity = canBatch
+              ? getValidQuantityPreset(quantityByItem[item.id] ?? 1, maxQuantity)
+              : 1;
+            const effectBadges = getItemEffectBadges(item.effect, quantity);
             return (
-              <article className="inventory-modal__item" key={item.id} title={getItemEffectTitle(item.displaySummary, item.effect)}>
+              <article className="inventory-modal__item" key={item.id} title={getItemEffectTitle(item.displaySummary, item.effect, quantity)}>
                 <span className="inventory-item__icon-wrap">
                   <img src={icon} alt="" aria-hidden="true" />
-                  <strong className="inventory-item__count">x{inventory[item.id]}</strong>
+                  <strong className="inventory-item__count">x{ownedCount}</strong>
                 </span>
                 <div className="inventory-item__copy">
                   <div className="inventory-item__title-row">
@@ -100,22 +115,32 @@ export const InventoryModal = ({
                   </div>
                   <small className="inventory-item__summary">{item.displaySummary}</small>
                 </div>
-                <button
-                  type="button"
-                  className={isGardenItem ? 'secondary-button inventory-modal__action' : 'primary-button inventory-modal__action'}
-                  disabled={!isGardenItem && (isPetBusy || !item.usable)}
-                  title={!isGardenItem && isPetBusy ? t('ui.inventory.partnerScheduleBusy') : undefined}
-                  onClick={() => isGardenItem ? onOpenGarden() : onUseItem(item.id)}
-                >
-                  {isGardenItem && <Sprout size={17} aria-hidden="true" />}
-                  {isGardenItem
-                    ? t('ui.inventory.goGarden')
-                    : isPetBusy
-                      ? t('ui.inventory.partnerScheduleBusyShort')
-                      : item.usable
-                        ? t('ui.inventory.use')
-                        : t('ui.inventory.unavailable')}
-                </button>
+                <div className="inventory-modal__actions">
+                  {canBatch && (
+                    <QuantityPresets
+                      value={quantity}
+                      max={maxQuantity}
+                      disabled={isPetBusy}
+                      onChange={(next) => setQuantityByItem((current) => ({ ...current, [item.id]: next }))}
+                    />
+                  )}
+                  <button
+                    type="button"
+                    className={isGardenItem ? 'secondary-button inventory-modal__action' : 'primary-button inventory-modal__action'}
+                    disabled={!isGardenItem && (isPetBusy || !item.usable || ownedCount < quantity)}
+                    title={!isGardenItem && isPetBusy ? t('ui.inventory.partnerScheduleBusy') : undefined}
+                    onClick={() => isGardenItem ? onOpenGarden() : onUseItem(item.id, quantity)}
+                  >
+                    {isGardenItem && <Sprout size={17} aria-hidden="true" />}
+                    {isGardenItem
+                      ? t('ui.inventory.goGarden')
+                      : isPetBusy
+                        ? t('ui.inventory.partnerScheduleBusyShort')
+                        : item.usable
+                          ? t('ui.inventory.use')
+                          : t('ui.inventory.unavailable')}
+                  </button>
+                </div>
               </article>
             );
           })}

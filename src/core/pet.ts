@@ -250,6 +250,9 @@ export {
   getNextUpgradeHeartCost,
   getPetEnergyCap,
   getPetStatCap,
+  getPetStatRatio,
+  getPetStatScale,
+  getPetStatThreshold,
   getUpgradeHeartCost,
   linearUpgradeHeartBaseCost,
   linearUpgradeHeartCostPerLevel,
@@ -260,8 +263,10 @@ export {
   lowEnergyThreshold,
   maxPetLevel,
   sleepEnergyRecoveryMs,
+  scalePetStatDelta,
   statCapPerLevel,
 } from './petStats';
+export type { ScaledPetStatKey } from './petStats';
 export { getWeatherForDate, weatherInfo, weatherTypeSet, weatherTypes } from './weather';
 export { getSeasonForDate, getSeasonInfo } from './season';
 export { DAILY_RESET_HOUR, getDailyResetDateKey, isSameDailyResetDay } from './dailyReset';
@@ -349,6 +354,7 @@ export {
 } from './petLifecycle';
 export {
   applyPetAction,
+  batchActionUnlockLevel,
   buyItem,
   exchangeHeartForCoins,
   interactWithPet,
@@ -361,8 +367,13 @@ export {
   updatePomodoroSettings,
   upgradePet,
   getWorkReward,
+  getEffectiveBatchQuantity,
+  getItemPurchaseQuote,
+  maxBatchQuantity,
+  normalizeBatchQuantity,
   useInventoryItem,
 } from './petActions';
+export type { ItemPurchaseQuote, ItemPurchaseQuoteReason } from './petActions';
 
 export type { ClaimedDateReward, DateRewardItem, DateRewardKind, FestivalConfig } from './dateRewards';
 export {

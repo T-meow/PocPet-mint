@@ -4,7 +4,7 @@ import { incrementDailyWishClaim, incrementReturnWelcomeClaim, recordEarnedCoins
 import { addInventoryItem, allItemIds } from './items';
 import { resolveDailyGachaTicket } from './goldenAppleGacha';
 import { getPartnerScheduleCrossSystemEffects } from './partnerScheduleEffects';
-import { clampCoins, clampCount } from './petStats';
+import { clampCoins, clampCount, getPetStatThreshold } from './petStats';
 import type {
   DailyWishActionKey,
   DailyWishId,
@@ -17,7 +17,7 @@ import type {
 } from './petTypes';
 import { hashString, isNumber } from './utils';
 
-type DailyWishSnapshot = Pick<PetState, 'createdAt' | 'name' | 'energy' | 'health' | 'isSleeping'>;
+type DailyWishSnapshot = Pick<PetState, 'level' | 'createdAt' | 'name' | 'energy' | 'health' | 'isSleeping'>;
 
 type DailyWishConfig = {
   id: DailyWishId;
@@ -68,7 +68,7 @@ const isReturnWelcomeTaskId = (value: unknown): value is ReturnWelcomeTaskId =>
 const getDailyWishConfig = (id: DailyWishId) => dailyWishConfigs.find((config) => config.id === id) ?? dailyWishConfigs[0];
 
 const getAvailableDailyWishConfigs = (pet: DailyWishSnapshot) => {
-  const canSpendEnergy = !pet.isSleeping && pet.energy >= 34 && pet.health > 35;
+  const canSpendEnergy = !pet.isSleeping && pet.energy >= 34 && pet.health > getPetStatThreshold(pet, 35);
   const configs = dailyWishConfigs.filter((config) => {
     if (config.action === 'play' || config.action === 'work') return canSpendEnergy;
     return true;
@@ -130,8 +130,8 @@ const getReturnWelcomeTaskConfig = (taskId: ReturnWelcomeTaskId): ReturnWelcomeT
 };
 
 const chooseReturnWelcomeTask = (pet: PetState): ReturnWelcomeTaskConfig => {
-  if (pet.hunger <= 48) return getReturnWelcomeTaskConfig('feed_once');
-  if (pet.cleanliness <= 48) return getReturnWelcomeTaskConfig('clean_once');
+  if (pet.hunger <= getPetStatThreshold(pet, 48)) return getReturnWelcomeTaskConfig('feed_once');
+  if (pet.cleanliness <= getPetStatThreshold(pet, 48)) return getReturnWelcomeTaskConfig('clean_once');
   if (!pet.isSleeping && pet.energy <= 34) return getReturnWelcomeTaskConfig('sleep_once');
   return getReturnWelcomeTaskConfig('touch_once');
 };

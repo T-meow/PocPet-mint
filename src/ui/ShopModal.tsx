@@ -1,8 +1,12 @@
+import { useState } from 'react';
 import { Heart } from 'lucide-react';
 import {
+  batchActionUnlockLevel,
   getDailyBiscuitClaimInfo,
   getDailyHeartExchangeInfo,
   getDailyShopDiscountInfo,
+  getItemPurchaseQuote,
+  maxBatchQuantity,
   shopCategories,
   type InventoryItemDefinition,
   type ItemId,
@@ -14,6 +18,7 @@ import { t } from '../i18n';
 import { getItemEffectBadges } from './itemEffectBadges';
 import { formatCompactNumber } from './numberFormat';
 import { DialogShell } from './DialogShell';
+import { QuantityStepper } from './QuantityStepper';
 
 interface ShopModalProps {
   pet: PetState;
@@ -22,7 +27,7 @@ interface ShopModalProps {
   itemIconMap: Partial<Record<string, string>>;
   onClose: () => void;
   onSelectCategory: (category: ShopCategory) => void;
-  onBuyItem: (itemId: ItemId) => void;
+  onBuyItem: (itemId: ItemId, quantity: number) => void;
   onExchangeHeart: () => void;
   isHeartExchangeCoolingDown: boolean;
 }
@@ -38,8 +43,10 @@ export const ShopModal = ({
   onExchangeHeart,
   isHeartExchangeCoolingDown,
 }: ShopModalProps) => {
-  const discountInfo = getDailyShopDiscountInfo(pet);
-  const heartExchangeInfo = getDailyHeartExchangeInfo(pet);
+  const [quantityByItem, setQuantityByItem] = useState<Record<string, number>>({});
+  const now = Date.now();
+  const discountInfo = getDailyShopDiscountInfo(pet, now);
+  const heartExchangeInfo = getDailyHeartExchangeInfo(pet, now);
   const canExchangeHeart = pet.hearts > 0 && heartExchangeInfo.canExchange && !isHeartExchangeCoolingDown;
   const fullCoinText = t('ui.shop.wallet', { coins: pet.coins });
   const fullHeartText = t('ui.top.heartsAria', { hearts: pet.hearts });
@@ -104,20 +111,28 @@ export const ShopModal = ({
             const isDiscountAvailable = Boolean(discountEntry && !discountEntry.used);
             const effectBadges = getItemEffectBadges(item.effect);
             const icon = itemIconMap[item.id] ?? item.imageUrl ?? unknownItemIcon;
-            const displayPrice = isDiscountAvailable ? discountEntry?.price ?? item.price : item.price;
+            const biscuitClaimInfo = item.id === 'emergency_biscuit' ? getDailyBiscuitClaimInfo(pet, now) : undefined;
+            const remainingBiscuitClaims = biscuitClaimInfo ? Math.max(0, biscuitClaimInfo.limit - biscuitClaimInfo.claimed) : undefined;
+            const storedQuantity = quantityByItem[item.id] ?? 1;
+            const quantity = remainingBiscuitClaims === undefined
+              ? storedQuantity
+              : Math.min(storedQuantity, Math.max(1, remainingBiscuitClaims));
+            const quote = getItemPurchaseQuote(pet, item.id, quantity, now, item);
+            const displayPrice = quote.totalPrice;
             const displayPriceText = formatCompactNumber(displayPrice);
             const priceTitle = t('ui.shop.price', { price: displayPrice });
             const originalPriceText = discountEntry?.originalPrice === undefined ? '' : formatCompactNumber(discountEntry.originalPrice);
             const originalPriceTitle = discountEntry?.originalPrice === undefined
               ? ''
               : t('ui.shop.priceNote', { originalPrice: discountEntry.originalPrice, label: discountInfo?.label });
-            const canAfford = pet.coins >= displayPrice;
-            const biscuitClaimInfo = item.id === 'emergency_biscuit' ? getDailyBiscuitClaimInfo(pet) : undefined;
-            const isClaimedOut = biscuitClaimInfo ? !biscuitClaimInfo.canClaim : false;
+            const canAfford = quote.canPurchase;
+            const isClaimedOut = quote.reason === 'daily_limit';
             const buttonLabel = biscuitClaimInfo
               ? isClaimedOut
                 ? t('ui.shop.claimedOut')
-                : t('ui.shop.freeClaim', { claimed: biscuitClaimInfo.claimed, limit: biscuitClaimInfo.limit })
+                : quantity > 1
+                  ? t('ui.shop.freeClaimBatch', { count: quantity })
+                  : t('ui.shop.freeClaim', { claimed: biscuitClaimInfo.claimed, limit: biscuitClaimInfo.limit })
               : t('ui.shop.price', { price: displayPriceText });
 
             return (
@@ -140,9 +155,19 @@ export const ShopModal = ({
                     )}
                   </div>
                   <span className="shop-item__summary">{item.displaySummary}</span>
-                  {isDiscountAvailable && <small className="shop-price-note" title={originalPriceTitle}>{t('ui.shop.priceNote', { originalPrice: originalPriceText, label: discountInfo?.label })}</small>}
+                  {isDiscountAvailable && <small className="shop-price-note" title={originalPriceTitle}>{t(quantity > 1 ? 'ui.shop.priceNoteBatch' : 'ui.shop.priceNote', { originalPrice: originalPriceText, label: discountInfo?.label })}</small>}
                 </div>
-                <button type="button" data-buy-item={item.id} disabled={isClaimedOut || !canAfford} title={biscuitClaimInfo ? undefined : priceTitle} onClick={() => onBuyItem(item.id)}>{buttonLabel}</button>
+                <div className="shop-item__actions">
+                  {pet.level >= batchActionUnlockLevel && (
+                    <QuantityStepper
+                      value={quantity}
+                      max={remainingBiscuitClaims === undefined ? maxBatchQuantity : Math.max(1, remainingBiscuitClaims)}
+                      disabled={remainingBiscuitClaims === 0}
+                      onChange={(next) => setQuantityByItem((current) => ({ ...current, [item.id]: next }))}
+                    />
+                  )}
+                  <button type="button" data-buy-item={item.id} disabled={isClaimedOut || !canAfford} title={biscuitClaimInfo ? undefined : priceTitle} onClick={() => onBuyItem(item.id, quantity)}>{buttonLabel}</button>
+                </div>
               </article>
             );
           })}

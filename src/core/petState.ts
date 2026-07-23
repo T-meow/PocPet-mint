@@ -10,7 +10,7 @@ import { defaultGoldenAppleGachaState, normalizeGoldenAppleGachaState } from './
 import { addInventoryItem } from './items';
 import { dailyBiscuitClaimLimit, dailyHeartExchangeLimit, isBuiltinItemId } from './items';
 import { neighborGiftDailyLimit } from './neighbors';
-import { clampCoins, clampCount, clampHealth, clampLevel, clampStat, defaultPetName, getPetEnergyCap, getPetStatCap, lowCleanlinessSleepConfirmClicks } from './petStats';
+import { clampCoins, clampCount, clampHealth, clampLevel, clampPetEnergy, clampStat, defaultPetName, getPetStatThreshold, getPetStatCap, lowCleanlinessSleepConfirmClicks } from './petStats';
 import type { AchievementState, ActionStreak, BuiltinItemId, Inventory, PartnerScheduleCategory, PetState, PetStatus, RecentActivity, WeatherType } from './petTypes';
 import { defaultPomodoroState, normalizePomodoroState } from './pomodoro';
 import { defaultPartnerScheduleState, normalizePartnerScheduleState } from './partnerSchedule';
@@ -150,6 +150,7 @@ export const createDefaultPet = (now = Date.now()): PetState => ({
   goldenAppleGacha: defaultGoldenAppleGachaState(now, now),
   classicEndgame: defaultClassicEndgameState(),
   dailyWish: createDailyWish({
+    level: 1,
     createdAt: now,
     name: defaultPetName,
     energy: 76,
@@ -160,11 +161,11 @@ export const createDefaultPet = (now = Date.now()): PetState => ({
 
 export const getPrimaryStatus = (pet: PetState): PetStatus => {
   if (pet.isSleeping) return 'sleeping';
-  if (pet.health <= 35) return 'sick';
-  if (pet.hunger <= 32) return 'hungry';
-  if (pet.cleanliness <= 32) return 'dirty';
+  if (pet.health <= getPetStatThreshold(pet, 35)) return 'sick';
+  if (pet.hunger <= getPetStatThreshold(pet, 32)) return 'hungry';
+  if (pet.cleanliness <= getPetStatThreshold(pet, 32)) return 'dirty';
   if (pet.energy <= 28) return 'tired';
-  if (pet.mood <= 30) return 'sad';
+  if (pet.mood <= getPetStatThreshold(pet, 30)) return 'sad';
   return 'content';
 };
 
@@ -271,7 +272,6 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   const classicLegacyCoinCurveRefund = getClassicLegacyCoinCurveMigrationRefund(raw.classicEndgame);
   const classicEndgame = normalizeClassicEndgameState(raw.classicEndgame);
   const statCap = getPetStatCap(level);
-  const energyCap = getPetEnergyCap({ level, classicEndgame });
   const createdAt = isNumber(raw.createdAt) && raw.createdAt >= 0
     ? raw.createdAt
     : ageSeconds > 0
@@ -281,10 +281,11 @@ export const normalizePet = (value: unknown, now = Date.now(), options: Normaliz
   const pendingYearReview = normalizeYearReview(raw.pendingYearReview);
   const yearlyStats = normalizeYearlyStats(raw.yearlyStats, now);
   const normalizedName = typeof raw.name === 'string' && raw.name.trim() ? raw.name.trim().slice(0, 32) : fallback.name;
-  const normalizedEnergy = clampStat(isNumber(raw.energy) ? raw.energy : fallback.energy, energyCap);
+  const normalizedEnergy = clampPetEnergy({ level, classicEndgame }, isNumber(raw.energy) ? raw.energy : fallback.energy);
   const normalizedHealth = clampHealth(isNumber(raw.health) ? raw.health : fallback.health, statCap);
   const normalizedIsSleeping = Boolean(raw.isSleeping);
   const dailyWish = normalizeDailyWishState(raw.dailyWish, {
+    level,
     createdAt,
     name: normalizedName,
     energy: normalizedEnergy,

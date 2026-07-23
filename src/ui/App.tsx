@@ -27,6 +27,7 @@ import {
   gardenCompensationCoins,
   gardenCompensationRewardId,
   getNextUpgradeHeartCost,
+  getPetStatThreshold,
   getInventoryItem,
   getInventoryDefinitions,
   getItemDefinition,
@@ -200,10 +201,16 @@ const readFileText = (file: File) =>
   });
 
 const getPetInteractionOutcome = (pet: PetState): SoundOutcome => {
-  if (pet.isSleeping || isPetLowEnergy(pet) || pet.health <= pomodoroMinHealthThreshold || pet.hunger <= 32 || pet.mood <= 30) {
+  if (
+    pet.isSleeping
+    || isPetLowEnergy(pet)
+    || pet.health <= getPetStatThreshold(pet, pomodoroMinHealthThreshold)
+    || pet.hunger <= getPetStatThreshold(pet, 32)
+    || pet.mood <= getPetStatThreshold(pet, 30)
+  ) {
     return 'low_state';
   }
-  return pet.mood >= 75 && pet.health >= 40 ? 'heart' : 'success';
+  return pet.mood >= getPetStatThreshold(pet, 75) && pet.health >= getPetStatThreshold(pet, 40) ? 'heart' : 'success';
 };
 
 const createPetForMod = (mod: ActivePetMod | null) => {
@@ -350,7 +357,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
   const showPomodoroPanel = isPomodoroOpen;
   const pomodoroStartTitle = isLowEnergy
     ? t('ui.pomodoro.lowEnergyTitle')
-    : pet.health <= pomodoroMinHealthThreshold
+    : pet.health <= getPetStatThreshold(pet, pomodoroMinHealthThreshold)
       ? t('ui.pomodoro.lowHealthTitle')
       : undefined;
   const isPomodoroActionDisabled = !pet.pomodoro.isRunning && !canRunPomodoro;
@@ -439,13 +446,13 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     });
   };
 
-  const handleBuyItem = (itemId: ItemId) => {
+  const handleBuyItem = (itemId: ItemId, quantity: number) => {
     playAfterUnlock('tap');
     setPet((current) => {
       const beforeCount = getInventoryCount(current, itemId);
       const beforeCoins = current.coins;
       const item = getItemDefinition(itemRegistry, itemId);
-      const next = buyItem(current, itemId, Date.now(), { item });
+      const next = buyItem(current, itemId, Date.now(), { item, quantity });
       const didGainItem = getInventoryCount(next, itemId) > beforeCount;
       const didSpendCoins = next.coins < beforeCoins;
       playSfx(didGainItem ? (didSpendCoins ? 'purchase' : 'coin') : 'error');
@@ -475,7 +482,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     });
   };
 
-  const useItemNow = (itemId: ItemId, suppressGoldenAppleConfirm = false) => {
+  const useItemNow = (itemId: ItemId, quantity = 1, suppressGoldenAppleConfirm = false) => {
     playAfterUnlock('tap');
     setPet((current) => {
       const currentWithPreference = suppressGoldenAppleConfirm
@@ -489,6 +496,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
         favoriteText: (amount) => formatFavoriteFoodText(activeMod, amount),
         itemName: displayItem?.displayName,
         item,
+        quantity,
       });
       playSfx(getInventoryCount(next, itemId) < beforeCount ? getItemSfx(itemId, item) : 'error');
       return commitPet(next);
@@ -575,18 +583,18 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
     });
   };
 
-  const handleUseItem = (itemId: ItemId) => {
+  const handleUseItem = (itemId: ItemId, quantity: number) => {
     if (itemId === 'golden_apple' && !petRef.current.suppressGoldenAppleUseConfirm) {
       playAfterUnlock('tap');
       setGoldenAppleUseConfirmOpen(true);
       return;
     }
-    useItemNow(itemId);
+    useItemNow(itemId, quantity);
   };
 
   const handleSuppressGoldenAppleUseConfirm = () => {
     setGoldenAppleUseConfirmOpen(false);
-    useItemNow('golden_apple', true);
+    useItemNow('golden_apple', 1, true);
   };
 
   const handleConfirmPartnerScheduleCancel = () => {
@@ -1286,6 +1294,7 @@ const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToP
         <InventoryModal
           items={ownedItems}
           inventory={pet.inventory}
+          petLevel={pet.level}
           itemIconMap={itemIconMap}
           activeCategory={inventoryController.activeCategory}
           isPetBusy={Boolean(pet.partnerSchedule.active)}

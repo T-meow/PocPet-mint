@@ -428,14 +428,15 @@ export const addInventoryItem = (inventory: Inventory, id: ItemId | string, amou
   [id]: Math.max(0, getInventoryCount(inventory, id) + amount),
 });
 
-export const removeInventoryItem = (inventory: Inventory, id: ItemId | string): Inventory => {
+export const removeInventoryItem = (inventory: Inventory, id: ItemId | string, amount = 1): Inventory => {
   const count = getInventoryCount(inventory, id);
-  if (count <= 1) {
+  const removed = Math.max(1, Math.floor(amount));
+  if (count <= removed) {
     const next = { ...inventory };
     delete next[id];
     return next;
   }
-  return { ...inventory, [id]: count - 1 };
+  return { ...inventory, [id]: count - removed };
 };
 
 const getDailyDiscountPrice = (price: number) => Math.max(1, Math.ceil(price * 0.7));

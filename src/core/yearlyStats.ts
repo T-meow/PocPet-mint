@@ -128,7 +128,7 @@ export const ensureYearlyStatsForDate = (pet: PetState, now = Date.now()): PetSt
   return { ...pet, yearlyStats: stats, pendingYearReview, lastYearReviewYear };
 };
 
-export const recordYearlyCareAction = (pet: PetState, action: CareActionKey, now = Date.now()): PetState => {
+export const recordYearlyCareAction = (pet: PetState, action: CareActionKey, now = Date.now(), amount = 1): PetState => {
   if (!yearlyCareKeys.includes(action as YearlyCareActionKey)) return ensureYearlyStatsForDate(pet, now);
   const current = ensureYearlyStatsForDate(pet, now);
   const key = action as YearlyCareActionKey;
@@ -138,19 +138,19 @@ export const recordYearlyCareAction = (pet: PetState, action: CareActionKey, now
       ...current.yearlyStats,
       careActionCounts: {
         ...current.yearlyStats.careActionCounts,
-        [key]: current.yearlyStats.careActionCounts[key] + 1,
+        [key]: current.yearlyStats.careActionCounts[key] + Math.max(0, Math.floor(amount)),
       },
     },
   };
 };
 
-export const recordYearlyItemUse = (pet: PetState, now = Date.now()): PetState => {
+export const recordYearlyItemUse = (pet: PetState, now = Date.now(), amount = 1): PetState => {
   const current = ensureYearlyStatsForDate(pet, now);
   return {
     ...current,
     yearlyStats: {
       ...current.yearlyStats,
-      itemUseCount: current.yearlyStats.itemUseCount + 1,
+      itemUseCount: current.yearlyStats.itemUseCount + Math.max(0, Math.floor(amount)),
     },
   };
 };

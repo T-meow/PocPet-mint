@@ -517,10 +517,12 @@ export interface UseInventoryItemOptions {
   favoriteText?: (amount: number) => string | undefined;
   itemName?: string;
   item?: ItemDefinition;
+  quantity?: number;
 }
 
 export interface BuyItemOptions {
   item?: ItemDefinition;
+  quantity?: number;
 }
 
 

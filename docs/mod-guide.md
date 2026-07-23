@@ -149,9 +149,10 @@ Custom item limits:
 
 - `kind` must be `food`, `item`, `care`, or `garden`.
 - `effect` may only contain `hunger`, `mood`, `cleanliness`, `energy`, and `health`, each from `-100..100`.
+- `effect` is a fixed per-item point value. It does not scale with pet level or stat cap; batch use after level 20 applies it once per consumed item.
 - `price` must be an integer from `0..99999`.
 - If `image` is set, it must point to `items/*.png` at the zip root. Missing referenced images import with a placeholder; unreferenced custom image files are rejected.
-- Custom items do not count toward fixed built-in collection achievements, but total purchase/use counters can still increase.
+- Custom items do not count toward fixed built-in collection achievements, but total purchase/use counters can still increase. After level 20, shop and inventory actions can process 1-99 items at once, with coins, inventory, and counters settled by the actual quantity.
 
 ## Image Guidelines
 

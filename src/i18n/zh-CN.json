@@ -3,6 +3,14 @@
     "comma": "，"
   },
   "ui": {
+    "quantity": {
+      "aria": "选择数量",
+      "decrease": "减少数量",
+      "increase": "增加数量",
+      "value": "数量",
+      "presetsAria": "选择道具使用数量",
+      "preset": "使用 {count} 个道具"
+    },
     "brand": {
       "eyebrow": "Pocket Pet"
     },
@@ -69,10 +77,12 @@
       "tabsAria": "商店分类",
       "claimedOut": "今日已领完",
       "freeClaim": "免费领取 {claimed}/{limit}",
+      "freeClaimBatch": "免费领取 x{count}",
       "price": "{price} 金币",
       "discountToday": "今日特价",
       "discountUsed": "特价已用",
       "priceNote": "原价 {originalPrice} 金币，今日 {label}",
+      "priceNoteBatch": "首件原价 {originalPrice} 金币，首件今日 {label}",
       "exchange": {
         "aria": "小心心兑换",
         "rate": "1 小心心 = {coins} 金币",
@@ -1052,7 +1062,7 @@
     "weather": {
       "sunny": {
         "label": "晴天",
-        "summary": "阳光很好，心情下降稍慢，玩耍心情额外 +2。"
+        "summary": "阳光很好，心情下降稍慢，玩耍的额外心情会随属性上限增长。"
       },
       "cloudy": {
         "label": "多云",
@@ -1060,7 +1070,7 @@
       },
       "rainy": {
         "label": "雨天",
-        "summary": "雨天更容易弄脏，清洁额外 +5，打工金币 -4。"
+        "summary": "雨天更容易弄脏，清洁的额外效果会随属性上限增长，打工金币 -4。"
       },
       "breezy": {
         "label": "微风",
@@ -1126,6 +1136,14 @@
       "dreamTalk": "梦话：",
       "dreamEvent": "梦境："
     },
+    "effectSummary": {
+      "hunger": "饱腹 {amount}",
+      "mood": "心情 {amount}",
+      "cleanliness": "清洁 {amount}",
+      "energy": "体力 {amount}",
+      "health": "健康 {amount}",
+      "wrap": "（{effects}）"
+    },
     "interaction": {
       "cost": [
         "{name} 玩累了，肚子也有点空。",
@@ -1158,10 +1176,10 @@
       "biscuit": "邻居送来一块苏打饼干，背包 +1。",
       "neighborGiftNamed": "邻居 {neighbor} 来拜访，留下了 {item}，背包 +1。",
       "neighborGiftGeneric": "有邻居来拜访，留下了 {item}，背包 +1。",
-      "sun": "{name} 晒了会儿太阳，心情 +8，清洁 -2。",
-      "rest": "{name} 睡醒后精神很好，体力 +10。",
-      "snack": "{name} 偷偷翻了点零食，饱腹 +10，清洁 -3。",
-      "nightmare": "{name} 做了个小噩梦，心情 -5。",
+      "sun": "{name} 晒了会儿太阳。",
+      "rest": "{name} 睡醒后精神很好。",
+      "snack": "{name} 偷偷翻了点零食。",
+      "nightmare": "{name} 做了个小噩梦。",
       "heart": "{name} 收到一张小贴纸，小心心 +{hearts}。"
     },
     "offlineDiary": {
@@ -1198,35 +1216,35 @@
         "{name} 把一张小贴纸藏好等你回来，小心心 +{hearts}。",
         "{name} 认真准备了一张欢迎卡片，小心心 +{hearts}。"
       ],
-      "sunnyPlay": "{name} 偷偷晒了会儿太阳，心情 +6，清洁 -2。",
-      "play": "{name} 自己玩了一会儿，心情 +6，清洁 -2。",
+      "sunnyPlay": "{name} 偷偷晒了会儿太阳。",
+      "play": "{name} 自己玩了一会儿。",
       "sunnyPlayNamed": [
-        "{name} 和邻居 {neighbor} 在阳光下玩了一会儿，心情 +6，清洁 -2。",
-        "{name} 拉着邻居 {neighbor} 追逐窗边的光斑，心情 +6，清洁 -2。"
+        "{name} 和邻居 {neighbor} 在阳光下玩了一会儿。",
+        "{name} 拉着邻居 {neighbor} 追逐窗边的光斑。"
       ],
       "sunnyPlayGeneric": [
-        "{name} 和邻居在阳光下玩了一会儿，心情 +6，清洁 -2。",
-        "{name} 和来访的邻居一起追着光斑跑，心情 +6，清洁 -2。"
+        "{name} 和邻居在阳光下玩了一会儿。",
+        "{name} 和来访的邻居一起追着光斑跑。"
       ],
       "playNamed": [
-        "{name} 和邻居 {neighbor} 玩了一会儿，心情 +6，清洁 -2。",
-        "{name} 与邻居 {neighbor} 把玩具滚来滚去，心情 +6，清洁 -2。"
+        "{name} 和邻居 {neighbor} 玩了一会儿。",
+        "{name} 与邻居 {neighbor} 把玩具滚来滚去。"
       ],
       "playGeneric": [
-        "{name} 和邻居玩了一会儿，心情 +6，清洁 -2。",
-        "{name} 和来访的邻居分享了玩具，心情 +6，清洁 -2。"
+        "{name} 和邻居玩了一会儿。",
+        "{name} 和来访的邻居分享了玩具。"
       ],
       "hungryHappy": [
-        "{name} 等你等得有点饿，但看到你回来很开心，饱腹 -4，心情 +4。",
-        "{name} 忙着守在门边忘了吃东西，见到你后立刻开心起来，饱腹 -4，心情 +4。"
+        "{name} 等你等得有点饿，但看到你回来很开心。",
+        "{name} 忙着守在门边忘了吃东西，见到你后立刻开心起来。"
       ],
       "rest": [
-        "{name} 安稳地休息了一会儿，体力 +8。",
-        "{name} 找到舒服的位置打了个盹，体力 +8。"
+        "{name} 安稳地休息了一会儿。",
+        "{name} 找到舒服的位置打了个盹。"
       ],
       "mess": [
-        "{name} 把角落翻得乱糟糟，清洁 -5。",
-        "{name} 为了找一件小玩具翻乱了垫子，清洁 -5。"
+        "{name} 把角落翻得乱糟糟。",
+        "{name} 为了找一件小玩具翻乱了垫子。"
       ],
       "ticket": "{name} 在垫子下面找到一张扭蛋券，扭蛋券 +{tickets}。",
       "tenTickets": "{name} 发现一张闪闪发亮的十连券，扭蛋券 +{tickets}！",
@@ -1234,29 +1252,29 @@
     },
     "sleepSettlement": {
       "tooShort": [
-        "{name} 刚躺下没多久就醒了，有点迷迷糊糊，心情 -1。",
-        "{name} 才闭上眼一会儿就醒来，还是有些困倦，心情 -1。"
+        "{name} 刚躺下没多久就醒了，有点迷迷糊糊。",
+        "{name} 才闭上眼一会儿就醒来，还是有些困倦。"
       ],
       "bad": [
-        "{name} 睡得不太安稳，像是做了一个小噩梦，心情 -3，健康 -1。",
-        "{name} 一直翻来覆去，醒来后看起来不太舒服，心情 -3，健康 -1。"
+        "{name} 睡得不太安稳，像是做了一个小噩梦。",
+        "{name} 一直翻来覆去，醒来后看起来不太舒服。"
       ],
       "good": [
-        "{name} 睡得很香，醒来还蹭了蹭小毯子，心情 +4，体力 +5。",
-        "{name} 舒舒服服地睡了一觉，醒来后伸了个大懒腰，心情 +4，体力 +5。"
+        "{name} 睡得很香，醒来还蹭了蹭小毯子。",
+        "{name} 舒舒服服地睡了一觉，醒来后伸了个大懒腰。"
       ],
       "normal": [
-        "{name} 睡醒了，精神平稳了一些，心情 +2。",
-        "{name} 安静地休息过后醒来了，心情 +2。"
+        "{name} 睡醒了，精神平稳了一些。",
+        "{name} 安静地休息过后醒来了。"
       ]
     },
     "streak": {
-      "play": "{name} 连续玩了好几次，脚步都慢下来了，体力 -2，饱腹 -2。",
-      "clean": "{name} 被频繁洗澡，甩了甩水珠表示抗议，心情 -4，饱腹 -1。",
-      "work": "{name} 连续打工有点吃不消，心情 -2，健康 -2。",
-      "feed": "{name} 吃得有点撑，偷偷把嘴边弄脏了，心情 -3，清洁 -1。",
-      "gift": "{name} 收到太多礼物，一时不知道先抱哪一个，心情 -2。",
-      "touch": "{name} 被连续互动得有点害羞，蹭到你手边休息，心情 -3，体力 -1。"
+      "play": "{name} 连续玩了好几次，脚步都慢下来了，体力 -{energy}，饱腹 -{hunger}。",
+      "clean": "{name} 被频繁洗澡，甩了甩水珠表示抗议，心情 -{mood}，饱腹 -{hunger}。",
+      "work": "{name} 连续打工有点吃不消，心情 -{mood}，健康 -{health}。",
+      "feed": "{name} 吃得有点撑，偷偷把嘴边弄脏了，心情 -{mood}，清洁 -{cleanliness}。",
+      "gift": "{name} 收到太多礼物，一时不知道先抱哪一个，心情 -{mood}。",
+      "touch": "{name} 被连续互动得有点害羞，蹭到你手边休息，心情 -{mood}，体力 -{energy}。"
     },
     "advance": {
       "wokeUp": "{name} 睡醒了，精神很好。",
@@ -1269,7 +1287,7 @@
       "lowEnergyPlay": "{name} 体力太低了，先睡一会儿或用道具恢复吧。",
       "lowHungerBlocked": "{name} 饿得没力气做这些事，先喂点东西吧。",
       "play": "{name} 玩得很开心。",
-      "clean": "{name} 变干净了，也放松了一点。饱腹 -3，心情 +1，体力 -3。",
+      "clean": "{name} 变干净了，也放松了一点。饱腹 -{hunger}，心情 +{mood}，体力 -{energy}。",
       "lowEnergyWork": "体力不足，睡觉或使用道具恢复后再打工。",
       "work": "{name} 陪你打工，赚到 {coins} 金币。",
       "sleep": {
@@ -1285,11 +1303,16 @@
     "buy": {
       "missing": "这个商品不存在。",
       "biscuitClaimedOut": "今天的苏打饼干已经领完了，明天再来吧。",
+      "biscuitLimitInsufficient": "今天最多还能领取 {remaining} 份苏打饼干。",
       "freeClaim": "拿到一份免费的{item}（{claimed}/{limit}）。",
+      "freeClaimBatch": "拿到 {count} 份免费的{item}（{claimed}/{limit}）。",
       "notEnoughCoins": "金币不够，{item} 需要 {price} 金币。",
       "discount": "今日特价购买了{item}，花费 {price} 金币。",
+      "discountBatch": "购买了 {count} 件{item}，首件享受今日特价，共花费 {price} 金币。",
       "free": "拿到一份免费的{item}。",
-      "paid": "购买了{item}。"
+      "freeBatch": "拿到 {count} 份免费的{item}。",
+      "paid": "购买了{item}。",
+      "paidBatch": "购买了 {count} 件{item}，共花费 {price} 金币。"
     },
     "item": {
       "missing": "这个道具不存在。",
@@ -1297,9 +1320,14 @@
       "use": {
         "food": "{name} 享用了{item}。",
         "foodWoke": "{name} 醒来享用了{item}。",
+        "foodBatch": "{name} 享用了 {count} 份{item}。",
+        "foodBatchWoke": "{name} 醒来享用了 {count} 份{item}。",
         "gift": "你送给 {name} {item}。",
+        "giftBatch": "你送给 {name} {count} 份{item}。",
         "care": "{name} 使用了{item}。",
         "careWoke": "{name} 醒来使用了{item}。",
+        "careBatch": "{name} 使用了 {count} 份{item}。",
+        "careBatchWoke": "{name} 醒来使用了 {count} 份{item}。",
         "favorite": "这是 Furo 喜欢的味道，心情额外 +{amount}。",
         "giftHeart": "礼物带来了 {hearts} 个小心心。",
         "birthdayCake": "{name} 吃下了{item}，全属性回满。",
@@ -1337,8 +1365,8 @@
     ],
     "dreamEvent": {
       "cloudNap": [
-        "{name} 梦见躺在软云上，醒来心情 +3。",
-        "{name} 梦见坐着云朵慢慢旅行，醒来心情 +3。"
+        "{name} 梦见躺在软云上。",
+        "{name} 梦见坐着云朵慢慢旅行。"
       ],
       "coinPath": [
         "{name} 梦见沿着星星小路捡硬币，金币 +10。",
@@ -1353,8 +1381,8 @@
         "{name} 从梦里的野餐布带回一块苏打饼干，背包 +1。"
       ],
       "puddleRun": [
-        "{name} 梦见踩着水洼跑步，体力 +4，清洁 -1。",
-        "{name} 梦见追着雨后的水花奔跑，体力 +4，清洁 -1。"
+        "{name} 梦见踩着水洼跑步。",
+        "{name} 梦见追着雨后的水花奔跑。"
       ]
     },
     "reward": {

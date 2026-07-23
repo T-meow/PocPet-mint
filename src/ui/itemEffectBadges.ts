@@ -8,12 +8,13 @@ export type ItemEffectBadge = {
   label: string;
 };
 
-export const getItemEffectBadges = (effect: ItemEffect): ItemEffectBadge[] =>
+export const getItemEffectBadges = (effect: ItemEffect, quantity = 1): ItemEffectBadge[] =>
   itemEffectKeys
     .map((key) => {
       const value = effect[key];
       if (!value) return undefined;
-      const amount = value > 0 ? `+${value}` : String(value);
+      const total = value * Math.max(1, Math.floor(quantity));
+      const amount = total > 0 ? `+${total}` : String(total);
       return {
         key,
         label: `${t(`ui.stats.${key}`)} ${amount}`,
@@ -21,7 +22,7 @@ export const getItemEffectBadges = (effect: ItemEffect): ItemEffectBadge[] =>
     })
     .filter((badge): badge is ItemEffectBadge => Boolean(badge));
 
-export const getItemEffectTitle = (summary: string, effect: ItemEffect) => {
-  const effectText = getItemEffectBadges(effect).map((badge) => badge.label).join(', ');
+export const getItemEffectTitle = (summary: string, effect: ItemEffect, quantity = 1) => {
+  const effectText = getItemEffectBadges(effect, quantity).map((badge) => badge.label).join(', ');
   return effectText ? `${summary}\n${effectText}` : summary;
 };

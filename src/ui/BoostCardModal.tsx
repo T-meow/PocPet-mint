@@ -1,25 +1,25 @@
 import { Heart, Sparkles, X } from 'lucide-react';
-import { boostCardDefinitions, boostCardIds, getActiveBoostCard, getBoostCardEffects, type BoostCardId, type PetState } from '../core/pet';
+import { boostCardDefinitions, boostCardIds, canClaimBoostCardDailyReward, getActiveBoostCard, getBoostCardEffects, type BoostCardId, type PetState } from '../core/pet';
 import { t } from '../i18n';
+import { DialogShell } from './DialogShell';
 
 interface BoostCardModalProps {
   pet: PetState;
   onClose: () => void;
   onBuyCard: (cardId: BoostCardId) => void;
-  onClaimDailyCoins: () => void;
+  onClaimDailyReward: () => void;
 }
 
 const remainingDays = (expiresAt: number) => expiresAt <= Date.now() ? 0 : Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000));
 
-export const BoostCardModal = ({ pet, onClose, onBuyCard, onClaimDailyCoins }: BoostCardModalProps) => {
+export const BoostCardModal = ({ pet, onClose, onBuyCard, onClaimDailyReward }: BoostCardModalProps) => {
   const activeCardId = getActiveBoostCard(pet);
   const effects = getBoostCardEffects(pet);
-  const claimed = activeCardId ? pet.boostCards.dailyCoinsClaimedCardId === activeCardId : false;
+  const claimed = Boolean(activeCardId && !canClaimBoostCardDailyReward(pet));
   const bestFriendActive = activeCardId === 'best_friend_pass';
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <section className="boost-card-modal" role="dialog" aria-modal="true" aria-labelledby="boost-card-title">
+    <DialogShell className="boost-card-modal" labelId="boost-card-title" onClose={onClose}>
         <header className="boost-card-modal__header">
           <div>
             <span>{t('ui.boostCards.kicker')}</span>
@@ -31,11 +31,18 @@ export const BoostCardModal = ({ pet, onClose, onBuyCard, onClaimDailyCoins }: B
         </header>
         <div className="boost-card-summary">
           <strong>{activeCardId ? t('ui.boostCards.activeCard', { card: t(`ui.boostCards.cards.${activeCardId}.name`) }) : t('ui.boostCards.noActive')}</strong>
-          <span>{t('ui.boostCards.todayWork', { coins: pet.boostCards.dailyWorkBonusCoinsUsed, limit: effects.workBonusDailyLimit })}</span>
+          {effects.workBonusDailyLimit > 0 && (
+            <span>{t('ui.boostCards.todayWork', { coins: pet.boostCards.dailyWorkBonusCoinsUsed, limit: effects.workBonusDailyLimit })}</span>
+          )}
+          {effects.partnerScheduleCoinBonusPercent > 0 && (
+            <span>{t('ui.boostCards.scheduleBonus', { percent: effects.partnerScheduleCoinBonusPercent })}</span>
+          )}
           <span>{t('ui.boostCards.extraHeartChance', { percent: effects.extraHeartChancePercent })}</span>
-          <span>{t('ui.boostCards.todayGarden', { count: pet.boostCards.dailyGardenExtraDrops, limit: effects.gardenExtraDropDailyLimit })}</span>
-          <button type="button" className="primary-button" disabled={!activeCardId || claimed} onClick={onClaimDailyCoins}>
-            {claimed ? t('ui.boostCards.claimed') : t('ui.boostCards.claimCoins', { coins: effects.dailyCoins })}
+          {effects.gardenExtraDropDailyLimit > 0 && (
+            <span>{t('ui.boostCards.todayGarden', { count: pet.boostCards.dailyGardenExtraDrops, limit: effects.gardenExtraDropDailyLimit })}</span>
+          )}
+          <button type="button" className="primary-button" disabled={!activeCardId || claimed} onClick={onClaimDailyReward}>
+            {claimed ? t('ui.boostCards.claimed') : t('ui.boostCards.claimReward', { coins: effects.dailyCoins })}
           </button>
         </div>
         <div className="boost-card-list">
@@ -59,7 +66,6 @@ export const BoostCardModal = ({ pet, onClose, onBuyCard, onClaimDailyCoins }: B
             );
           })}
         </div>
-      </section>
-    </div>
+    </DialogShell>
   );
 };

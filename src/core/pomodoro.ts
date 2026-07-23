@@ -1,7 +1,8 @@
 import { t } from '../i18n';
+import { getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
 import type { PetState, PomodoroActivity, PomodoroDurations, PomodoroPhase, PomodoroState } from './petTypes';
 import { clampCount, getPetStatCap } from './petStats';
-import { getLocalDateKey, isNumber, pickRandom, randomInt } from './utils';
+import { isNumber, pickRandom, randomInt } from './utils';
 
 export const pomodoroPhaseLabels: Record<PomodoroPhase, string> = {
   focus: t('pet.pomodoro.phase.focus'),
@@ -65,7 +66,7 @@ export const defaultPomodoroState = (now: number): PomodoroState => ({
   phaseEndsAt: 0,
   round: 1,
   completedFocusCount: 0,
-  dailyFocusDate: getLocalDateKey(now),
+  dailyFocusDate: getDailyResetDateKey(now),
   dailyCompletedFocusCount: 0,
   settings: { ...defaultPomodoroDurations },
   currentActivity: 'reading_books',
@@ -96,7 +97,8 @@ export const normalizePomodoroState = (value: unknown, now: number): PomodoroSta
       : isRunning
         ? now + (rawPausedRemainingMs > 0 ? rawPausedRemainingMs : defaultRemainingMs)
         : 0;
-  const dailyFocusDate = typeof raw.dailyFocusDate === 'string' ? raw.dailyFocusDate : getLocalDateKey(now);
+  const currentDailyDateKey = getDailyResetDateKey(now);
+  const dailyFocusDate = normalizeLegacyDailyDateKey(raw.dailyFocusDate, now) || currentDailyDateKey;
   const round = clampPomodoroInteger(raw.round, fallback.round, 1, settings.targetRounds);
 
   return {
@@ -106,9 +108,9 @@ export const normalizePomodoroState = (value: unknown, now: number): PomodoroSta
     phaseEndsAt,
     round,
     completedFocusCount: clampCount(isNumber(raw.completedFocusCount) ? raw.completedFocusCount : 0),
-    dailyFocusDate: getLocalDateKey(now),
+    dailyFocusDate: currentDailyDateKey,
     dailyCompletedFocusCount:
-      dailyFocusDate === getLocalDateKey(now)
+      dailyFocusDate === currentDailyDateKey
         ? clampCount(isNumber(raw.dailyCompletedFocusCount) ? raw.dailyCompletedFocusCount : 0)
         : 0,
     settings,

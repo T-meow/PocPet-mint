@@ -1,11 +1,15 @@
 import { t } from '../i18n';
+import { getDailyResetDateKey, isSameDailyResetDay, normalizeLegacyDailyDateKey } from './dailyReset';
 import { ensureDailyWishForDate, maybeCreateReturnWelcome, returnWelcomeMinAwayMs } from './dailyWishes';
 import { getAchievementEffects, incrementAchievementPomodoroFocus, incrementNaturalWake, recordEarnedCoins } from './achievements';
+import { canClaimBoostCardDailyReward } from './boostCards';
 import { advanceGarden } from './garden';
+import { goldenAppleGachaDailyTicketLimit, resolveDailyGachaTicket } from './goldenAppleGacha';
 import { dailyBiscuitClaimLimit } from './items';
 import { applyTimedEvent, getRandomDailyEncounter, getRandomOfflineDiary, getRandomOfflineEvent, maybeApplyDreamTalk, settleSleep, startSleepSnapshot } from './petEvents';
-import { clampCoins, clampCount, clampPetHealth, clampPetStat, criticalHungerActionThreshold, getEnergyRecoveryIntervalMs, getPetStatCap, lowEnergyThreshold } from './petStats';
-import type { PetState } from './petTypes';
+import { neighborGiftDailyLimit } from './neighbors';
+import { clampCoins, clampCount, clampPetEnergy, clampPetHealth, clampPetStat, criticalHungerActionThreshold, getEnergyRecoveryIntervalMs, getPetEnergyCap, getPetStatCap, getPetStatThreshold, lowEnergyThreshold, scalePetStatDelta } from './petStats';
+import type { NeighborEventContext, PetState } from './petTypes';
 import {
   getDefaultPomodoroRemainingMs,
   getPomodoroBonusReward,
@@ -19,17 +23,22 @@ import {
   pomodoroMinHealthThreshold,
 } from './pomodoro';
 import { normalizePet } from './petState';
+import { advancePartnerSchedule, isPartnerSchedulePetBusy } from './partnerSchedule';
 import { getCleanlinessDecaySeasonModifier, getMoodDecaySeasonModifier } from './season';
 import { ensureYearlyStatsForDate, recordYearlyPomodoroFocus } from './yearlyStats';
 import { getWeatherForDate } from './weather';
-import { getLocalDateKey, isNightTime, isSameLocalDay } from './utils';
+import { isNightTime } from './utils';
 
 export const getEnergyRecoveryInfo = (pet: PetState, now = Date.now()) => {
   const current = normalizePet(pet, now);
-  const statCap = getPetStatCap(current);
+  const energyCap = getPetEnergyCap(current);
   const intervalMs = getEnergyRecoveryIntervalMs(current, current.isSleeping, now);
-  if (current.energy >= statCap) {
-    return { intervalMs, remainingMs: 0, isFull: true };
+  if (current.energy >= energyCap) {
+    return { intervalMs, remainingMs: 0, isFull: true, isPaused: false };
+  }
+
+  if (isPartnerSchedulePetBusy(current)) {
+    return { intervalMs, remainingMs: intervalMs, isFull: false, isPaused: true };
   }
 
   const startedAt = Math.min(current.lastEnergyRecoveryAt, now);
@@ -40,6 +49,7 @@ export const getEnergyRecoveryInfo = (pet: PetState, now = Date.now()) => {
     intervalMs,
     remainingMs: remainingMs === intervalMs && elapsedMs > 0 ? 0 : remainingMs,
     isFull: false,
+    isPaused: false,
   };
 };
 
@@ -53,7 +63,7 @@ export const getEnergyRecoveryInfo = (pet: PetState, now = Date.now()) => {
 
 export const getDailyBiscuitClaimInfo = (pet: PetState, now = Date.now()) => {
   const claimed =
-    pet.dailyBiscuitClaimDate === getLocalDateKey(now)
+    pet.dailyBiscuitClaimDate === getDailyResetDateKey(now)
       ? Math.min(dailyBiscuitClaimLimit, clampCount(pet.dailyBiscuitClaims))
       : 0;
 
@@ -67,10 +77,10 @@ export const getDailyBiscuitClaimInfo = (pet: PetState, now = Date.now()) => {
 
 export const isPetLowEnergy = (pet: PetState) => pet.energy < lowEnergyThreshold;
 
-export const isPetCriticallyHungry = (pet: PetState) => pet.hunger < criticalHungerActionThreshold;
+export const isPetCriticallyHungry = (pet: PetState) => pet.hunger < getPetStatThreshold(pet, criticalHungerActionThreshold);
 
 export const canStartPomodoro = (pet: PetState) =>
-  !isPetLowEnergy(pet) && pet.health > pomodoroMinHealthThreshold;
+  !isPetLowEnergy(pet) && pet.health > getPetStatThreshold(pet, pomodoroMinHealthThreshold);
 
 export const pausePomodoroForReason = (pet: PetState, now: number, recentEvent: string): PetState => {
   if (!pet.pomodoro.isRunning) {
@@ -94,20 +104,31 @@ export const pausePomodoroForReason = (pet: PetState, now: number, recentEvent: 
 };
 
 export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
-  let next = ensureYearlyStatsForDate(normalizePet(pet, now), now);
+  const persistedDailyFocusDate = normalizeLegacyDailyDateKey(pet.pomodoro.dailyFocusDate, now);
+  const persistedDailyFocusCount = clampCount(pet.pomodoro.dailyCompletedFocusCount);
+  let next = normalizePet(pet, now);
   let pomodoro = next.pomodoro;
   if (!pomodoro.isRunning) return next;
+  if (persistedDailyFocusDate) {
+    pomodoro = {
+      ...pomodoro,
+      dailyFocusDate: persistedDailyFocusDate,
+      dailyCompletedFocusCount: persistedDailyFocusCount,
+    };
+  }
 
   let settledPhaseCount = 0;
   let settledFocusCount = 0;
   let settledShortBreakCount = 0;
+  const settledFocusTimes: number[] = [];
+  let maxSettledDailyFocusCount = pomodoro.dailyCompletedFocusCount;
   let earnedCoins = 0;
   let earnedMood = 0;
   let earnedBonusCoins = 0;
   let rewardChanged = false;
   let autoStopped = false;
   let activity = pomodoro.currentActivity;
-  const today = getLocalDateKey(now);
+  const today = getDailyResetDateKey(now);
   const maxSettlements = 1000;
 
   const settleFocusRewardsUntil = (focusUntil: number) => {
@@ -158,11 +179,12 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
 
     const phaseId = getPomodoroPhaseId(pomodoro);
     const shouldSettlePhase = pomodoro.lastSettledPhaseId !== phaseId;
+    const phaseDateKey = getDailyResetDateKey(pomodoro.phaseEndsAt);
     const completedFocusCount = pomodoro.phase === 'focus' ? pomodoro.completedFocusCount + 1 : pomodoro.completedFocusCount;
     const dailyCompletedFocusCount =
       pomodoro.phase === 'focus'
-        ? (pomodoro.dailyFocusDate === today ? pomodoro.dailyCompletedFocusCount : 0) + 1
-        : pomodoro.dailyFocusDate === today
+        ? (pomodoro.dailyFocusDate === phaseDateKey ? pomodoro.dailyCompletedFocusCount : 0) + 1
+        : pomodoro.dailyFocusDate === phaseDateKey
           ? pomodoro.dailyCompletedFocusCount
           : 0;
     const nextStartedAt = pomodoro.phaseEndsAt;
@@ -171,6 +193,10 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
       settledPhaseCount += 1;
       settledFocusCount += pomodoro.phase === 'focus' ? 1 : 0;
       settledShortBreakCount += pomodoro.phase === 'short_break' ? 1 : 0;
+      if (pomodoro.phase === 'focus') {
+        settledFocusTimes.push(pomodoro.phaseEndsAt);
+        maxSettledDailyFocusCount = Math.max(maxSettledDailyFocusCount, dailyCompletedFocusCount);
+      }
     }
 
     if (pomodoro.phase === 'short_break' && pomodoro.round >= pomodoro.settings.targetRounds) {
@@ -183,7 +209,7 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
         phaseEndsAt: 0,
         round: 1,
         completedFocusCount,
-        dailyFocusDate: today,
+        dailyFocusDate: phaseDateKey,
         dailyCompletedFocusCount,
         currentActivity: 'reading_books',
         lastSettledPhaseId: phaseId,
@@ -205,7 +231,7 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
       phaseEndsAt: nextStartedAt + getPomodoroPhaseDurationMs(nextPhase, pomodoro.settings),
       round: nextRound,
       completedFocusCount,
-      dailyFocusDate: today,
+      dailyFocusDate: phaseDateKey,
       dailyCompletedFocusCount,
       currentActivity: activity,
       lastSettledPhaseId: phaseId,
@@ -218,17 +244,29 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
     settleFocusRewardsUntil(now);
   }
 
+  if (pomodoro.dailyFocusDate !== today) {
+    pomodoro = { ...pomodoro, dailyFocusDate: today, dailyCompletedFocusCount: 0 };
+  }
+
+  const scaledEarnedMood = scalePetStatDelta(next, earnedMood);
   next = {
     ...next,
     coins: clampCoins(next.coins + earnedCoins),
-    mood: clampPetStat(next, next.mood + earnedMood),
+    mood: clampPetStat(next, next.mood + scaledEarnedMood),
     pomodoro,
     recentActivity: !pomodoro.isRunning ? 'idle' : next.isSleeping ? next.recentActivity : activity,
     recentActivityUntil: !pomodoro.isRunning ? 0 : next.isSleeping ? next.recentActivityUntil : pomodoro.phaseEndsAt > now ? pomodoro.phaseEndsAt : 0,
     lastInteractionAt: now,
   };
 
-  next = recordEarnedCoins(incrementAchievementPomodoroFocus(recordYearlyPomodoroFocus(next, settledFocusCount, now), settledFocusCount), earnedCoins);
+  settledFocusTimes.forEach((settledAt) => {
+    next = recordYearlyPomodoroFocus(next, 1, settledAt);
+  });
+  next = ensureYearlyStatsForDate(next, now);
+  next = recordEarnedCoins(
+    incrementAchievementPomodoroFocus(next, settledFocusCount, maxSettledDailyFocusCount),
+    earnedCoins,
+  );
 
   if (settledPhaseCount > 0) {
     const parts = [
@@ -240,14 +278,14 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
     const autoStopText = autoStopped ? t('pet.pomodoro.autoStopped', { rounds: pomodoro.settings.targetRounds }) : '';
     next = {
       ...next,
-      recentEvent: t('pet.pomodoro.settlementEvent', { prefix, parts: parts.join(t('common.comma')), mood: earnedMood, coins: earnedCoins }) + bonusText + autoStopText,
+      recentEvent: t('pet.pomodoro.settlementEvent', { prefix, parts: parts.join(t('common.comma')), mood: Math.round(scaledEarnedMood * 10) / 10, coins: earnedCoins }) + bonusText + autoStopText,
     };
   } else if (rewardChanged) {
     const minutes = Math.floor(pomodoro.sessionFocusMs / 60000);
     const bonusText = earnedBonusCoins > 0 ? t('pet.pomodoro.bonusEvent', { coins: earnedBonusCoins }) : '';
     next = {
       ...next,
-      recentEvent: t('pet.pomodoro.rewardTick', { minutes, mood: earnedMood, coins: earnedCoins }) + bonusText,
+      recentEvent: t('pet.pomodoro.rewardTick', { minutes, mood: Math.round(scaledEarnedMood * 10) / 10, coins: earnedCoins }) + bonusText,
     };
   }
 
@@ -255,30 +293,45 @@ export const advancePomodoro = (pet: PetState, now = Date.now()): PetState => {
     return pausePomodoroForReason(next, now, t('pet.pomodoro.pause.lowEnergy', { name: next.name }));
   }
 
-  if (next.pomodoro.isRunning && next.health <= pomodoroMinHealthThreshold) {
+  if (next.pomodoro.isRunning && next.health <= getPetStatThreshold(next, pomodoroMinHealthThreshold)) {
     return pausePomodoroForReason(next, now, t('pet.pomodoro.pause.lowHealth', { name: next.name }));
   }
 
   return next;
 };
 
-const applyDailyEncounter = (pet: PetState, now: number): PetState => {
-  if (isSameLocalDay(pet.lastDailyEncounterAt, now)) return pet;
+const applyDailyEncounter = (pet: PetState, now: number, eventContext?: NeighborEventContext): PetState => {
+  if (isSameDailyResetDay(pet.lastDailyEncounterAt, now)) return pet;
 
-  const encounter = getRandomDailyEncounter(pet.name);
-  return applyTimedEvent(pet, encounter, now, t('pet.prefix.dailyEncounter'));
+  const giftCount = pet.neighborGiftDateKey === getDailyResetDateKey(now) ? pet.neighborGiftCount : 0;
+  const randomGiftLimit = canClaimBoostCardDailyReward(pet, now) ? neighborGiftDailyLimit - 1 : neighborGiftDailyLimit;
+  const encounter = getRandomDailyEncounter(pet.name, eventContext, giftCount < randomGiftLimit);
+  const settled = applyTimedEvent(pet, encounter, now, t('pet.prefix.dailyEncounter'));
+  return resolveDailyGachaTicket(settled, 'daily_encounter', 20, now).pet;
 };
 
-export const advancePet = (pet: PetState, now = Date.now()): PetState => {
-  const current = advanceGarden(ensureDailyWishForDate(ensureYearlyStatsForDate(normalizePet(pet, now), now), now), now);
+export const advancePet = (pet: PetState, now = Date.now(), eventContext?: NeighborEventContext): PetState => {
+  const prepared = advanceGarden(ensureDailyWishForDate(ensureYearlyStatsForDate(
+    normalizePet(pet, now, { preserveExpiredPartnerSchedule: true }),
+    now,
+  ), now), now);
+  const scheduleForInterval = prepared.partnerSchedule.active;
+  const current = advancePartnerSchedule(prepared, now);
   const deltaMs = Math.max(0, now - current.lastUpdatedAt);
-  const elapsedSeconds = deltaMs / 1000;
+  const getProtectedScheduleMs = (from: number, to: number) => {
+    if (!scheduleForInterval || to <= from) return 0;
+    const overlapStart = Math.max(from, scheduleForInterval.startedAt);
+    const overlapEnd = Math.min(to, scheduleForInterval.endsAt);
+    return Math.max(0, overlapEnd - overlapStart);
+  };
+  const lifecycleDeltaMs = Math.max(0, deltaMs - getProtectedScheduleMs(current.lastUpdatedAt, now));
+  const elapsedSeconds = lifecycleDeltaMs / 1000;
   const weather = getWeatherForDate(now);
-  const weatherChanged = current.weatherDate !== getLocalDateKey(now) || current.weather !== weather;
+  const weatherChanged = current.weatherDate !== getDailyResetDateKey(now) || current.weather !== weather;
   const currentWithWeather = weatherChanged
     ? {
         ...current,
-        weatherDate: getLocalDateKey(now),
+        weatherDate: getDailyResetDateKey(now),
         weather,
       }
     : current;
@@ -288,71 +341,74 @@ export const advancePet = (pet: PetState, now = Date.now()): PetState => {
       ? { ...currentWithPomodoro, lastInteractionAt: now }
       : currentWithPomodoro;
 
-  if (elapsedSeconds < 1) {
+  if (deltaMs < 1000) {
     return advancePomodoro(currentForActivity, now);
   }
 
   const statCap = getPetStatCap(currentForActivity);
+  const energyCap = getPetEnergyCap(currentForActivity);
   const weatherMoodModifier = weather === 'sunny' ? 0.75 : 1;
   const seasonMoodModifier = getMoodDecaySeasonModifier(now);
   const weatherCleanlinessModifier = weather === 'rainy' ? 1.3 : 1;
   const seasonCleanlinessModifier = getCleanlinessDecaySeasonModifier(now);
-  const pressure = [currentForActivity.hunger <= 18, currentForActivity.cleanliness <= 22, currentForActivity.mood <= 18].filter(Boolean).length;
+  const pressure = [
+    currentForActivity.hunger <= getPetStatThreshold(currentForActivity, 18),
+    currentForActivity.cleanliness <= getPetStatThreshold(currentForActivity, 22),
+    currentForActivity.mood <= getPetStatThreshold(currentForActivity, 18),
+  ].filter(Boolean).length;
   const autoSleepByIdle =
     !currentForActivity.pomodoro.isRunning &&
+    !currentForActivity.partnerSchedule.active &&
     !currentForActivity.isSleeping &&
     isNightTime(now) &&
     now - currentForActivity.lastInteractionAt >= 30 * 60 * 1000;
   const sleepingForDecay = currentForActivity.isSleeping || autoSleepByIdle;
-  const hungerDelta = sleepingForDecay ? -(elapsedSeconds / 3600) * 2 : -(elapsedSeconds / 3600) * 7;
-  const moodDelta = sleepingForDecay
+  const hungerDelta = scalePetStatDelta(currentForActivity, sleepingForDecay ? -(elapsedSeconds / 3600) * 2 : -(elapsedSeconds / 3600) * 7);
+  const moodDelta = scalePetStatDelta(currentForActivity, sleepingForDecay
     ? (elapsedSeconds / 3600) * 2
-    : -(elapsedSeconds / 3600) * (pressure > 0 ? 5 : 2) * weatherMoodModifier * seasonMoodModifier;
-  const cleanDelta = sleepingForDecay
+    : -(elapsedSeconds / 3600) * (pressure > 0 ? 5 : 2) * weatherMoodModifier * seasonMoodModifier);
+  const cleanDelta = scalePetStatDelta(currentForActivity, sleepingForDecay
     ? -(elapsedSeconds / 3600) * 1
-    : -(elapsedSeconds / 3600) * 4 * weatherCleanlinessModifier * seasonCleanlinessModifier;
-  const healthDelta =
+    : -(elapsedSeconds / 3600) * 4 * weatherCleanlinessModifier * seasonCleanlinessModifier);
+  const healthDelta = scalePetStatDelta(currentForActivity,
     pressure >= 2
       ? -(elapsedSeconds / 3600) * 4
       : pressure === 0 && currentForActivity.health < statCap
         ? (elapsedSeconds / 3600) * 1.5
-        : 0;
+        : 0);
 
   const energyRecoveryIntervalMs = getEnergyRecoveryIntervalMs(currentForActivity, sleepingForDecay, now);
   const recoveryStartedAt = Math.min(currentForActivity.lastEnergyRecoveryAt, now);
-  const elapsedRecoveryMs = Math.max(0, now - recoveryStartedAt);
-  const recoverableEnergy = Math.max(0, statCap - currentForActivity.energy);
-  const energyRecoveryPoints = currentForActivity.energy >= statCap ? 0 : Math.floor(elapsedRecoveryMs / energyRecoveryIntervalMs);
+  const elapsedRecoveryMs = Math.max(0, now - recoveryStartedAt - getProtectedScheduleMs(recoveryStartedAt, now));
+  const recoverableEnergy = Math.max(0, energyCap - currentForActivity.energy);
+  const energyRecoveryPoints = currentForActivity.energy >= energyCap ? 0 : Math.floor(elapsedRecoveryMs / energyRecoveryIntervalMs);
   const recoveredEnergy = Math.min(recoverableEnergy, energyRecoveryPoints);
-  const energy = clampPetStat(currentForActivity, currentForActivity.energy + recoveredEnergy);
-  const lastEnergyRecoveryAt =
-    energy >= statCap
-      ? now
-      : recoveredEnergy > 0
-        ? recoveryStartedAt + energyRecoveryPoints * energyRecoveryIntervalMs
-        : currentForActivity.lastEnergyRecoveryAt;
+  const energy = clampPetEnergy(currentForActivity, currentForActivity.energy + recoveredEnergy);
+  const lastEnergyRecoveryAt = energy >= energyCap
+    ? now
+    : now - (elapsedRecoveryMs % energyRecoveryIntervalMs);
 
   const hunger = clampPetStat(currentForActivity, currentForActivity.hunger + hungerDelta);
   const mood = clampPetStat(currentForActivity, currentForActivity.mood + moodDelta);
   const cleanliness = clampPetStat(currentForActivity, currentForActivity.cleanliness + cleanDelta);
   const health = clampPetHealth(currentForActivity, currentForActivity.health + healthDelta);
-  const ageSeconds = currentForActivity.ageSeconds + elapsedSeconds;
+  const ageSeconds = currentForActivity.ageSeconds + deltaMs / 1000;
   const keepSleepingAtNight =
     sleepingForDecay && isNightTime(now) && now - currentForActivity.lastInteractionAt >= 30 * 60 * 1000;
-  const wokeUp = currentForActivity.isSleeping && energy >= statCap && !keepSleepingAtNight;
+  const wokeUp = currentForActivity.isSleeping && energy >= energyCap && !keepSleepingAtNight;
 
   let recentEvent = currentForActivity.recentEvent;
   let recentActivity = currentForActivity.recentActivityUntil > now ? currentForActivity.recentActivity : 'idle';
   let recentActivityUntil = currentForActivity.recentActivityUntil > now ? currentForActivity.recentActivityUntil : 0;
-  const offlineDiaryDue = !currentForActivity.pomodoro.isRunning && deltaMs >= 30 * 60 * 1000;
-  const offlineEventDue = !currentForActivity.pomodoro.isRunning && deltaMs >= 2 * 60 * 60 * 1000;
+  const offlineDiaryDue = !currentForActivity.pomodoro.isRunning && lifecycleDeltaMs >= 30 * 60 * 1000;
+  const offlineEventDue = !currentForActivity.pomodoro.isRunning && lifecycleDeltaMs >= 2 * 60 * 60 * 1000;
   if (wokeUp) {
     recentEvent = t('pet.advance.wokeUp', { name: currentForActivity.name });
   } else if (autoSleepByIdle) {
     recentEvent = t('pet.advance.autoSleep', { name: currentForActivity.name });
   } else if (offlineDiaryDue) {
     recentEvent = t('pet.prefix.offlineDiary') + getRandomOfflineDiary(currentForActivity.name, weather);
-  } else if (hunger <= 10) {
+  } else if (hunger <= getPetStatThreshold(currentForActivity, 10)) {
     recentEvent = t('pet.advance.hungerCritical', { name: currentForActivity.name });
   } else if (pressure >= 2) {
     recentEvent = t('pet.advance.needsCare', { name: currentForActivity.name });
@@ -397,14 +453,29 @@ export const advancePet = (pet: PetState, now = Date.now()): PetState => {
     next = withReturnWelcome;
   }
 
+  if (currentForActivity.partnerSchedule.active) {
+    return next;
+  }
+
   if (offlineEventDue) {
-    return applyTimedEvent(next, getRandomOfflineEvent(next.name, weather), now, t('pet.prefix.offlineEvent'));
+    const giftCount = next.neighborGiftDateKey === getDailyResetDateKey(now) ? next.neighborGiftCount : 0;
+    const randomGiftLimit = canClaimBoostCardDailyReward(next, now) ? neighborGiftDailyLimit - 1 : neighborGiftDailyLimit;
+    return applyTimedEvent(
+      next,
+      getRandomOfflineEvent(next.name, weather, eventContext, {
+        allowNeighborGift: giftCount < randomGiftLimit,
+        allowGachaTicket: next.goldenAppleGacha.dailyTicketsGranted < goldenAppleGachaDailyTicketLimit
+          && next.goldenAppleGacha.tickets < 9999,
+      }),
+      now,
+      t('pet.prefix.offlineEvent'),
+    );
   }
 
   if (offlineDiaryDue) {
     return next;
   }
 
-  return applyDailyEncounter(next, now);
+  return applyDailyEncounter(next, now, eventContext);
 };
 

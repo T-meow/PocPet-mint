@@ -3,6 +3,14 @@
     "comma": ", "
   },
   "ui": {
+    "quantity": {
+      "aria": "Choose quantity",
+      "decrease": "Decrease quantity",
+      "increase": "Increase quantity",
+      "value": "Quantity",
+      "presetsAria": "Choose how many items to use",
+      "preset": "Use {count} item(s)"
+    },
     "brand": {
       "eyebrow": "Pocket Pet"
     },
@@ -10,6 +18,7 @@
       "lessThanMinute": "less than 1 minute",
       "hoursMinutes": "{hours}h {minutes}m",
       "minutes": "{minutes} minutes",
+      "seconds": "{seconds} seconds",
       "days": "{days} day(s)",
       "monthsDays": "{months} month(s) {days} day(s)",
       "yearsMonthsDays": "{years} year(s) {months} month(s) {days} day(s)"
@@ -46,6 +55,17 @@
       "aria": "Inventory",
       "kicker": "Inventory",
       "title": "Food and Items",
+      "modalTitle": "Inventory",
+      "ownedKinds": "{count} item types owned",
+      "tabsAria": "Inventory categories",
+      "close": "Close inventory",
+      "use": "Use",
+      "unavailable": "Unavailable",
+      "partnerScheduleBusy": "Your companion is busy with a schedule, so this item cannot be used now.",
+      "partnerScheduleBusyShort": "Schedule active",
+      "goGarden": "Go to garden",
+      "emptyCategory": "There are no items in this category yet.",
+      "openCategoryShop": "Browse the shop",
       "shop": "Shop",
       "empty": "Inventory is empty. You can claim 3 Gubi Crisps from the shop each day."
     },
@@ -57,10 +77,12 @@
       "tabsAria": "Shop categories",
       "claimedOut": "Claimed out",
       "freeClaim": "Claim free {claimed}/{limit}",
+      "freeClaimBatch": "Claim x{count}",
       "price": "{price} coins",
       "discountToday": "Today only",
       "discountUsed": "Used",
       "priceNote": "Original {originalPrice} coins, {label} today",
+      "priceNoteBatch": "First item: original {originalPrice} coins, {label} today",
       "exchange": {
         "aria": "Heart exchange",
         "rate": "1 heart = {coins} coins",
@@ -79,6 +101,9 @@
       "birthdayDay": "Day",
       "birthdayHint": "Birthday rewards use this date until a mod is reapplied.",
       "birthdayUnsetHint": "No birthday reward is active. Pick a month or day to set one.",
+      "petAnniversary": "Meeting anniversary",
+      "anniversaryValue": "{month}/{day}",
+      "metDateValue": "Met on {month}/{day}/{year}",
       "language": "Language",
       "languageHint": "Changing language reloads the interface. Your save is kept.",
       "saveName": "Save profile",
@@ -98,6 +123,22 @@
         "active": "Active mod: {name} v{version}",
         "import": "Import mod",
         "restoreDefault": "Restore default",
+        "useBuiltin": "Use built-in pet",
+        "libraryAria": "Installed mods",
+        "libraryEmpty": "No mods installed yet.",
+        "libraryLimit": "The mod library can hold up to {count} mods. Delete an unused mod first.",
+        "currentShort": "Current",
+        "activate": "Use this mod",
+        "delete": "Delete {name}",
+        "installed": "Installed {name}. The current pet was not changed.",
+        "deleted": "Deleted {name}.",
+        "deleteFailed": "Failed to delete mod.",
+        "deleteDialog": {
+          "title": "Delete this mod?",
+          "message": "This removes all local resources for {name}. Save progress and inventory counts remain; missing content uses compatibility placeholders.",
+          "cancel": "Keep",
+          "confirm": "Delete mod"
+        },
         "imported": "Imported {name}.",
         "importedWithFallback": "Imported {name}. {count} assets are using default images.",
         "importFailed": "Failed to import mod.",
@@ -112,12 +153,16 @@
         "title": "Save",
         "summary": "Export the current pet save. Saves that reference a mod still need that mod installed separately.",
         "exportText": "Export text",
-        "download": "Download save",
+        "download": "Save to file",
         "importFile": "Import file",
         "exportedAria": "Exported save text",
         "pasteText": "Paste save text",
         "importPasted": "Import pasted save",
         "generated": "Save text generated.",
+        "saved": "Save exported to the selected file.",
+        "downloadStarted": "Save download started.",
+        "saveCancelled": "Save export cancelled.",
+        "saveFailed": "Failed to save the save file.",
         "imported": "Save imported.",
         "importedMissingMod": "Save imported, but it references {name} v{version}. Import the matching mod zip for the same appearance.",
         "importFailed": "Failed to import save.",
@@ -148,15 +193,18 @@
           "Inventory items can feed, gift, care for your pet, or plant and boost things in the garden."
         ],
         "other": [
-          "The shop sells food, gifts, care, and garden items. You can claim free Gubi Crisps daily and exchange coins for hearts.",
-          "Daily wishes and return tasks grant rewards after completion. Offline time may also leave diaries or events.",
-          "Pomodoro cycles focus and breaks. Completed focus grants coins and mood, while poor status pauses the timer.",
-          "The garden lets you unlock slots, plant trees, water, fertilize, and harvest. Clear withered trees to plant again.",
-          "Achievements track care, shop, inventory, garden, and Pomodoro progress, rewarding coins, items, boosts, or CGs.",
-          "Birthdays, anniversaries, festivals, and yearly reviews can grant special rewards; weather and seasons lightly affect daily actions.",
+          "Schedules, daily rewards, weather, and daily counters reset at 5:00 local time. Birthdays, meeting anniversaries, festivals, and monthly gifts follow calendar dates and can be claimed for three days after the event.",
+          "The shop sells food, gifts, care, and garden items. Claim a free Gubi Crisp daily and exchange hearts for coins; Friend and Best Friend Passes provide timed bonuses and a daily neighbor gift.",
+          "Daily wishes and return tasks grant rewards after completion. Offline diaries and random events may bring neighbor gifts or gacha tickets; an offline ticket has a 1% chance to become a ten-pull reward, and all daily sources share three ticket-grant slots.",
+          "Pomodoro cycles focus and breaks. Completed focus grants coins and mood, while low energy or health pauses the timer.",
+          "The garden lets you unlock slots, plant trees, water, fertilize, upgrade tools, and harvest. Item trees with no harvests left become withered.",
+          "Partner schedules unlock at Lv.3 and allow up to three completions per day. Four skills grow to Lv.10, then track master completions; finishing all three daily schedules also grants a gacha ticket.",
+          "Golden Apple Gacha accepts coins or tickets and includes a one-time starter gift of 10 tickets. Golden apples care for your partner and are also important Partner Dreams materials.",
+          "Achievements, birthdays, anniversaries, festivals, and yearly reviews grant special rewards. At Lv.20, Partner Dreams lead to trophies and long-term legacy levels.",
           "Settings include save management, language, audio, and mods. Mods can replace visuals/text and add safe custom items."
         ],
-        "authorLink": "Author page and feedback"
+        "authorLinkAvailable": "Author page and feedback · first click grants {count} gacha tickets",
+        "authorLinkClaimed": "Author page and feedback · {count} gacha tickets claimed"
       },
       "back": "Back"
     },
@@ -190,7 +238,14 @@
       "activityAlt": "{name}'s activity",
       "statusAlt": "{name} {status}",
       "sceneAria": "Pet status",
-      "interactAria": "Interact with pet"
+      "interactAria": "Interact with pet",
+      "partnerScheduleBusy": "Companion schedule in progress",
+      "expandWeather": "Expand weather details",
+      "collapseWeather": "Collapse weather details",
+      "expandSeason": "Expand season details",
+      "collapseSeason": "Collapse season details",
+      "expandStatus": "Expand status bar",
+      "collapseStatus": "Collapse status bar"
     },
     "actionDock": {
       "dock": "Care actions",
@@ -217,6 +272,8 @@
       "level": "Lv.{level}",
       "cost": "{cost} hearts",
       "maxLevel": "Max level",
+      "inventory": "Inventory",
+      "inventoryKinds": "{count} types owned",
       "pomodoro": "Pomodoro",
       "boostCards": "Boost cards",
       "boostCardsHint": "Daily bonus perks",
@@ -225,7 +282,328 @@
       "garden": "Garden",
       "gardenHint": "Grow trees",
       "gardenReady": "Ready to harvest",
-      "gardenWithered": "Withered tree"
+      "gardenWithered": "Withered tree",
+      "partnerSchedule": "Partner Schedule",
+      "partnerScheduleHint": "Plan today's activities",
+      "partnerScheduleLocked": "Unlocks at Lv.{level}",
+      "partnerScheduleReady": "Activity rewards ready",
+      "partnerScheduleActive": "Schedule in progress",
+      "gacha": "Golden Apple Gacha",
+      "gachaHint": "Spend coins or tickets for a chance at prizes",
+      "gachaTickets": "{count} gacha tickets",
+      "commonDreams": "Partner Dreams",
+      "commonDreamsLocked": "Needs Lv.{level} and all skills Lv.{skill} (lowest {currentSkill})",
+      "commonDreamsReady": "Partner Dreams unlocked",
+      "commonDreamsComplete": "Partner Dreams complete · Legacy Lv.{level}"
+    },
+    "gacha": {
+      "title": "Golden Apple Gacha",
+      "subtitle": "Use gacha tickets first. Coin payouts do not cover the draw cost; most value comes from non-sellable items and Golden Apples.",
+      "close": "Close Golden Apple Gacha",
+      "walletAria": "Gacha balances",
+      "paymentAria": "Choose gacha payment method",
+      "payCoins": "Coins",
+      "payTickets": "Tickets",
+      "singleDraw": "Draw 1 · {cost}",
+      "tenDraw": "Draw 10 · {cost}",
+      "coinCostHint": "One draw costs 500 coins; ten draws cost 5,000 coins",
+      "ticketCostHint": "One draw costs 1 ticket; ten cost 10; payments cannot be mixed",
+      "notEnoughCoins": "You do not have enough coins for this draw.",
+      "notEnoughTickets": "You do not have enough gacha tickets for this draw.",
+      "charging": "The gacha machine is charging",
+      "burst": "The results are about to appear",
+      "skip": "Skip animation",
+      "revealAll": "Reveal all",
+      "starterGift": "Starter gift",
+      "starterGiftHint": "Claim {count} gacha tickets",
+      "starterGiftClaimed": "Gacha tickets ×{count}",
+      "coinReward": "{coins} coins",
+      "unknownReward": "Unknown item",
+      "guaranteed": "Ten-draw apple guarantee",
+      "pityGuaranteed": "First ultimate pity",
+      "jackpot": "Ultimate Jackpot",
+      "probabilities": "Full probabilities",
+      "guaranteeNote": "If none of ten base results contains a golden apple, the tenth is replaced with one golden apple.",
+      "pityProgress": "First ultimate pity progress: {current}/{threshold}",
+      "pityAvailable": "This save's one-time ultimate pity has not triggered yet.",
+      "pityUsed": "This save's one-time ultimate pity has triggered; the counter no longer increases.",
+      "pityRule": "While the first pity is available, {threshold} consecutive draws without Golden Apples ×100 make the next draw award it. A natural jackpot resets the miss counter without using the pity. The pity can trigger only once.",
+      "recentTitle": "Recent results",
+      "recentEmpty": "No gacha results yet.",
+      "detailsAria": "Gacha details",
+      "closeDetails": "Close gacha details",
+      "rarity": {
+        "common": "Common",
+        "uncommon": "Uncommon",
+        "rare": "Rare",
+        "legendary": "Legendary",
+        "jackpot": "Ultimate jackpot"
+      },
+      "confirm": {
+        "title": "Confirm draw?",
+        "coins": "Draw {count} time(s) and spend {cost} coins. Generated results cannot be reversed.",
+        "tickets": "Draw {count} time(s) and spend {cost} gacha tickets. Generated results cannot be reversed.",
+        "cancel": "Not yet",
+        "submit": "Confirm draw"
+      },
+      "appleUseConfirm": {
+        "title": "Use a golden apple?",
+        "message": "Golden apples are important items for endgame content. Use one?",
+        "cancel": "Don't use",
+        "confirm": "Don't ask again"
+      }
+    },
+    "classicEndgame": {
+      "back": "Back home",
+      "kicker": "Ultimate Dreams",
+      "title": "Partner Dreams",
+      "summary": "Fulfill ultimate dreams and earn ultimate bonuses.",
+      "appleMaterialHint": "Endgame material: golden apples",
+      "progress": "Goal progress",
+      "stageProgress": "Stage completion",
+      "fundingProgress": "Goal funding",
+      "levelLocked": "Reach pet Lv.{targetLevel} to unlock Partner Dreams goals (currently Lv.{level}).",
+      "lockedProgress": "Raise all four schedule skills to Lv.{targetSkill} to fund goals (currently lowest Lv.{skill}).",
+      "finalComplete": "The ultimate dreams are fulfilled, but care and growth can continue.",
+      "stage": "Stage {stage}",
+      "stageNamed": "Stage {stage} · {name}",
+      "nextStage": "Next · Stage {stage} · {name}",
+      "finalStagePreview": "Completing this stage achieves the final result",
+      "goldTrophyPreview": "Also unlocks: {trophy}",
+      "projectComplete": "Goal achieved",
+      "requirementSkill": "Skill Lv.{current}/{target}",
+      "requirementSchedule": "Category schedules {current}/{target}",
+      "requirementMaster": "Master completions {current}/{target}",
+      "requirementApples": "Golden apples {current}/{target}",
+      "funding": "Coin investment",
+      "nextRequirementCoins": "{target} coins",
+      "nextRequirementSkill": "Skill Lv.{target}",
+      "nextRequirementSchedule": "{target} category schedules",
+      "nextRequirementMaster": "{target} master completions",
+      "nextRequirementApples": "{target} golden apples",
+      "completeStage": "Complete this stage",
+      "legacyKicker": "Shared Legacy",
+      "legacyTitle": "Legacy Level {level}",
+      "legacySummary": "Legacy levels, no rewards.",
+      "legacyCoins": "Coins {current}/{target}",
+      "completeLegacy": "Complete Lv.{level}",
+      "invest": {
+        "ten": "Invest 10% · {coins}",
+        "quarter": "Invest 25% · {coins}",
+        "fill": "Fill · {coins}"
+      },
+      "confirm": {
+        "title": "Confirm large investment?",
+        "message": "This will invest {coins} coins and cannot be reversed.",
+        "cancel": "Not now",
+        "confirm": "Invest"
+      },
+      "trophies": {
+        "kicker": "Trophy Cabinet",
+        "title": "Trophy Cabinet",
+        "summary": "Trophies unlock automatically with goal stages. Only the highest tier in each category applies.",
+        "unlocked": "Unlocked · Effect active",
+        "unlockStage": "Complete stage {stage} of this goal to unlock",
+        "unlockDiamond": "Unlock all {count} standard trophies to earn this",
+        "names": {
+          "study": { "bronze": "Inspiration Bronze", "silver": "Manuscript Silver", "gold": "Timeless Gold" },
+          "cooking": { "bronze": "First Taste Bronze", "silver": "Signature Silver", "gold": "Master Chef Gold" },
+          "garden": { "bronze": "New Sprout Bronze", "silver": "Four Seasons Silver", "gold": "Master Gardener Gold" },
+          "exercise": { "bronze": "Departure Bronze", "silver": "Mountains and Seas Silver", "gold": "World Tour Gold" },
+          "diamond": "Diamond Friendship Trophy"
+        },
+        "effects": {
+          "schedule": "All schedule settlement rewards ×{value}",
+          "food": "Positive stat effects from normal food ×{value}",
+          "garden": "Garden extra-yield chance +{value} percentage points",
+          "energy": "Energy cap +{value}",
+          "diamond": "Schedules and food ×2.5 · Garden extra-yield chance +150 points · Energy cap +150"
+        }
+      },
+      "exchange": {
+        "kicker": "Diamond Benefit",
+        "title": "Golden Apple Exchange",
+        "unlocked": "The Diamond Trophy is unlocked. Exchanges grant a fixed number of hearts and ignore other heart bonuses.",
+        "locked": "Earn the Diamond Friendship Trophy to unlock exchanges.",
+        "inventory": "Golden apples: {apples}",
+        "allValue": "Exchange all for {hearts} hearts",
+        "actionsAria": "Choose a golden apple exchange amount",
+        "one": "Exchange 1",
+        "ten": "Exchange 10",
+        "all": "All · {apples}",
+        "confirm": {
+          "title": "Exchange golden apples?",
+          "message": "This will use {apples} golden apples and grant {hearts} hearts. The exchange cannot be reversed.",
+          "cancel": "Not now",
+          "confirm": "Exchange"
+        }
+      },
+      "projects": {
+        "study": {
+          "title": "Write a Book",
+          "summary": "Turn the stories and discoveries from life together into a book.",
+          "result": "You finished writing a book together.",
+          "stages": { "1": "Choose a Theme", "2": "Gather Material", "3": "Finish the Draft", "4": "Edit the Final Copy", "5": "Publish the Book" }
+        },
+        "cooking": {
+          "title": "Become a Master Chef",
+          "summary": "Hone your cooking skills and create signature dishes worth remembering.",
+          "result": "Your cooking reached new heights and earned master-chef status.",
+          "stages": { "1": "Know the Kitchen", "2": "Master the Heat", "3": "Create a Signature Dish", "4": "Complete the Feast", "5": "Master Chef Crown" }
+        },
+        "garden": {
+          "title": "Master Gardener",
+          "summary": "Tend plants through every season and keep the garden flourishing.",
+          "result": "The garden flourished year-round, earning master-gardener status.",
+          "stages": { "1": "Plan the Beds", "2": "Raise New Seedlings", "3": "Tend Every Season", "4": "Cultivate a Treasure", "5": "Master's Garden" }
+        },
+        "exercise": {
+          "title": "Travel the World",
+          "summary": "Let every workout prepare you for the next journey.",
+          "result": "You traveled far and wide together, completing a journey around the world.",
+          "stages": { "1": "Plan the Route", "2": "Set Out", "3": "Cross Mountains and Seas", "4": "Leave Your Mark", "5": "Travel the World" }
+        }
+      }
+    },
+    "partnerSchedule": {
+      "aria": "Partner Schedule",
+      "back": "Back home",
+      "kicker": "Partner Schedule",
+      "title": "Partner Schedule",
+      "summary": "Schedule a real-time companion activity while natural pet stats are paused.",
+      "skillsAria": "Activity proficiency",
+      "skillLevel": "Proficiency Lv.{level}",
+      "skillProgress": "Lv.{level} · {xp}/{needed}",
+      "passives": {
+        "level2": "Lv.2: Energy cost -10% for this category",
+        "level4": "Lv.4: Hunger and mood costs -10%",
+        "level5": "Lv.5: Activity duration -5%",
+        "level7": "Lv.7: Proficiency XP +15%",
+        "level8": "Lv.8: Schedule coins +5% for this category",
+        "level9": "Lv.9: Total activity duration -10%",
+        "level10": "Lv.10: Unlock the master skill"
+      },
+      "mastery": {
+        "count": "Master · {count} completed",
+        "unlocked": "Master skill unlocked",
+        "reward": "Master completion +1",
+        "next10": "{count}/{target} · Raise total energy reduction to 15%",
+        "next30": "{count}/{target} · Raise category coin bonus to 10%",
+        "next60": "{count}/{target} · Strengthen the long-term master passive",
+        "complete": "Master legacy complete · {count} lifetime"
+      },
+      "masterPassives": {
+        "study": { "base": "Daily wish coins +10%", "advanced": "Daily wish coins +20%" },
+        "cooking": { "base": "Normal food effects +10%", "advanced": "Normal food effects +15%" },
+        "garden": { "base": "New garden cycle time -5%", "advanced": "New garden cycle time -8%" },
+        "exercise": { "base": "Awake energy recovery interval -8%", "advanced": "Awake energy recovery interval -12%" }
+      },
+      "milestones": {
+        "aria": "All-skill progression milestones",
+        "level3Title": "All Skills Lv.3",
+        "level6Title": "All Skills Lv.6",
+        "progress": "{count}/4 at Lv.{level}",
+        "level3Locked": "All skills: coins +5%, 4 choices next day",
+        "level6Locked": "All skills: total coins +15%, 5 choices next day",
+        "level3Active": "4 choices active · coins +5%",
+        "level6Active": "5 choices active · total coins +15%",
+        "nextReset": "Coin bonus active; {count} choices from the next reset",
+        "income": "Current milestone coins +{percent}%"
+      },
+      "categories": {
+        "study": "Study",
+        "cooking": "Cooking",
+        "garden": "Gardening",
+        "exercise": "Exercise"
+      },
+      "sizes": {
+        "short": "Short",
+        "standard": "Standard",
+        "long": "Long"
+      },
+      "todayKicker": "Today",
+      "todayTitle": "Today's activities",
+      "dailyCount": "Completed {count}/{limit} · {offers} choices today",
+      "dailyTicketHint": "Complete {limit} activities today to earn 1 gacha ticket",
+      "dailyTicketClaimed": "Today's completion reward claimed · Gacha ticket +1",
+      "activeAria": "Active schedule",
+      "activeKicker": "Schedule in progress",
+      "homeDockAria": "Current partner schedule",
+      "homeDockKicker": "Partner Schedule",
+      "open": "Open partner schedule",
+      "busyShort": "Schedule active",
+      "busyHint": "Your companion is busy with a schedule, so pet care is unavailable.",
+      "remaining": "{time} remaining",
+      "progress": "Activity progress {percent}%",
+      "cancel": "End early",
+      "completed": "Completed",
+      "start": "Start",
+      "rewardPreview": "{coins} coins · proficiency +{xp}",
+      "rewardPreviewMaster": "{coins} coins · master completion +1",
+      "cost": {
+        "energy": "Energy -{amount}",
+        "hunger": "Hunger -{amount}",
+        "mood": "Mood -{amount}"
+      },
+      "blocked": {
+        "locked": "Locked",
+        "busy": "Already active",
+        "pending": "Claim reward first",
+        "completed": "Completed",
+        "daily_limit": "3 completed today",
+        "sleeping": "Sleeping",
+        "energy": "Low energy",
+        "hunger": "Low hunger",
+        "mood": "Low mood",
+        "health": "Low health",
+        "missing": "Unavailable"
+      },
+      "resultAria": "Activity rewards",
+      "resultKicker": "Activity complete",
+      "resultSummary": "Choose the reward that matters most this time.",
+      "extraRewardChance": "Current chance to gain one extra full reward: {percent}%",
+      "claimCoins": "Claim {coins} coins",
+      "claimXp": "Proficiency +{xp}",
+      "categoryRewards": {
+        "study": "Organize notes · {coins} coins",
+        "cooking": "Keep the meal · {coins} coins",
+        "garden": "Bring a sapling · {coins} coins",
+        "exercise": "Recover well · {coins} coins"
+      },
+      "neighborActivity": {
+        "title": {
+          "named": "With {neighbor}: {activity}",
+          "generic": "Neighbor activity: {activity}"
+        },
+        "summary": {
+          "named": "This time, {neighbor} will join in. {summary}",
+          "generic": "A neighbor from nearby will join in. {summary}"
+        }
+      },
+      "neighborClaimed": {
+        "named": "{neighbor} made it home safely too.",
+        "generic": "The neighbor made it home safely too."
+      },
+      "cancelDialog": {
+        "title": "End this activity early?",
+        "message": "Current progress will be lost, and the starting stat costs will not be restored.",
+        "keep": "Keep going",
+        "confirm": "End early"
+      },
+      "activities": {
+        "study_notes": { "title": "Organize Notes", "summary": "Sort loose notes and review what was learned today." },
+        "study_archive": { "title": "Archive Old Books", "summary": "Check pages and labels, then build a useful catalog." },
+        "study_research": { "title": "Focused Research", "summary": "Complete a deeper reading session and record the findings." },
+        "cooking_snack": { "title": "Make a Snack", "summary": "Prepare something simple and practice timing the heat." },
+        "cooking_lunch": { "title": "Prepare Lunch", "summary": "Plan and make a balanced bento for the day." },
+        "cooking_feast": { "title": "Prepare a Feast", "summary": "Handle several ingredients in a more demanding meal." },
+        "garden_seedlings": { "title": "Tend Seedlings", "summary": "Check fresh shoots and keep the soil in good condition." },
+        "garden_orchard": { "title": "Organize the Orchard", "summary": "Inspect every tree and plan the next care cycle." },
+        "garden_field_day": { "title": "Full Garden Day", "summary": "Handle pruning, watering, and soil care in one long session." },
+        "exercise_walk": { "title": "Brisk Walk", "summary": "Move at a comfortable pace and explore the neighborhood." },
+        "exercise_training": { "title": "Fitness Training", "summary": "Complete a steady set of progressive exercises." },
+        "exercise_challenge": { "title": "Endurance Challenge", "summary": "Budget energy carefully and stay with a longer goal." }
+      }
     },
     "rewards": {
       "claim": "Claim reward",
@@ -235,6 +613,7 @@
       "dailyTitle": "Daily login gift",
       "coins": "+{coins} coins",
       "hearts": "+{hearts} hearts",
+      "gachaTickets": "+{count} gacha tickets",
       "item": "{item} x{count}",
       "confirm": "Take gift",
       "anniversaryTitle": "{name} anniversary",
@@ -330,12 +709,15 @@
       "back": "Back",
       "kicker": "Achievement",
       "title": "Achievements",
-      "unlocked": "Unlocked",
-      "unlockedProgress": "Unlocked {unlocked}/{total}",
+      "unlocked": "Completed",
+      "unlockedProgress": "Completed {unlocked}/{total}",
       "claimable": "Claimable",
       "dailyStipend": "Daily achievement stipend",
       "dailyStipendAmount": "+{coins} coins",
       "claim": "Claim",
+      "claimAll": "Claim all ({count})",
+      "gardenExtraDrop": "Bonus produce",
+      "gardenExtraDropAmount": "+{percent}%",
       "dailyStipendClaimed": "Claimed today",
       "reviewNotice": "Older save data or multiple achievements have been organized. Review them here.",
       "tabsAria": "Achievement categories",
@@ -350,8 +732,12 @@
       },
       "categories": {
         "all": "All",
+        "companion": "Companion",
+        "life": "Daily Life",
+        "schedule": "Schedule",
         "care": "Care",
         "daily": "Daily",
+        "garden": "Garden",
         "shop": "Shop",
         "inventory": "Inventory",
         "pomodoro": "Pomodoro",
@@ -368,6 +754,7 @@
       "dailyStipendAuto": "Paid automatically with daily login rewards",
       "cg": {
         "open": "View {title} memorial image",
+        "view": "View memorial",
         "kicker": "Memorial image",
         "save": "Save image",
         "close": "Close"
@@ -391,6 +778,32 @@
       "dropTitle": "{count} item(s)",
       "dailyLimit": "Daily limit reached",
       "toolsAria": "Garden tools",
+      "openTools": "Open tool upgrades",
+      "toolsButton": "Garden tools",
+      "environmentAria": "Garden environment and bonuses",
+      "weatherLabel": "Weather · {weather}",
+      "seasonLabel": "Season · {season}",
+      "weatherEffects": {
+        "sunny": "New growth cycle time -5%",
+        "cloudy": "Bonus harvest chance +5%",
+        "rainy": "Watering time reduction +5%",
+        "breezy": "New growth cycle time -3%"
+      },
+      "seasonEffects": {
+        "spring": "New growth cycle time -10%",
+        "summer": "Watering time reduction +3%",
+        "autumn": "Bonus harvest chance +10%",
+        "winter": "New trees can be harvested +1 time"
+      },
+      "chooseSapling": "Choose a sapling",
+      "plantDialogTitle": "Choose a sapling",
+      "plantDialogSummary": "Choose the sapling to plant in this slot",
+      "toolsDialogTitle": "Garden tools",
+      "toolsDialogSummary": "Upgrade tools to improve daily garden work",
+      "closeDialog": "Close",
+      "plantAction": "Plant",
+      "buySaplings": "Buy saplings and garden supplies",
+      "upgradeTool": "Upgrade",
       "toolUpgrade": "Upgrade to Lv.{level} · {coins} coins",
       "maxTool": "Max level",
       "states": {
@@ -450,7 +863,10 @@
       "saplingOwned": "Sapling x{count}",
       "needSapling": "Buy in shop · {coins} coins",
       "itemOwned": "Bag x{count}",
-      "waterFree": "Free · -{percent}%",
+      "waterPreview": "Free · saves about {time}",
+      "fertilizerPreview": "Bag x{count} · saves about {time}",
+      "careMinimumRemaining": "Minimum 10 seconds remaining",
+      "careReductionLimitReached": "Round speed-up limit reached",
       "coinDropTitle": "Harvest {coins} coins",
       "compensationGiftLabel": "Claim garden compensation: {coins} coins",
       "compensationGiftCoins": "+{coins}"
@@ -462,10 +878,13 @@
       "activeCard": "Active: {card}",
       "noActive": "No active card",
       "todayWork": "Work bonus {coins}/{limit}",
+      "scheduleBonus": "Partner schedule coins +{percent}%",
       "extraHeartChance": "Extra heart chance {percent}% · unlimited",
       "todayGarden": "Garden drops {count}/{limit}",
       "claimed": "Claimed today",
-      "claimCoins": "Claim {coins} coins",
+      "claimReward": "Claim a neighbor gift and {coins} coins",
+      "rewardGiftTitle": "Neighbor gift delivered",
+      "rewardCoinsTitle": "Daily boost-card reward",
       "remaining": "{days} days left",
       "buy": "{hearts} hearts · 30 days",
       "blockedByBestFriend": "Best Friend active",
@@ -473,25 +892,25 @@
       "cards": {
         "friend_pass": {
           "name": "Friend Pass",
-          "summary": "Daily coins, work coins, and a small heart bonus."
+          "summary": "A daily neighbor gift and 15 coins, +8 work coins each time (up to 80 daily), and a 10% extra-heart chance."
         },
         "best_friend_pass": {
           "name": "Best Friend Pass",
-          "summary": "Higher daily rewards plus garden growth and drop bonuses."
+          "summary": "A daily neighbor gift and 50 coins, +10% partner schedule coins, plus the existing garden growth and drop bonuses."
         }
       }
     },
     "rolePicker": {
       "aria": "Choose pet character",
       "title": "Choose your companion",
-      "description": "Use built-in mint, continue with the installed mod, or import a new mod. No save is created until you choose.",
+      "description": "Choose built-in mint or any installed mod. You can also install another mod first. No save is created until you choose.",
       "loading": "Loading local mod...",
       "builtinTitle": "Built-in mint",
       "builtinSummary": "Create the default companion without a mod.",
       "installedTitle": "Use {name}",
       "installedSummary": "Create the mod companion named {pet}.",
       "importTitle": "Import mod",
-      "importSummary": "Pick a zip file and create a companion from it."
+      "importSummary": "Install a zip into the Mod Library, then choose a companion."
     }
   },
   "pet": {
@@ -619,11 +1038,11 @@
         },
         "normal_fertilizer": {
           "name": "Fertilizer",
-          "summary": "Use in the garden to cut the current timer by 20%."
+          "summary": "Cuts 20% of the round's original duration, up to 10 hours."
         },
         "heart_fertilizer": {
           "name": "Heart fertilizer",
-          "summary": "Use in the garden to cut the current timer by 35%."
+          "summary": "Cuts 35% of the round's original duration, up to 18 hours."
         },
         "harvest_nutrient": {
           "name": "Harvest nutrient",
@@ -643,7 +1062,7 @@
     "weather": {
       "sunny": {
         "label": "Sunny",
-        "summary": "Good sunlight slows mood decay a little, and play gives mood +2."
+        "summary": "Good sunlight slows mood decay a little, and the extra play mood scales with the stat cap."
       },
       "cloudy": {
         "label": "Cloudy",
@@ -651,7 +1070,7 @@
       },
       "rainy": {
         "label": "Rainy",
-        "summary": "Rain makes messes easier; cleaning gets +5, work earns -4 coins."
+        "summary": "Rain makes messes easier; the extra cleaning effect scales with the stat cap, and work earns 4 fewer coins."
       },
       "breezy": {
         "label": "Breezy",
@@ -717,6 +1136,14 @@
       "dreamTalk": "Dream talk: ",
       "dreamEvent": "Dream: "
     },
+    "effectSummary": {
+      "hunger": "Hunger {amount}",
+      "mood": "Mood {amount}",
+      "cleanliness": "Cleanliness {amount}",
+      "energy": "Energy {amount}",
+      "health": "Health {amount}",
+      "wrap": " ({effects})"
+    },
     "interaction": {
       "cost": [
         "{name} played hard and got a little hungry.",
@@ -747,53 +1174,107 @@
     "dailyEncounter": {
       "coins": "{name} found shiny coins near the window, coins +18.",
       "biscuit": "A neighbor brought a Gubi Crisp, inventory +1.",
-      "sun": "{name} basked in the sun, mood +8, cleanliness -2.",
-      "rest": "{name} woke up refreshed, energy +10.",
-      "snack": "{name} secretly found a snack, hunger +10, cleanliness -3.",
-      "nightmare": "{name} had a tiny bad dream, mood -5.",
+      "neighborGiftNamed": "Your neighbor {neighbor} visited and left {item}, inventory +1.",
+      "neighborGiftGeneric": "A neighbor visited and left {item}, inventory +1.",
+      "sun": "{name} basked in the sun.",
+      "rest": "{name} woke up refreshed.",
+      "snack": "{name} secretly found a snack.",
+      "nightmare": "{name} had a tiny bad dream.",
       "heart": "{name} received a small sticker, hearts +{hearts}."
     },
     "offlineDiary": {
       "sunny": [
         "{name} napped in the sun and looked for you with sleepy eyes.",
-        "{name} took the warm window spot and carefully fixed the small cushion."
+        "{name} took the warm window spot and carefully fixed the small cushion.",
+        "{name} followed patches of sunlight across the floor before settling in the warmest one."
       ],
       "cloudy": [
         "{name} waited quietly for a while, as if expecting you back.",
-        "{name} watched the clouds for a long time, then softly nudged you when you returned."
+        "{name} watched the clouds for a long time, then softly nudged you when you returned.",
+        "{name} lined up the small toys neatly and waited patiently for you to come home."
       ],
       "rainy": [
         "{name} listened to the rain and dragged the blanket to a cozier spot.",
-        "{name} spaced out a little today and noticed you only after the rain stopped."
+        "{name} spaced out a little today and noticed you only after the rain stopped.",
+        "{name} listened to raindrops tap the window and saved a corner of the blanket for you."
       ],
       "breezy": [
         "{name} rested in the breeze and looked more relaxed than before.",
-        "{name} noticed scents in the wind and seriously patrolled the room."
+        "{name} noticed scents in the wind and seriously patrolled the room.",
+        "{name} watched the curtains sway in the breeze, tail moving just as slowly."
       ]
     },
     "offlineEvent": {
-      "coins": "{name} found a coin that rolled beside the mat, coins +12.",
+      "coins": [
+        "{name} found a coin that rolled beside the mat, coins +12.",
+        "{name} uncovered a little spare change beneath a toy, coins +12."
+      ],
       "biscuit": "A neighbor passed by and left a Gubi Crisp, inventory +1.",
-      "heart": "{name} hid a small sticker for your return, hearts +{hearts}.",
-      "sunnyPlay": "{name} secretly basked in the sun, mood +6, cleanliness -2.",
-      "play": "{name} played alone for a while, mood +6, cleanliness -2.",
-      "hungryHappy": "{name} got a little hungry waiting, but was happy to see you, hunger -4, mood +4.",
-      "rest": "{name} rested calmly for a while, energy +8.",
-      "mess": "{name} turned the corner into a mess, cleanliness -5."
+      "neighborGiftNamed": "Your neighbor {neighbor} visited and left {item}, inventory +1.",
+      "neighborGiftGeneric": "A neighbor visited and left {item}, inventory +1.",
+      "heart": [
+        "{name} hid a small sticker for your return, hearts +{hearts}.",
+        "{name} carefully prepared a welcome-home card, hearts +{hearts}."
+      ],
+      "sunnyPlay": "{name} secretly basked in the sun.",
+      "play": "{name} played alone for a while.",
+      "sunnyPlayNamed": [
+        "{name} played in the sun with {neighbor}.",
+        "{name} chased sunbeams by the window with {neighbor}."
+      ],
+      "sunnyPlayGeneric": [
+        "{name} played in the sun with a neighbor.",
+        "{name} chased patches of sunlight with a visiting neighbor."
+      ],
+      "playNamed": [
+        "{name} played with {neighbor} for a while.",
+        "{name} rolled a toy back and forth with {neighbor}."
+      ],
+      "playGeneric": [
+        "{name} played with a neighbor for a while.",
+        "{name} shared the toys with a visiting neighbor."
+      ],
+      "hungryHappy": [
+        "{name} got a little hungry waiting, but was happy to see you.",
+        "{name} forgot to eat while guarding the door, then brightened up when you returned."
+      ],
+      "rest": [
+        "{name} rested calmly for a while.",
+        "{name} found a cozy spot for a nap."
+      ],
+      "mess": [
+        "{name} turned the corner into a mess.",
+        "{name} scattered the cushions while looking for a small toy."
+      ],
+      "ticket": "{name} found a gacha ticket beneath the mat, gacha tickets +{tickets}.",
+      "tenTickets": "{name} found a shining ten-pull ticket, gacha tickets +{tickets}!",
+      "tenTicketsCapped": "{name} found a ten-pull ticket, but the ticket limit was close; {tickets} ticket(s) arrived."
     },
     "sleepSettlement": {
-      "tooShort": "{name} woke soon after lying down, a little groggy, mood -1.",
-      "bad": "{name} slept poorly and seemed to have a small bad dream, mood -3, health -1.",
-      "good": "{name} slept deeply and nuzzled the blanket after waking, mood +4, energy +5.",
-      "normal": "{name} woke up feeling steadier, mood +2."
+      "tooShort": [
+        "{name} woke soon after lying down, a little groggy.",
+        "{name} opened its eyes after only a brief rest and still looked sleepy."
+      ],
+      "bad": [
+        "{name} slept poorly and seemed to have a small bad dream.",
+        "{name} tossed and turned, then woke up looking uncomfortable."
+      ],
+      "good": [
+        "{name} slept deeply and nuzzled the blanket after waking.",
+        "{name} enjoyed a very comfortable sleep and woke with a long stretch."
+      ],
+      "normal": [
+        "{name} woke up feeling steadier.",
+        "{name} woke after a quiet rest."
+      ]
     },
     "streak": {
-      "play": "{name} played several times in a row and slowed down, energy -2, hunger -2.",
-      "clean": "{name} was washed too often and shook off water in protest, mood -4, hunger -1.",
-      "work": "{name} struggled with too much work in a row, mood -2, health -2.",
-      "feed": "{name} got a little too full and dirtied its mouth, mood -3, cleanliness -1.",
-      "gift": "{name} received too many gifts and did not know which one to hug first, mood -2.",
-      "touch": "{name} got shy from too much interaction and rested by your hand, mood -3, energy -1."
+      "play": "{name} played several times in a row and slowed down, energy -{energy}, hunger -{hunger}.",
+      "clean": "{name} was washed too often and shook off water in protest, mood -{mood}, hunger -{hunger}.",
+      "work": "{name} struggled with too much work in a row, mood -{mood}, health -{health}.",
+      "feed": "{name} got a little too full and dirtied its mouth, mood -{mood}, cleanliness -{cleanliness}.",
+      "gift": "{name} received too many gifts and did not know which one to hug first, mood -{mood}.",
+      "touch": "{name} got shy from too much interaction and rested by your hand, mood -{mood}, energy -{energy}."
     },
     "advance": {
       "wokeUp": "{name} woke up feeling great.",
@@ -806,7 +1287,7 @@
       "lowEnergyPlay": "{name}'s energy is too low. Sleep or use an item to recover first.",
       "lowHungerBlocked": "{name} is too hungry to do that. Feed your pet first.",
       "play": "{name} had a great time playing.",
-      "clean": "{name} got clean and relaxed a little. Hunger -3, mood +1, energy -3.",
+      "clean": "{name} got clean and relaxed a little. Hunger -{hunger}, mood +{mood}, energy -{energy}.",
       "lowEnergyWork": "Not enough energy. Sleep or use an item before working.",
       "work": "{name} worked with you and earned {coins} coins.",
       "sleep": {
@@ -822,11 +1303,16 @@
     "buy": {
       "missing": "This shop item does not exist.",
       "biscuitClaimedOut": "Today's Gubi Crisps are all claimed. Come back tomorrow.",
+      "biscuitLimitInsufficient": "You can claim at most {remaining} more Gubi Crisp(s) today.",
       "freeClaim": "Got a free {item} ({claimed}/{limit}).",
+      "freeClaimBatch": "Got {count} free {item} ({claimed}/{limit}).",
       "notEnoughCoins": "Not enough coins. {item} costs {price} coins.",
       "discount": "Bought {item} at today's discount for {price} coins.",
+      "discountBatch": "Bought {count} {item}; the first used today's discount. Total: {price} coins.",
       "free": "Got a free {item}.",
-      "paid": "Bought {item}."
+      "freeBatch": "Got {count} free {item}.",
+      "paid": "Bought {item}.",
+      "paidBatch": "Bought {count} {item} for {price} coins."
     },
     "item": {
       "missing": "This item does not exist.",
@@ -834,9 +1320,14 @@
       "use": {
         "food": "{name} enjoyed {item}.",
         "foodWoke": "{name} woke up and enjoyed {item}.",
+        "foodBatch": "{name} enjoyed {count} {item}.",
+        "foodBatchWoke": "{name} woke up and enjoyed {count} {item}.",
         "gift": "You gave {name} {item}.",
+        "giftBatch": "You gave {name} {count} {item}.",
         "care": "{name} used {item}.",
         "careWoke": "{name} woke up and used {item}.",
+        "careBatch": "{name} used {count} {item}.",
+        "careBatchWoke": "{name} woke up and used {count} {item}.",
         "favorite": "This is a favorite flavor. Mood feels better.",
         "giftHeart": "The gift brought {hearts} heart(s).",
         "birthdayCake": "{name} enjoyed {item}. All stats are full.",
@@ -865,25 +1356,47 @@
       "{name} turns over and mumbles about counting one more coin.",
       "{name} seems to be chasing shiny stickers in a dream.",
       "{name} sleepily says your name.",
-      "{name} hugs the small blanket and hums softly."
+      "{name} hugs the small blanket and hums softly.",
+      "{name} quietly asks whether the stars will visit today.",
+      "{name} mumbles about saving a biscuit for the clouds by the window.",
+      "{name} carefully counts one, two, three Golden Apples in a dream.",
+      "{name} softly kicks the blanket as if chasing a rolling ball.",
+      "{name} lets out a little laugh, perhaps dreaming that you came home early."
     ],
     "dreamEvent": {
-      "cloudNap": "{name} dreamed of lying on soft clouds, mood +3 after waking.",
-      "coinPath": "{name} dreamed of collecting coins on a star path, coins +10.",
-      "sticker": "{name} dreamed of receiving a glowing sticker, hearts +{hearts}.",
-      "biscuit": "The dream snack basket left a Gubi Crisp, inventory +1.",
-      "puddleRun": "{name} dreamed of running through puddles, energy +4, cleanliness -1."
+      "cloudNap": [
+        "{name} dreamed of lying on soft clouds.",
+        "{name} dreamed of riding a cloud on a slow journey."
+      ],
+      "coinPath": [
+        "{name} dreamed of collecting coins on a star path, coins +10.",
+        "{name} dreamed of finding coins beneath the moonlight, coins +10."
+      ],
+      "sticker": [
+        "{name} dreamed of receiving a glowing sticker, hearts +{hearts}.",
+        "{name} dreamed of placing a sparkling star in the memory book, hearts +{hearts}."
+      ],
+      "biscuit": [
+        "The dream snack basket left a Gubi Crisp, inventory +1.",
+        "{name} brought a Gubi Crisp back from a dream picnic, inventory +1."
+      ],
+      "puddleRun": [
+        "{name} dreamed of running through puddles.",
+        "{name} dreamed of chasing splashes after the rain."
+      ]
     },
     "reward": {
       "helpStarterGift": "Starter gift claimed, coins +{coins}.",
-      "birthday": "It's {name}'s birthday. Birthday reward: coins +{coins}, hearts +{hearts}, Birthday Cake +1.",
+      "birthday": "It's {name}'s birthday. Birthday gift: Golden Apple +1, Birthday Cake +1, gacha tickets +10.",
       "festival": "{festival} gift arrived. A seasonal item was added to the bag.",
       "dailyCoins": "Daily login gift: coins +{coins}.",
       "dailyItem": "Daily login gift: a surprise item was added to the bag.",
       "helpPageGift": "Gameplay help gift claimed, coins +{coins}.",
+      "authorLinkGift": "Thanks for following the author. Gacha tickets +{count}.",
       "gardenCompensation": "Garden compensation claimed, coins +{coins}.",
-      "anniversary": "Today is the day you met {name}. Anniversary reward: coins +{coins}, hearts +{hearts}, Shiny Sticker +1.",
-      "monthlyGift": "A fresh month begins. Gift: coins +{coins} and a fruit snack.",
+      "anniversary": "Today is the day you met {name}. Anniversary gift: Golden Apple +1, Shiny Sticker +1, gacha tickets +10.",
+      "monthlyGift": "A fresh month begins. Gift: Golden Apple +1 and 3 gacha tickets.",
+      "catchUp": "{name} waited for you with a gift.",
       "dailyWithStipend": "Daily login gift: coins +{coins} (includes achievement stipend +{stipend}).",
       "dailyWithBonusItems": "Daily login gift delivered, achievement bonus items +{count}.",
       "dailyWithStipendAndBonusItems": "Daily login gift: coins +{coins} (includes achievement stipend +{stipend}), achievement bonus items +{count}."
@@ -945,6 +1458,7 @@
     "achievements": {
       "events": {
         "rewardClaimed": "Achievement \"{title}\" reward claimed.",
+        "rewardsClaimed": "Claimed rewards from {count} achievements.",
         "unlocked": "Achievement \"{title}\" unlocked.",
         "dailyStipendClaimed": "Daily achievement stipend claimed: {coins} coins."
       },
@@ -955,6 +1469,8 @@
         "pomodoroCoinBonus": "Pomodoro coins +{amount}",
         "cleanCooldown": "Clean cooldown {seconds}s",
         "extraHeartChance": "Extra heart chance +{percent}%",
+        "gardenExtraDropChance": "Bonus produce chance on harvest +{percent}%",
+        "partnerScheduleExtraRewardChance": "Chance of one extra full schedule reward +{percent}%",
         "globalFlatBonus": "Global yield +{amount}",
         "dailyStipend": "Daily achievement stipend +{coins} coins",
         "careStatBonus": "Feed and clean recovery +{amount}",
@@ -1050,12 +1566,96 @@
           "description": "Claim 100 daily wish rewards in total."
         },
         "return_welcome_1": {
-          "title": "Welcome Back",
-          "description": "Claim 1 return welcome reward."
+          "title": "Companion Mark",
+          "description": "Earn 1 companion mark. Each return reward or every 30 cumulative active days grants 1 mark."
         },
         "daily_login_7": {
           "title": "Just Passing By",
           "description": "Claim daily login rewards 7 times. They do not need to be consecutive."
+        },
+        "daily_login_30": {
+          "title": "A Month Together",
+          "description": "Claim daily login rewards 30 times. They do not need to be consecutive."
+        },
+        "garden_first_plant": {
+          "title": "First Planting",
+          "description": "Successfully plant 1 tree in the garden."
+        },
+        "garden_first_harvest": {
+          "title": "First Basket",
+          "description": "Complete your first garden harvest."
+        },
+        "garden_water_20": {
+          "title": "Steady Watering",
+          "description": "Successfully water garden trees 20 times."
+        },
+        "garden_harvest_30": {
+          "title": "Bumper Harvest",
+          "description": "Complete 30 garden harvests."
+        },
+        "garden_harvest_100": {
+          "title": "Hundred Harvests",
+          "description": "Complete 100 garden harvests."
+        },
+        "garden_tree_catalogue": {
+          "title": "Master Gardener",
+          "description": "Harvest the fruit, care, gift, money, and golden apple trees at least once each."
+        },
+        "garden_all_slots": {
+          "title": "Garden Master",
+          "description": "Unlock all 5 garden slots."
+        },
+        "garden_tools_max": {
+          "title": "Tool Expert",
+          "description": "Upgrade the watering can, shovel, and fertilizer box to level 3."
+        },
+        "schedule_first": {
+          "title": "First Trip",
+          "description": "Claim 1 partner schedule reward."
+        },
+        "schedule_10": {
+          "title": "Finding a Rhythm",
+          "description": "Claim 10 partner schedule rewards in total."
+        },
+        "schedule_50": {
+          "title": "Schedule Expert",
+          "description": "Claim 50 partner schedule rewards in total."
+        },
+        "schedule_all_categories": {
+          "title": "All-Rounder",
+          "description": "Claim at least 1 reward from study, cooking, garden, and exercise schedules."
+        },
+        "schedule_long_5": {
+          "title": "Long-Term Plan",
+          "description": "Complete and claim 5 long schedule rewards."
+        },
+        "schedule_long_all_categories": {
+          "title": "Four Long Roads",
+          "description": "Complete and claim at least 1 long schedule reward in every category."
+        },
+        "schedule_category_reward_10": {
+          "title": "Specialized Returns",
+          "description": "Choose the category reward 10 times."
+        },
+        "schedule_daily_three": {
+          "title": "Full Itinerary",
+          "description": "Complete 3 partner schedules on the same day."
+        },
+        "schedule_all_skills_3": {
+          "title": "Skilled in Four",
+          "description": "Raise all 4 partner schedule skills to level 3."
+        },
+        "schedule_all_skills_6": {
+          "title": "Four Skills Refined",
+          "description": "Raise all 4 partner schedule skills to level 6."
+        },
+        "schedule_all_skills_max": {
+          "title": "Ultimate Partner",
+          "description": "Raise all 4 partner schedule skills to level 10."
+        },
+        "schedule_all_master_10": {
+          "title": "Master of Four Paths",
+          "description": "After all 4 partner schedule skills reach level 10, complete 10 master schedules in each category."
         },
         "first_purchase": {
           "title": "First Purchase",
@@ -1065,9 +1665,17 @@
           "title": "Restocking the Little Pantry",
           "description": "Buy or claim items 20 times in total."
         },
+        "paid_purchase_100": {
+          "title": "Shop Regular",
+          "description": "Buy non-free items 100 times in total."
+        },
         "item_use_20": {
           "title": "The Bag Gets Used",
           "description": "Use items 20 times in total."
+        },
+        "item_use_100": {
+          "title": "Put to Good Use",
+          "description": "Use items 100 times in total."
         },
         "fruit_taster": {
           "title": "Fruit Taster",
@@ -1096,6 +1704,10 @@
         "pomodoro_100": {
           "title": "Deep Focus",
           "description": "Complete 100 focus phases in total."
+        },
+        "pomodoro_250": {
+          "title": "Focus as a Habit",
+          "description": "Complete 250 focus phases in total."
         },
         "pomodoro_day_4": {
           "title": "Focused Today",
@@ -1173,6 +1785,10 @@
           "title": "Shining Companion",
           "description": "Raise your pet to level 10."
         },
+        "rare_level_20": {
+          "title": "Growing Up Together",
+          "description": "Raise your pet to level 20."
+        },
         "hidden_good_ending_year_1": {
           "title": "Good Ending",
           "description": "To the end with you"
@@ -1223,11 +1839,11 @@
         },
         "hidden_never_give_you_up": {
           "title": "never give you up",
-          "description": "Claim 3 return rewards."
+          "description": "Earn 3 companion marks. Return rewards and every 30 cumulative active days each grant 1 mark."
         },
         "hidden_never_let_you_down": {
           "title": "never let you down",
-          "description": "Claim 10 return rewards."
+          "description": "Earn 10 companion marks. Return rewards and every 30 cumulative active days each grant 1 mark."
         },
         "hidden_quiet_companion": {
           "title": "Quiet Companion",
@@ -1255,8 +1871,60 @@
         },
         "hidden_full_catalogue": {
           "title": "Task Master",
-          "description": "Complete 36 normal tasks to unlock."
+          "description": "Complete at least 80% of normal achievements to unlock."
         }
+      }
+    },
+    "gacha": {
+      "drawn": "Completed {count} Golden Apple Gacha draws and received {coins} coins directly.",
+      "ticketGranted": "Received 1 extra gacha ticket.",
+      "starterGiftClaimed": "Claimed the starter gift and received {count} gacha tickets."
+    },
+    "classicEndgame": {
+      "locked": "Partner Dreams are not unlocked yet.",
+      "projectComplete": "This partner dream is already complete.",
+      "notEnoughCoins": "There are no coins available to invest.",
+      "stageFunded": "This stage is fully funded.",
+      "invested": "Invested {coins} coins in a partner dream.",
+      "stageNeedsCoins": "Fully fund this stage first.",
+      "requirementsMissing": "The skill, schedule, or master requirements are not met.",
+      "applesMissing": "Completion requires {apples} golden apples.",
+      "stageComplete": "Partner Dream stage {stage} completed. Hearts +{hearts}.",
+      "allComplete": "All four Partner Dreams are complete. The final memorial is unlocked. Hearts +{hearts}.",
+      "legacyLocked": "Complete all four Partner Dreams first.",
+      "legacyFunded": "This legacy level is fully funded.",
+      "legacyInvested": "Invested {coins} coins in Shared Legacy.",
+      "legacyNeedsCoins": "Fully fund this legacy level first.",
+      "legacyComplete": "Shared Legacy reached Lv.{level}, using {apples} golden apples.",
+      "legacyCurveRefund": "The Shared Legacy coin curve changed. {coins} excess invested coins were refunded.",
+      "exchangeLocked": "Earn the Diamond Friendship Trophy first.",
+      "exchangeEmpty": "There are no golden apples available to exchange.",
+      "exchangeSuccess": "Exchanged {apples} golden apples. Hearts +{hearts}."
+    },
+    "partnerSchedule": {
+      "completed": "{name} finished today's activity. The rewards are ready.",
+      "started": "{name} started today's partner schedule.",
+      "startBlocked": {
+        "locked": "Partner Schedule unlocks at Lv.3.",
+        "busy": "{name} already has an active schedule.",
+        "pending": "Claim the previous activity reward first.",
+        "completed": "This activity is already complete today.",
+        "daily_limit": "Three partner schedules are already complete today.",
+        "sleeping": "{name} is still asleep. Try again after waking up.",
+        "energy": "{name} needs more energy for this activity.",
+        "hunger": "{name} needs something to eat first.",
+        "mood": "{name} is not in the mood for this activity.",
+        "health": "{name} needs to recover first.",
+        "missing": "This activity is no longer available."
+      },
+      "busyAction": "{name} is busy with a partner schedule, so pet care is unavailable.",
+      "cancelled": "{name} ended the activity early. Its progress was not kept.",
+      "noResult": "There are no activity rewards to claim.",
+      "masterCompletion": " Master completion +1 ({count} total).",
+      "extraRewardTriggered": "Achievement bonus triggered: gained {count} extra full schedule reward(s).",
+      "claimed": {
+        "coins": "Activity rewards claimed. Coins +{coins}.",
+        "category": "Activity results collected. Coins +{coins}."
       }
     },
     "garden": {
@@ -1266,13 +1934,16 @@
       "notEnoughCoins": "Not enough coins. Need {coins}.",
       "slotLocked": "This slot is locked.",
       "slotNotEmpty": "This slot already has a tree.",
+      "goldenAppleTreeLimit": "The garden can contain at most {limit} golden apple trees at once.",
       "unlockSlotSuccess": "Unlocked slot {slot} for {coins} coins.",
       "plantSuccess": "Planted {tree} and used {item}.",
       "cannotWater": "This tree cannot be watered now.",
       "wateredToday": "This slot was already watered today.",
-      "waterSuccess": "Watered for free. Current timer shortened by {percent}%.",
+      "waterSuccess": "Watered for free. Growth time shortened by {time}.",
       "cannotFertilize": "This tree cannot be fertilized now.",
       "fertilizedToday": "This slot was already fertilized today.",
+      "careMinimumRemaining": "Growth time is already at the 10-second minimum and cannot be shortened further.",
+      "careReductionLimitReached": "This round's watering and fertilizer speed-up limit has been reached.",
       "cannotBoost": "This tree cannot use nutrient now.",
       "boostedToday": "This slot already used nutrient today.",
       "nutrientSuccess": "Used {item}. The next harvest will have an extra drop.",
@@ -1285,7 +1956,7 @@
       "toolMaxLevel": "This tool is already max level.",
       "toolUpgradeSuccess": "{tool} upgraded to Lv.{level} for {coins} coins.",
       "missingGardenItem": "No {item} in the bag.",
-      "fertilizeSuccess": "Used {item}. Current growth sped up by {percent}%.",
+      "fertilizeSuccess": "Used {item}. Growth time shortened by {time}.",
       "harvestCoinsSuccess": "Harvested +{coins} coins.",
       "harvestMixedSuccess": "Harvested {count} item(s) and +{coins} coins.",
       "harvestCoinsWithered": "Harvested +{coins} coins. The tree has withered.",
@@ -1297,8 +1968,10 @@
       "bestFriendBlocksFriend": "Friend Pass cannot be purchased while Best Friend Pass is active.",
       "buySuccess": "{card} is active or extended.",
       "noActiveCard": "No active boost card.",
-      "dailyCoinsClaimed": "Boost card coins were already claimed today.",
-      "claimDailyCoins": "Claimed {coins} daily boost-card coins.",
+      "dailyRewardClaimed": "Today's boost-card neighbor gift and coins were already claimed.",
+      "claimDailyRewardNamed": "{neighbor} brought {item}, and the boost card granted {coins} daily coins.",
+      "claimDailyRewardGeneric": "A neighbor brought {item}, and the boost card granted {coins} daily coins.",
+      "claimDailyRewardCoinsOnly": "Three neighbor gifts were already received today, so this claim granted only {coins} daily coins.",
       "workBonus": " Boost card +{coins} coins."
     }
   }

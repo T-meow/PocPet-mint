@@ -1,53 +1,44 @@
 import { useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
-import { Heart, Settings, Trophy, Upload, Volume2, VolumeX } from 'lucide-react';
+import { Heart, Settings, Ticket, Trophy, Volume2, VolumeX } from 'lucide-react';
 import {
-  advancePet,
   buyBoostCard,
-  claimBoostCardDailyCoins,
-  clearWitheredTree,
-  fertilizeTree,
-  getGardenClearCost,
+  completeClassicLegacyLevel,
+  completeDreamProjectStage,
+  exchangeClassicGoldenApplesForHearts,
+  claimBoostCardDailyReward,
   getGardenReminder,
-  harvestTree,
-  plantTree,
-  selectGardenSlot,
-  unlockGardenSlot,
-  upgradeGardenTool,
-  useGardenNutrient,
-  waterTree,
+  cancelPartnerSchedule,
+  claimPartnerScheduleResult,
   applyPetAction,
-  claimAvailableDateRewards,
+  claimAllAchievementRewards,
   claimAchievementReward,
   claimReturnWelcomeReward,
   buyItem,
   canStartPomodoro,
   claimDailyWishReward,
+  claimGoldenAppleGachaStarterGift,
   exchangeHeartForCoins,
   createDefaultPet,
+  drawGoldenAppleGacha,
   defaultPetBirthday,
   defaultPetName,
   dismissYearReview,
-  evaluateAchievementUnlocks,
   getAchievementSummary,
-  getDailyWishView,
-  getEnergyRecoveryInfo,
   gardenCompensationCoins,
   gardenCompensationRewardId,
   getNextUpgradeHeartCost,
+  getPetStatThreshold,
   getInventoryItem,
   getInventoryDefinitions,
   getItemDefinition,
   getShopDefinitions,
+  resolveNeighborName,
+  selectNeighborReference,
   createItemRegistry,
   heartExchangeCooldownMs,
-  helpPageGiftCoins,
-  helpPageGiftRewardId,
-  helpStarterGiftCoins,
-  helpStarterGiftRewardId,
-  clampCoins,
-  getPetStatCap,
-  getReturnWelcomeView,
   interactWithPet,
+  investClassicLegacy,
+  investDreamProject,
   isPetCriticallyHungry,
   isPetLowEnergy,
   markAchievementReviewSeen,
@@ -55,37 +46,38 @@ import {
   resetPomodoro,
   pomodoroMinHealthThreshold,
   recordPetInteraction,
-  recordEarnedCoins,
   updatePetProfile,
   shopCategories,
   startPomodoro,
+  startPartnerSchedule,
   updatePomodoroSettings,
   upgradePet,
   useInventoryItem,
   withBackfilledBirthday,
   withPetIdentityBirthday,
-  type AchievementCategory,
   type AchievementId,
   type AchievementView,
   type BoostCardId,
-  type GardenFertilizerId,
-  type GardenToolId,
-  type GardenTreeId,
-  type ClaimedDateReward,
   type InventoryItemDefinition,
+  type GachaPaymentMethod,
+  type GoldenAppleGachaDrawOutcome,
   type ItemId,
+  type NeighborEventContext,
+  type NeighborIdentity,
   type PetAction,
   type PetBirthday,
   type PetState,
   type PetStatus,
+  type PartnerScheduleRewardChoice,
+  type PartnerScheduleCategory,
   type PomodoroDurations,
+  type ShopCategory,
 } from '../core/pet';
-import { currencyIcon, giftBoxIcon, goodEndingImage, itemIcons, resolveItemIcons, resolvePetActivityImages, resolvePetStatusImages } from '../assets';
+import { currencyIcon, giftBoxIcon, goodEndingImage, resolveItemIcons, resolvePetActivityImages, resolvePetStatusImages } from '../assets';
 import {
   getAudioEnabled,
   playSfx,
   setAudioEnabled,
-  setAudioTemporarilyMuted,
   syncBgm,
   unlockAudio,
   type BgmMode,
@@ -98,43 +90,41 @@ import {
   getModStatusText,
   parsePetModZip,
   type ActivePetMod,
+  type InstalledPetModSummary,
 } from '../core/mod';
-import { clearActivePetMod, loadActivePetMod, saveActivePetMod } from '../core/modStorage';
+import {
+  clearActivePetMod,
+  deletePetMod,
+  getPetModLibraryState,
+  installPetMod,
+  listInstalledPetMods,
+  loadActivePetMod,
+  loadPetMod,
+  setActivePetMod,
+} from '../core/modStorage';
 import { createSaveFileText, parseSaveFileText } from '../core/saveCodec';
-import { ActionDock } from './ActionDock';
-import { AchievementsPage } from './AchievementsPage';
+import { AchievementsPage, type AchievementTabId } from './AchievementsPage';
 import { BoostCardModal } from './BoostCardModal';
+import { CommonDreamsPage } from './CommonDreamsPage';
 import { ConfirmDialog } from './ConfirmDialog';
-import { FeatureRow } from './FeatureRow';
 import { GardenPage } from './GardenPage';
-import { InventoryPanel } from './InventoryPanel';
-import { PetDisplay } from './PetDisplay';
+import { GoldenAppleGachaModal } from './GoldenAppleGachaModal';
+import { HomePage } from './HomePage';
+import { InventoryModal } from './InventoryModal';
 import { PomodoroOverlay } from './PomodoroOverlay';
+import { PartnerSchedulePage } from './PartnerSchedulePage';
+import { RolePicker } from './RolePicker';
 import { SettingsModal } from './SettingsModal';
 import { ShopModal } from './ShopModal';
 import { YearReviewModal } from './YearReviewModal';
-import { StatusBar } from './StatusBar';
 import { formatCompactNumber } from './numberFormat';
 import { getLanguage, setLanguage, t, type LanguageCode } from '../i18n';
-
-const formatSharedTime = (seconds: number) => {
-  const totalDays = Math.max(1, Math.floor(seconds / 86400) + 1);
-  const years = Math.floor(totalDays / 365);
-  const daysAfterYears = totalDays % 365;
-  const months = Math.floor(daysAfterYears / 30);
-  const days = daysAfterYears % 30;
-
-  if (years > 0) return t('ui.time.yearsMonthsDays', { years, months, days });
-  if (months > 0) return t('ui.time.monthsDays', { months, days });
-  return t('ui.time.days', { days: totalDays });
-};
-
-const formatCountdownTime = (milliseconds: number) => {
-  const totalSeconds = Math.max(0, Math.ceil(milliseconds / 1000));
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = totalSeconds % 60;
-  return String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
-};
+import { createSaveFileName, saveTextFile } from '../platform/saveTextFile';
+import { useAppNavigation } from './app/useAppNavigation';
+import { useInventoryController } from './app/useInventoryController';
+import { useGardenController } from './app/useGardenController';
+import { usePetSession } from './app/usePetSession';
+import { useRewardController, type RewardPopupData } from './app/useRewardController';
 
 const getPomodoroRemainingMs = (pet: PetState) =>
   pet.pomodoro.isRunning ? pet.pomodoro.phaseEndsAt - Date.now() : pet.pomodoro.pausedRemainingMs;
@@ -158,24 +148,15 @@ const getPomodoroProgress = (pet: PetState) => {
 
 type PomodoroSettingKey = keyof PomodoroDurations;
 type SoundOutcome = 'success' | 'blocked' | 'heart' | 'low_state';
-type FloatingRewardConfig = { id: string; coins: number; eventKey: string };
-type RewardPopup = ClaimedDateReward;
-type RewardDisplayItem = { key: string; icon?: string; label: string; title?: string };
+type RewardPopup = RewardPopupData;
+type RewardDisplayItem = { key: string; icon?: string; glyph?: 'heart' | 'ticket'; label: string; title?: string };
 type WishQuickAction = PetState['dailyWish']['action'] | NonNullable<PetState['returnWelcome']>['action'];
-type ActivePage = 'home' | 'achievements' | 'garden';
-type AchievementToast = { kind: 'single'; achievement: AchievementView } | { kind: 'review' };
 type AchievementCgPopup = { title: string; description: string; image: string; fileName: string };
-type GardenClearConfirm = { slotIndex: number; kind: 'clear' | 'remove'; treeId: GardenTreeId; coins: number };
-type PetAppProps = { initialPet: PetState; initialActiveMod: ActivePetMod | null; onResetToPicker: (storedMod: ActivePetMod | null) => void };
-type RolePickerProps = {
-  installedMod: ActivePetMod | null;
-  modMessage: string;
-  isAudioEnabled: boolean;
-  isLoading?: boolean;
-  onUseBuiltin: () => void;
-  onUseInstalledMod: () => void;
-  onImportMod: (event: ChangeEvent<HTMLInputElement>) => void;
-  onAudioToggle: () => void;
+type PetAppProps = {
+  initialPet: PetState;
+  initialActiveMod: ActivePetMod | null;
+  initialInstalledMods: readonly InstalledPetModSummary[];
+  onResetToPicker: (storedMod: ActivePetMod | null, installedMods: readonly InstalledPetModSummary[]) => void;
 };
 const achievementToastLabels = {
   single: t('ui.achievements.toast.single'),
@@ -186,12 +167,6 @@ const achievementCgImages: Record<string, string> = {
   good_ending_year_1: goodEndingImage,
 };
 
-const defaultRolePetImage = resolvePetStatusImages(null).content;
-
-const floatingRewardConfigs: readonly FloatingRewardConfig[] = [
-  { id: helpStarterGiftRewardId, coins: helpStarterGiftCoins, eventKey: 'pet.reward.helpStarterGift' },
-];
-
 const getInventoryCount = (pet: PetState, itemId: ItemId) => pet.inventory[itemId] ?? 0;
 const getDisplayItem = (items: readonly InventoryItemDefinition[], itemId: ItemId) => items.find((item) => item.id === itemId);
 const getActionSfx = (action: PetAction): SfxId => {
@@ -199,8 +174,6 @@ const getActionSfx = (action: PetAction): SfxId => {
   if (action === 'play' || action === 'work') return 'action_work_play_medicine';
   return 'pet_touch';
 };
-const getWishActionButtonLabel = (action: WishQuickAction) => t(`ui.wishes.actions.${action}`);
-
 
 const getItemSfx = (itemId: ItemId, item?: { kind: 'food' | 'item' | 'care' | 'garden' }): SfxId => {
   const resolvedItem = item ?? getInventoryItem(itemId);
@@ -210,18 +183,6 @@ const getItemSfx = (itemId: ItemId, item?: { kind: 'food' | 'item' | 'care' | 'g
   if (itemId === 'medicine' || itemId === 'vitamin_tablet' || itemId === 'energy_drink') return 'action_work_play_medicine';
   return 'pet_heart';
 };
-const downloadTextFile = (fileName: string, text: string) => {
-  const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  link.remove();
-  URL.revokeObjectURL(url);
-};
-
 const downloadImageFile = (fileName: string, imageUrl: string) => {
   const link = document.createElement('a');
   link.href = imageUrl;
@@ -240,10 +201,16 @@ const readFileText = (file: File) =>
   });
 
 const getPetInteractionOutcome = (pet: PetState): SoundOutcome => {
-  if (pet.isSleeping || isPetLowEnergy(pet) || pet.health <= pomodoroMinHealthThreshold || pet.hunger <= 32 || pet.mood <= 30) {
+  if (
+    pet.isSleeping
+    || isPetLowEnergy(pet)
+    || pet.health <= getPetStatThreshold(pet, pomodoroMinHealthThreshold)
+    || pet.hunger <= getPetStatThreshold(pet, 32)
+    || pet.mood <= getPetStatThreshold(pet, 30)
+  ) {
     return 'low_state';
   }
-  return pet.mood >= 75 && pet.health >= 40 ? 'heart' : 'success';
+  return pet.mood >= getPetStatThreshold(pet, 75) && pet.health >= getPetStatThreshold(pet, 40) ? 'heart' : 'success';
 };
 
 const createPetForMod = (mod: ActivePetMod | null) => {
@@ -256,89 +223,98 @@ const createPetForMod = (mod: ActivePetMod | null) => {
   };
 };
 
-const RolePicker = ({ installedMod, modMessage, isAudioEnabled, isLoading = false, onUseBuiltin, onUseInstalledMod, onImportMod, onAudioToggle }: RolePickerProps) => (
-  <main className="app-shell app-shell--role-picker">
-    <section className="role-picker" aria-label={t('ui.rolePicker.aria')}>
-      <div className="role-picker__header">
-        <p className="eyebrow">{t('ui.brand.eyebrow')}</p>
-        <h1>{t('ui.rolePicker.title')}</h1>
-        <p>{isLoading ? t('ui.rolePicker.loading') : t('ui.rolePicker.description')}</p>
-      </div>
-      {!isLoading && (
-        <div className="role-picker__grid">
-          <button type="button" className="role-card" onClick={onUseBuiltin}>
-            <img src={defaultRolePetImage} alt="" aria-hidden="true" />
-            <span>
-              <strong>{t('ui.rolePicker.builtinTitle')}</strong>
-              <small>{t('ui.rolePicker.builtinSummary')}</small>
-            </span>
-          </button>
-          {installedMod && (
-            <button type="button" className="role-card" onClick={onUseInstalledMod}>
-              <img src={installedMod.petImageUrls.content ?? defaultRolePetImage} alt="" aria-hidden="true" />
-              <span>
-                <strong>{t('ui.rolePicker.installedTitle', { name: installedMod.manifest.name })}</strong>
-                <small>{t('ui.rolePicker.installedSummary', { pet: installedMod.manifest.defaultPetName })}</small>
-              </span>
-            </button>
-          )}
-          <label className="role-card role-card--import">
-            <Upload size={34} aria-hidden="true" />
-            <span>
-              <strong>{t('ui.rolePicker.importTitle')}</strong>
-              <small>{t('ui.rolePicker.importSummary')}</small>
-            </span>
-            <input type="file" accept=".zip,application/zip" onChange={onImportMod} />
-          </label>
-        </div>
-      )}
-      {modMessage && <p className="role-picker__message">{modMessage}</p>}
-      <button type="button" className="icon-button audio-button role-picker__audio" aria-label={isAudioEnabled ? t('ui.top.audioOn') : t('ui.top.audioOff')} aria-pressed={isAudioEnabled} onClick={onAudioToggle}>
-        {isAudioEnabled ? <Volume2 size={21} aria-hidden="true" /> : <VolumeX size={21} aria-hidden="true" />}
-      </button>
-    </section>
-  </main>
-);
+const getNeighborIdentities = (
+  installedMods: readonly InstalledPetModSummary[],
+  activeModId?: string,
+): NeighborIdentity[] => installedMods
+  .filter((mod) => mod.manifest.id !== activeModId)
+  .map((mod) => ({ modId: mod.manifest.id, name: mod.manifest.defaultPetName }))
+  .sort((left, right) => left.modId.localeCompare(right.modId));
 
-const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) => {
-  const [pet, setPet] = useState<PetState>(initialPet);
-  const [isSettingsOpen, setSettingsOpen] = useState(false);
-  const [isShopOpen, setShopOpen] = useState(false);
+const createNeighborEventContext = (
+  installedMods: readonly InstalledPetModSummary[],
+  activeMod: ActivePetMod | null,
+): NeighborEventContext => {
+  const registry = createItemRegistry(activeMod);
+  return {
+    neighbors: getNeighborIdentities(installedMods, activeMod?.manifest.id),
+    giftCandidates: getShopDefinitions(registry).map((item) => ({
+      itemId: item.id,
+      displayName: item.displayName,
+      price: item.price,
+    })),
+  };
+};
+
+let initialAppLoadPromise: Promise<{
+  mods: readonly InstalledPetModSummary[];
+  mod: ActivePetMod | null;
+  pet: PetState | null;
+}> | undefined;
+
+const loadInitialAppState = () => {
+  if (!initialAppLoadPromise) {
+    getPetModLibraryState();
+    initialAppLoadPromise = Promise.all([listInstalledPetMods(), loadActivePetMod()])
+      .then(([mods, mod]) => ({
+        mods,
+        mod,
+        pet: loadPetOrNull(Date.now(), createNeighborEventContext(mods, mod)),
+      }));
+  }
+  return initialAppLoadPromise;
+};
+
+const PetApp = ({ initialPet, initialActiveMod, initialInstalledMods, onResetToPicker }: PetAppProps) => {
+  const {
+    activePage,
+    isHomeRef,
+    utilityDialog,
+    setActivePage,
+    openUtilityDialog,
+    closeUtilityDialog,
+  } = useAppNavigation();
   const [isPomodoroOpen, setPomodoroOpen] = useState(false);
-  const [isBoostCardOpen, setBoostCardOpen] = useState(false);
   const [isAudioEnabled, setAudioEnabledState] = useState(() => getAudioEnabled());
   const [language, setLanguageState] = useState<LanguageCode>(() => getLanguage());
   const [activeShopCategory, setActiveShopCategory] = useState(shopCategories[0].id);
   const [draftName, setDraftName] = useState(initialPet.name);
   const [draftBirthday, setDraftBirthday] = useState<PetBirthday | undefined>(initialPet.birthday);
   const [activeMod, setActiveMod] = useState<ActivePetMod | null>(initialActiveMod);
+  const [installedMods, setInstalledMods] = useState<readonly InstalledPetModSummary[]>(initialInstalledMods);
   const [modMessage, setModMessage] = useState('');
   const [saveText, setSaveText] = useState('');
   const [importSaveText, setImportSaveText] = useState('');
-  const [rewardQueue, setRewardQueue] = useState<RewardPopup[]>([]);
   const [isResetConfirmOpen, setResetConfirmOpen] = useState(false);
-  const [gardenClearConfirm, setGardenClearConfirm] = useState<GardenClearConfirm | null>(null);
-  const [featureInfoMessage, setFeatureInfoMessage] = useState<{ message: string; recentEvent: string } | null>(null);
-  const [activePage, setActivePage] = useState<ActivePage>('home');
-  const activePageRef = useRef<ActivePage>('home');
-  const [activeAchievementCategory, setActiveAchievementCategory] = useState<'all' | AchievementCategory>('all');
-  const [achievementToast, setAchievementToast] = useState<AchievementToast | null>(null);
+  const [modDeleteConfirmId, setModDeleteConfirmId] = useState<string | null>(null);
+  const [isPartnerScheduleCancelConfirmOpen, setPartnerScheduleCancelConfirmOpen] = useState(false);
+  const [isGoldenAppleUseConfirmOpen, setGoldenAppleUseConfirmOpen] = useState(false);
+  const [activeAchievementCategory, setActiveAchievementCategory] = useState<AchievementTabId>('all');
   const [achievementCgPopup, setAchievementCgPopup] = useState<AchievementCgPopup | null>(null);
-  const petRef = useRef(pet);
+  const itemIconMap = useMemo(() => resolveItemIcons(activeMod), [activeMod]);
+  const itemRegistry = useMemo(() => createItemRegistry(activeMod, itemIconMap), [activeMod, itemIconMap]);
+  const neighbors = useMemo(
+    () => getNeighborIdentities(installedMods, activeMod?.manifest.id),
+    [activeMod?.manifest.id, installedMods],
+  );
+  const eventContext = useMemo<NeighborEventContext>(() => ({
+    neighbors,
+    giftCandidates: getShopDefinitions(itemRegistry).map((item) => ({
+      itemId: item.id,
+      displayName: item.displayName,
+      price: item.price,
+    })),
+  }), [itemRegistry, neighbors]);
+  const { pet, petRef, setPet, commitPet, achievementToast, setAchievementToast } = usePetSession(initialPet, isHomeRef, eventContext);
   const completedFocusCountRef = useRef(pet.pomodoro.completedFocusCount);
   const lastHeartExchangeAtRef = useRef(0);
   const [isHeartExchangeCoolingDown, setHeartExchangeCoolingDown] = useState(false);
   const hasLoadedModRef = useRef(false);
-  activePageRef.current = activePage;
-
-  useEffect(() => {
-    petRef.current = pet;
-    savePet(pet);
-  }, [pet]);
-
-  useEffect(() => {
-    setFeatureInfoMessage((current) => (current && current.recentEvent !== pet.recentEvent ? null : current));
-  }, [pet.recentEvent]);
+  const isInventoryOpen = utilityDialog === 'inventory';
+  const isShopOpen = utilityDialog === 'shop';
+  const isBoostCardOpen = utilityDialog === 'boostCards';
+  const isGachaOpen = utilityDialog === 'gacha';
+  const isSettingsOpen = utilityDialog === 'settings';
 
   useEffect(() => {
     setActiveMod(initialActiveMod);
@@ -360,48 +336,12 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
     hasLoadedModRef.current = true;
   }, [initialActiveMod]);
 
-  useEffect(() => {
-    const timer = window.setInterval(() => {
-      setPet((current) => commitPet(advancePet(current)));
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    const handleVisibilityChange = () => {
-      const isVisible = document.visibilityState === 'visible';
-      setAudioTemporarilyMuted(!isVisible);
-      if (isVisible) {
-        setPet((current) => commitPet(advancePet(current)));
-      }
-    };
-
-    handleVisibilityChange();
-    document.addEventListener('visibilitychange', handleVisibilityChange);
-    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
-  }, []);
-  const itemIconMap = useMemo(() => resolveItemIcons(activeMod), [activeMod]);
-  const itemRegistry = useMemo(() => createItemRegistry(activeMod, itemIconMap), [activeMod, itemIconMap]);
   const petStatusImageMap = useMemo(() => resolvePetStatusImages(activeMod), [activeMod]);
   const petActivityImageMap = useMemo(() => resolvePetActivityImages(activeMod), [activeMod]);
   const displayInventoryItems = useMemo(() => getInventoryDefinitions(itemRegistry, pet.inventory), [itemRegistry, pet.inventory]);
+  const inventoryController = useInventoryController(displayInventoryItems);
   const displayShopItems = useMemo(() => getShopDefinitions(itemRegistry), [itemRegistry]);
   const getStatusLabel = (status: PetStatus) => getModStatusText(activeMod, status) ?? t(`pet.status.${status}`);
-  const statCap = getPetStatCap(pet);
-  const energyRecoveryInfo = getEnergyRecoveryInfo(pet);
-  const energyRecoveryText = energyRecoveryInfo.isFull ? '' : formatCountdownTime(energyRecoveryInfo.remainingMs);
-  const stats = useMemo(
-    () => [
-      { label: t('ui.stats.hunger'), value: pet.hunger, max: statCap, tone: 'food' as const },
-      { label: t('ui.stats.mood'), value: pet.mood, max: statCap, tone: 'mood' as const },
-      { label: t('ui.stats.cleanliness'), value: pet.cleanliness, max: statCap, tone: 'clean' as const },
-      { label: t('ui.stats.energy'), value: pet.energy, max: statCap, detail: energyRecoveryText, tone: 'energy' as const },
-      { label: t('ui.stats.health'), value: pet.health, max: statCap, tone: 'health' as const },
-    ],
-    [energyRecoveryText, pet, statCap],
-  );
-
   const ownedItems = displayInventoryItems;
   const visibleShopItems = useMemo(
     () => displayShopItems.filter((item) => item.kind === activeShopCategory),
@@ -409,7 +349,6 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
   );
   const isLowEnergy = isPetLowEnergy(pet);
   const isCriticallyHungry = isPetCriticallyHungry(pet);
-  const dashboardEventText = featureInfoMessage?.message ?? pet.recentEvent;
   const nextUpgradeCost = getNextUpgradeHeartCost(pet);
   const canUpgrade = nextUpgradeCost > 0 && pet.hearts >= nextUpgradeCost;
   const canRunPomodoro = canStartPomodoro(pet);
@@ -418,7 +357,7 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
   const showPomodoroPanel = isPomodoroOpen;
   const pomodoroStartTitle = isLowEnergy
     ? t('ui.pomodoro.lowEnergyTitle')
-    : pet.health <= pomodoroMinHealthThreshold
+    : pet.health <= getPetStatThreshold(pet, pomodoroMinHealthThreshold)
       ? t('ui.pomodoro.lowHealthTitle')
       : undefined;
   const isPomodoroActionDisabled = !pet.pomodoro.isRunning && !canRunPomodoro;
@@ -426,17 +365,43 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
   const achievementSummary = getAchievementSummary(pet);
   const hasAchievementNotice = achievementSummary.pendingReviewNotice || achievementSummary.claimable > 0;
   const gardenReminder = getGardenReminder(pet);
-  const dailyWishView = getDailyWishView(pet);
-  const returnWelcomeView = getReturnWelcomeView(pet);
-  const dailyWishButtonLabel = dailyWishView.canClaim || dailyWishView.claimed
-    ? dailyWishView.buttonLabel
-    : getWishActionButtonLabel(pet.dailyWish.action);
-  const returnWelcomeButtonLabel =
-    returnWelcomeView && pet.returnWelcome
-      ? returnWelcomeView.canClaim
-        ? returnWelcomeView.buttonLabel
-        : getWishActionButtonLabel(pet.returnWelcome.action)
-      : '';
+
+  const playAfterUnlock = (id: SfxId) => {
+    void unlockAudio().then(() => playSfx(id));
+  };
+
+  const gardenController = useGardenController({ petRef, setPet, commitPet, playAfterUnlock });
+  const rewardController = useRewardController({ pet, setPet, commitPet, hasLoadedModRef, playAfterUnlock });
+  const {
+    clearConfirm: gardenClearConfirm,
+    resetClearConfirm: resetGardenClearConfirm,
+    selectSlot: handleSelectGardenSlot,
+    unlockSlot: handleUnlockGardenSlot,
+    plantTree: handlePlantTree,
+    waterTree: handleWaterTree,
+    fertilizeTree: handleFertilizeTree,
+    useNutrient: handleGardenNutrient,
+    harvestTree: handleHarvestTree,
+    requestClear: handleRequestClearGardenSlot,
+    cancelClear: handleCancelGardenClear,
+    confirmClear: handleConfirmGardenClear,
+    upgradeTool: handleUpgradeGardenTool,
+    commitAction: commitGardenAction,
+  } = gardenController;
+  const {
+    activeReward: activeRewardPopup,
+    closeActiveReward,
+    enqueueReward,
+    availableFloatingReward,
+    hasClaimedAuthorLinkGift,
+    hasClaimedHelpGift: hasClaimedHelpPageGift,
+    hasClaimedGardenCompensation,
+    claimDateRewards,
+    claimFloatingReward: handleClaimFloatingReward,
+    claimAuthorLinkGift: handleClaimAuthorLinkGift,
+    claimHelpGift: handleClaimHelpPageGift,
+    claimGardenCompensation: handleClaimGardenCompensation,
+  } = rewardController;
 
   useEffect(() => {
     syncBgm(currentBgmMode);
@@ -458,35 +423,6 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
       setAchievementToast({ kind: 'review' });
     }
   }, [activePage, achievementToast, pet.achievements.pendingReviewNotice]);
-
-  const playAfterUnlock = (id: SfxId) => {
-    void unlockAudio().then(() => playSfx(id));
-  };
-
-  const commitPet = (next: PetState, options: { silent?: boolean } = {}) => {
-    const result = evaluateAchievementUnlocks(next);
-    const shouldShowAchievementToast = !options.silent && activePageRef.current === 'home';
-    if (shouldShowAchievementToast && result.unlocked.length > 0) {
-      setAchievementToast(result.unlocked.length === 1 && !result.pet.achievements.pendingReviewNotice ? { kind: 'single', achievement: result.unlocked[0] } : { kind: 'review' });
-      playSfx('notification');
-    }
-    return result.pet;
-  };
-
-  const claimDateRewards = () => {
-    if (!hasLoadedModRef.current) return;
-    setPet((current) => {
-      const result = claimAvailableDateRewards(current);
-      if (result.rewards.length > 0) {
-        setRewardQueue((queue) => [
-          ...queue,
-          ...result.rewards.filter((reward) => !queue.some((queued) => queued.id === reward.id)),
-        ]);
-        playSfx('notification');
-      }
-      return commitPet(result.pet);
-    });
-  };
 
   const handleAudioToggle = () => {
     const nextEnabled = !isAudioEnabled;
@@ -510,13 +446,13 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
     });
   };
 
-  const handleBuyItem = (itemId: ItemId) => {
+  const handleBuyItem = (itemId: ItemId, quantity: number) => {
     playAfterUnlock('tap');
     setPet((current) => {
       const beforeCount = getInventoryCount(current, itemId);
       const beforeCoins = current.coins;
       const item = getItemDefinition(itemRegistry, itemId);
-      const next = buyItem(current, itemId, Date.now(), { item });
+      const next = buyItem(current, itemId, Date.now(), { item, quantity });
       const didGainItem = getInventoryCount(next, itemId) > beforeCount;
       const didSpendCoins = next.coins < beforeCoins;
       playSfx(didGainItem ? (didSpendCoins ? 'purchase' : 'coin') : 'error');
@@ -546,17 +482,21 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
     });
   };
 
-  const handleUseItem = (itemId: ItemId) => {
+  const useItemNow = (itemId: ItemId, quantity = 1, suppressGoldenAppleConfirm = false) => {
     playAfterUnlock('tap');
     setPet((current) => {
-      const beforeCount = getInventoryCount(current, itemId);
+      const currentWithPreference = suppressGoldenAppleConfirm
+        ? { ...current, suppressGoldenAppleUseConfirm: true }
+        : current;
+      const beforeCount = getInventoryCount(currentWithPreference, itemId);
       const displayItem = getDisplayItem(displayInventoryItems, itemId);
       const item = getItemDefinition(itemRegistry, itemId);
-      const next = useInventoryItem(current, itemId, Date.now(), {
+      const next = useInventoryItem(currentWithPreference, itemId, Date.now(), {
         favoriteFoodIds: getModFavoriteFoodIds(activeMod),
         favoriteText: (amount) => formatFavoriteFoodText(activeMod, amount),
         itemName: displayItem?.displayName,
         item,
+        quantity,
       });
       playSfx(getInventoryCount(next, itemId) < beforeCount ? getItemSfx(itemId, item) : 'error');
       return commitPet(next);
@@ -568,20 +508,30 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
     setPet((current) => commitPet(interactWithPet(current)));
   };
 
-  const handleOpenShop = () => {
+  const handleOpenShop = (category?: ShopCategory) => {
     playAfterUnlock('open');
+    if (category) setActiveShopCategory(category);
     setPet((current) => recordPetInteraction(current));
-    setShopOpen(true);
+    openUtilityDialog('shop');
   };
 
   const handleCloseShop = () => {
     playAfterUnlock('close');
-    setShopOpen(false);
+    closeUtilityDialog();
   };
 
-  const handleShowFeatureInfo = (message: string) => {
-    setFeatureInfoMessage({ message, recentEvent: petRef.current.recentEvent });
+  const handleOpenInventory = () => {
+    playAfterUnlock('open');
+    inventoryController.prepareOpen();
+    setPet((current) => recordPetInteraction(current));
+    openUtilityDialog('inventory');
   };
+
+  const handleCloseInventory = () => {
+    playAfterUnlock('close');
+    closeUtilityDialog();
+  };
+
   const handleOpenGarden = () => {
     playAfterUnlock('open');
     setActivePage('garden');
@@ -590,80 +540,145 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
 
   const handleCloseGarden = () => {
     playAfterUnlock('close');
-    setGardenClearConfirm(null);
+    resetGardenClearConfirm();
     setActivePage('home');
   };
 
-  const commitGardenAction = (action: (current: PetState) => PetState, successSfx: SfxId = 'coin') => {
+  const handleOpenPartnerSchedule = () => {
+    if (petRef.current.level < 3) {
+      playAfterUnlock('error');
+      return;
+    }
+    playAfterUnlock('open');
+    setActivePage('partnerSchedule');
+    setPet((current) => recordPetInteraction(current));
+  };
+
+  const handleClosePartnerSchedule = () => {
+    playAfterUnlock('close');
+    setPartnerScheduleCancelConfirmOpen(false);
+    setActivePage('home');
+  };
+
+  const handleStartPartnerSchedule = (offerId: string) => {
+    playAfterUnlock('tap');
+    const neighbor = petRef.current.partnerSchedule.neighborOfferId === offerId
+      ? selectNeighborReference(offerId, neighbors)
+      : undefined;
+    const next = startPartnerSchedule(petRef.current, offerId, Date.now(), neighbor);
+    const didStart = next.partnerSchedule.active?.offerId === offerId;
+    playSfx(didStart ? 'action_work_play_medicine' : 'error');
+    setPet(commitPet(next));
+    if (didStart) setActivePage('home');
+  };
+
+  const handleClaimPartnerSchedule = (choice: PartnerScheduleRewardChoice) => {
     playAfterUnlock('tap');
     setPet((current) => {
-      const before = current.recentEvent;
-      const next = action(current);
-      playSfx(next.recentEvent === before ? 'error' : successSfx);
+      const hadResult = Boolean(current.partnerSchedule.pendingResult);
+      const neighborName = resolveNeighborName(current.partnerSchedule.pendingResult?.neighbor, neighbors);
+      const next = claimPartnerScheduleResult(current, choice, Date.now(), neighborName);
+      playSfx(hadResult && !next.partnerSchedule.pendingResult ? 'coin' : 'error');
       return commitPet(next);
     });
   };
 
-  const handleSelectGardenSlot = (slotIndex: number) => {
-    playAfterUnlock('tap');
-    setPet((current) => selectGardenSlot(current, slotIndex));
-  };
-  const handleUnlockGardenSlot = (slotIndex: number) => commitGardenAction((current) => unlockGardenSlot(current, slotIndex), 'purchase');
-  const handlePlantTree = (slotIndex: number, treeId: GardenTreeId) => commitGardenAction((current) => plantTree(current, slotIndex, treeId), 'purchase');
-  const handleWaterTree = (slotIndex: number) => commitGardenAction((current) => waterTree(current, slotIndex), 'tap');
-  const handleFertilizeTree = (slotIndex: number, fertilizerId: GardenFertilizerId) => commitGardenAction((current) => fertilizeTree(current, slotIndex, fertilizerId), fertilizerId === 'heart' ? 'pet_heart' : 'purchase');
-  const handleGardenNutrient = (slotIndex: number) => commitGardenAction((current) => useGardenNutrient(current, slotIndex), 'purchase');
-  const handleHarvestTree = (slotIndex: number) => commitGardenAction((current) => harvestTree(current, slotIndex), 'coin');
-  const handleClearGardenSlot = (slotIndex: number) => commitGardenAction((current) => clearWitheredTree(current, slotIndex), 'purchase');
-  const handleRequestClearGardenSlot = (slotIndex: number) => {
-    const current = petRef.current;
-    const slot = current.garden.slots[slotIndex];
-    if (!slot || !slot.treeId || slot.state === 'empty') {
-      handleClearGardenSlot(slotIndex);
+  const handleUseItem = (itemId: ItemId, quantity: number) => {
+    if (itemId === 'golden_apple' && !petRef.current.suppressGoldenAppleUseConfirm) {
+      playAfterUnlock('tap');
+      setGoldenAppleUseConfirmOpen(true);
       return;
     }
+    useItemNow(itemId, quantity);
+  };
 
-    playAfterUnlock('tap');
-    setGardenClearConfirm({
-      slotIndex,
-      kind: slot.state === 'withered' ? 'clear' : 'remove',
-      treeId: slot.treeId,
-      coins: getGardenClearCost(current.garden.tools),
-    });
+  const handleSuppressGoldenAppleUseConfirm = () => {
+    setGoldenAppleUseConfirmOpen(false);
+    useItemNow('golden_apple', 1, true);
   };
-  const handleCancelGardenClear = () => {
+
+  const handleConfirmPartnerScheduleCancel = () => {
+    setPartnerScheduleCancelConfirmOpen(false);
     playAfterUnlock('close');
-    setGardenClearConfirm(null);
+    setPet((current) => commitPet(cancelPartnerSchedule(current)));
   };
-  const handleConfirmGardenClear = () => {
-    const pending = gardenClearConfirm;
-    if (!pending) return;
-    setGardenClearConfirm(null);
-    handleClearGardenSlot(pending.slotIndex);
-  };
-  const handleUpgradeGardenTool = (toolId: GardenToolId) => commitGardenAction((current) => upgradeGardenTool(current, toolId), 'purchase');
 
   const handleOpenBoostCards = () => {
     playAfterUnlock('open');
-    setBoostCardOpen(true);
+    openUtilityDialog('boostCards');
   };
 
   const handleCloseBoostCards = () => {
     playAfterUnlock('close');
-    setBoostCardOpen(false);
+    closeUtilityDialog();
   };
 
   const handleBuyBoostCard = (cardId: BoostCardId) => {
     commitGardenAction((current) => buyBoostCard(current, cardId), 'purchase');
   };
 
-  const handleClaimBoostCardCoins = () => {
+  const handleClaimBoostCardReward = () => {
     playAfterUnlock('tap');
     setPet((current) => {
-      const result = claimBoostCardDailyCoins(current);
+      const result = claimBoostCardDailyReward(current, eventContext);
       playSfx(result.coins > 0 ? 'coin' : 'error');
+      if (result.coins > 0) {
+        enqueueReward({
+          id: `boost_card:${result.pet.boostCards.dailyDateKey}`,
+          title: t(result.gift ? 'ui.boostCards.rewardGiftTitle' : 'ui.boostCards.rewardCoinsTitle'),
+          message: result.pet.recentEvent,
+          coins: result.coins,
+          items: result.gift ? [{ itemId: result.gift.itemId, amount: result.gift.itemAmount }] : [],
+        });
+        closeUtilityDialog();
+      }
       return commitPet(result.pet);
     });
+  };
+
+  const handleOpenGacha = () => {
+    playAfterUnlock('open');
+    openUtilityDialog('gacha');
+  };
+
+  const handleCloseGacha = () => {
+    playAfterUnlock('close');
+    closeUtilityDialog();
+  };
+
+  const handleGachaDraw = (payment: GachaPaymentMethod, count: 1 | 10): GoldenAppleGachaDrawOutcome => {
+    const outcome = drawGoldenAppleGacha(petRef.current, payment, count, Date.now());
+    if (outcome.error) return outcome;
+    const settled = commitPet(outcome.pet);
+    savePet(settled);
+    petRef.current = settled;
+    setPet(settled);
+    return { ...outcome, pet: settled };
+  };
+
+  const handleClaimGachaStarterGift = () => {
+    const outcome = claimGoldenAppleGachaStarterGift(petRef.current);
+    if (!outcome.claimed) return false;
+    const settled = commitPet(outcome.pet);
+    savePet(settled);
+    petRef.current = settled;
+    setPet(settled);
+    return true;
+  };
+
+  const handleOpenCommonDreams = () => {
+    playAfterUnlock('open');
+    setActivePage('commonDreams');
+  };
+
+  const handleCloseCommonDreams = () => {
+    playAfterUnlock('close');
+    setActivePage('home');
+  };
+
+  const commitEndgameAction = (updater: (current: PetState) => PetState) => {
+    playAfterUnlock('tap');
+    setPet((current) => commitPet(updater(current)));
   };
 
   const handleOpenAchievements = () => {
@@ -682,6 +697,11 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
   const handleClaimAchievementReward = (id: AchievementId) => {
     playAfterUnlock('coin');
     setPet((current) => commitPet(claimAchievementReward(current, id)));
+  };
+
+  const handleClaimAllAchievementRewards = () => {
+    playAfterUnlock('coin');
+    setPet((current) => commitPet(claimAllAchievementRewards(current).pet));
   };
 
   const handleOpenAchievementCg = (achievement: AchievementView) => {
@@ -743,53 +763,11 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
   const handleSaveProfile = () => {
     playAfterUnlock('tap');
     setPet((current) => updatePetProfile(current, draftName, draftBirthday));
-    setSettingsOpen(false);
+    closeUtilityDialog();
   };
 
   const handleOpenHelp = () => {
     setPet((current) => (current.hasOpenedHelp ? current : { ...current, hasOpenedHelp: true }));
-  };
-
-  const handleClaimFloatingReward = (reward: FloatingRewardConfig) => {
-    playAfterUnlock('coin');
-    setPet((current) => {
-      if (current.claimedRewardIds.includes(reward.id)) return current;
-
-      return recordEarnedCoins({
-        ...current,
-        coins: current.coins + reward.coins,
-        claimedRewardIds: [...current.claimedRewardIds, reward.id],
-        recentEvent: t(reward.eventKey, { coins: reward.coins }),
-      }, reward.coins);
-    });
-  };
-
-  const handleClaimHelpPageGift = () => {
-    playAfterUnlock('coin');
-    setPet((current) => {
-      if (current.claimedRewardIds.includes(helpPageGiftRewardId)) return current;
-
-      return recordEarnedCoins({
-        ...current,
-        coins: current.coins + helpPageGiftCoins,
-        claimedRewardIds: [...current.claimedRewardIds, helpPageGiftRewardId],
-        recentEvent: t('pet.reward.helpPageGift', { coins: helpPageGiftCoins }),
-      }, helpPageGiftCoins);
-    });
-  };
-
-  const handleClaimGardenCompensation = () => {
-    playAfterUnlock('coin');
-    setPet((current) => {
-      if (current.claimedRewardIds.includes(gardenCompensationRewardId)) return current;
-
-      return recordEarnedCoins({
-        ...current,
-        coins: clampCoins(current.coins + gardenCompensationCoins),
-        claimedRewardIds: [...current.claimedRewardIds, gardenCompensationRewardId],
-        recentEvent: t('pet.reward.gardenCompensation', { coins: gardenCompensationCoins }),
-      }, gardenCompensationCoins);
-    });
   };
 
   const handleClaimDailyWish = () => {
@@ -804,12 +782,12 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
   };
 
   const completeFeedWishAction = () => {
-    const foodItem = displayInventoryItems.find((item) => item.kind === 'food' && getInventoryCount(petRef.current, item.id) > 0);
+    const foodItem = displayInventoryItems.find((item) => item.kind === 'food' && item.id !== 'golden_apple' && getInventoryCount(petRef.current, item.id) > 0);
     if (!foodItem) {
       playAfterUnlock('open');
       setActiveShopCategory('food');
       setPet((current) => recordPetInteraction(current));
-      setShopOpen(true);
+      openUtilityDialog('shop');
       return;
     }
 
@@ -904,11 +882,11 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
   const handleConfirmReset = () => {
     playAfterUnlock('tap');
     clearPet();
-    onResetToPicker(activeMod);
+    onResetToPicker(activeMod, installedMods);
     setDraftName(defaultPetName);
     setDraftBirthday(defaultPetBirthday);
     setPomodoroOpen(false);
-    setSettingsOpen(false);
+    closeUtilityDialog();
     setResetConfirmOpen(false);
   };
 
@@ -918,30 +896,54 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
     if (!file) return;
 
     try {
-      const oldDefaultName = activeMod?.manifest.defaultPetName ?? defaultPetName;
       const parsed = await parsePetModZip(file);
-      await saveActivePetMod(parsed);
-      const loaded = await loadActivePetMod();
-      setActiveMod(loaded);
+      await installPetMod(parsed);
+      setInstalledMods(await listInstalledPetMods());
+      if (activeMod?.manifest.id === parsed.manifest.id) {
+        const oldDefaultName = activeMod.manifest.defaultPetName;
+        const loaded = await loadPetMod(parsed.manifest.id);
+        if (!loaded) throw new Error(t('ui.settings.mod.loadFailed'));
+        setActiveMod(loaded);
+        setPet((current) => ({
+          ...withPetIdentityBirthday(current, parsed.manifest.birthday),
+          name: current.name === oldDefaultName ? parsed.manifest.defaultPetName : current.name,
+        }));
+        setDraftName((current) => current === oldDefaultName ? parsed.manifest.defaultPetName : current);
+        setDraftBirthday(parsed.manifest.birthday);
+      }
       setModMessage(
         parsed.warnings.length > 0
           ? t('ui.settings.mod.importedWithFallback', { name: parsed.manifest.name, count: parsed.warnings.length })
-          : t('ui.settings.mod.imported', { name: parsed.manifest.name }),
+          : t('ui.settings.mod.installed', { name: parsed.manifest.name }),
       );
-      setPet((current) => {
-        const shouldUseModDefaultName = current.name === defaultPetName || current.name === oldDefaultName;
-        const nextName = shouldUseModDefaultName ? parsed.manifest.defaultPetName : current.name;
-        return {
-          ...withPetIdentityBirthday(current, parsed.manifest.birthday),
-          name: nextName,
-          recentEvent: parsed.manifest.texts?.recentEvent ?? t('ui.settings.mod.switched', { name: parsed.manifest.name }),
-        };
-      });
-      setDraftName((current) => (current === defaultPetName || current === oldDefaultName ? parsed.manifest.defaultPetName : current));
-      setDraftBirthday(parsed.manifest.birthday);
       setSaveText('');
     } catch (error) {
       setModMessage(error instanceof Error ? error.message : t('ui.settings.mod.importFailed'));
+      playSfx('error');
+    }
+  };
+
+  const handleActivateMod = async (modId: string) => {
+    try {
+      const loaded = await loadPetMod(modId);
+      if (!loaded) throw new Error(t('ui.settings.mod.loadFailed'));
+      const oldDefaultName = activeMod?.manifest.defaultPetName ?? defaultPetName;
+      setActivePetMod(modId);
+      setActiveMod(loaded);
+      setPet((current) => {
+        const shouldUseDefaultName = current.name === defaultPetName || current.name === oldDefaultName;
+        return {
+          ...withPetIdentityBirthday(current, loaded.manifest.birthday),
+          name: shouldUseDefaultName ? loaded.manifest.defaultPetName : current.name,
+          recentEvent: loaded.manifest.texts?.recentEvent ?? t('ui.settings.mod.switched', { name: loaded.manifest.name }),
+        };
+      });
+      setDraftName((current) => current === defaultPetName || current === oldDefaultName ? loaded.manifest.defaultPetName : current);
+      setDraftBirthday(loaded.manifest.birthday);
+      setSaveText('');
+      setModMessage(t('ui.settings.mod.active', { name: loaded.manifest.name, version: loaded.manifest.version }));
+    } catch (error) {
+      setModMessage(error instanceof Error ? error.message : t('ui.settings.mod.loadFailed'));
       playSfx('error');
     }
   };
@@ -967,34 +969,75 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
     }
   };
 
+  const handleConfirmDeleteMod = async () => {
+    const modId = modDeleteConfirmId;
+    if (!modId) return;
+    const target = installedMods.find((mod) => mod.manifest.id === modId);
+    try {
+      const wasActive = activeMod?.manifest.id === modId;
+      const oldDefaultName = wasActive ? activeMod?.manifest.defaultPetName : undefined;
+      await deletePetMod(modId);
+      setInstalledMods(await listInstalledPetMods());
+      if (wasActive) {
+        setActiveMod(null);
+        setPet((current) => ({
+          ...withPetIdentityBirthday(current, defaultPetBirthday),
+          name: oldDefaultName && current.name === oldDefaultName ? defaultPetName : current.name,
+        }));
+        setDraftName((current) => oldDefaultName && current === oldDefaultName ? defaultPetName : current);
+        setDraftBirthday(defaultPetBirthday);
+      }
+      setSaveText('');
+      setModMessage(t('ui.settings.mod.deleted', { name: target?.manifest.name ?? modId }));
+    } catch (error) {
+      setModMessage(error instanceof Error ? error.message : t('ui.settings.mod.deleteFailed'));
+      playSfx('error');
+    } finally {
+      setModDeleteConfirmId(null);
+    }
+  };
+
   const handleExportSave = () => {
     const text = createSaveFileText(petRef.current, activeMod?.manifest);
     setSaveText(text);
     setModMessage(t('ui.settings.save.generated'));
   };
 
-  const handleDownloadSave = () => {
+  const handleDownloadSave = async () => {
     const text = createSaveFileText(petRef.current, activeMod?.manifest);
     setSaveText(text);
-    downloadTextFile(`pocpet-mint-save-${new Date().toISOString().slice(0, 10)}.pocpet`, text);
+    try {
+      const result = await saveTextFile(createSaveFileName(petRef.current.name), text);
+      if (result === 'saved') setModMessage(t('ui.settings.save.saved'));
+      if (result === 'downloaded') setModMessage(t('ui.settings.save.downloadStarted'));
+      if (result === 'cancelled') setModMessage(t('ui.settings.save.saveCancelled'));
+    } catch (error) {
+      setModMessage(error instanceof Error ? error.message : t('ui.settings.save.saveFailed'));
+      playSfx('error');
+    }
   };
 
-  const importSaveFromText = (text: string) => {
+  const importSaveFromText = async (text: string) => {
     try {
       const imported = parseSaveFileText(text);
       const importedMod = imported.activeMod;
-      const hasMatchingMod = importedMod ? activeMod?.manifest.id === importedMod.id : true;
-      const nextPet = importedMod && !hasMatchingMod
-        ? imported.pet
-        : activeMod
-          ? withPetIdentityBirthday(imported.pet, activeMod.manifest.birthday)
+      const hasInstalledMod = importedMod
+        ? installedMods.some((mod) => mod.manifest.id === importedMod.id)
+        : false;
+      const matchingMod = importedMod && hasInstalledMod ? await loadPetMod(importedMod.id) : null;
+      setActivePetMod(matchingMod?.manifest.id);
+      setActiveMod(matchingMod);
+      const nextPet = matchingMod
+        ? withPetIdentityBirthday(imported.pet, matchingMod.manifest.birthday)
+        : importedMod
+          ? imported.pet
           : withBackfilledBirthday(imported.pet, defaultPetBirthday);
       setPet(nextPet);
       setDraftName(nextPet.name);
       setDraftBirthday(nextPet.birthday);
       setImportSaveText('');
       setModMessage(
-        importedMod && !hasMatchingMod
+        importedMod && !matchingMod
           ? t('ui.settings.save.importedMissingMod', { name: importedMod.name, version: importedMod.version })
           : t('ui.settings.save.imported'),
       );
@@ -1010,17 +1053,14 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
     if (!file) return;
 
     try {
-      importSaveFromText(await readFileText(file));
+      await importSaveFromText(await readFileText(file));
     } catch (error) {
       setModMessage(error instanceof Error ? error.message : t('ui.settings.save.readFailed'));
     }
   };
 
-  const availableFloatingReward = floatingRewardConfigs.find((reward) => !pet.claimedRewardIds.includes(reward.id));
-  const hasClaimedHelpPageGift = pet.claimedRewardIds.includes(helpPageGiftRewardId);
-  const hasClaimedGardenCompensation = pet.claimedRewardIds.includes(gardenCompensationRewardId);
-  const activeRewardPopup = rewardQueue[0];
-  const activeYearReview = !activeRewardPopup && !achievementCgPopup && !isShopOpen && !isSettingsOpen && !isResetConfirmOpen && !gardenClearConfirm ? pet.pendingYearReview : undefined;
+  const modDeleteTarget = installedMods.find((mod) => mod.manifest.id === modDeleteConfirmId);
+  const activeYearReview = !activeRewardPopup && !achievementCgPopup && !utilityDialog && !isResetConfirmOpen && !modDeleteConfirmId && !gardenClearConfirm ? pet.pendingYearReview : undefined;
 
   const handleCloseYearReview = () => {
     playAfterUnlock('tap');
@@ -1042,8 +1082,18 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
     if (reward.hearts) {
       rewardItems.push({
         key: 'hearts',
+        glyph: 'heart',
         label: t('ui.rewards.hearts', { hearts: formatCompactNumber(reward.hearts) }),
         title: t('ui.rewards.hearts', { hearts: reward.hearts }),
+      });
+    }
+
+    if (reward.gachaTickets) {
+      rewardItems.push({
+        key: 'gacha-tickets',
+        glyph: 'ticket',
+        label: t('ui.rewards.gachaTickets', { count: formatCompactNumber(reward.gachaTickets) }),
+        title: t('ui.rewards.gachaTickets', { count: reward.gachaTickets }),
       });
     }
 
@@ -1051,14 +1101,18 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
       const displayItem = getItemDefinition(itemRegistry, item.itemId);
       rewardItems.push({
         key: `${item.itemId}:${index}`,
-        icon: itemIconMap[item.itemId],
+        icon: itemIconMap[item.itemId] ?? displayItem?.imageUrl,
         label: t('ui.rewards.item', { item: displayItem?.name ?? item.itemId, count: item.amount }),
       });
     });
 
     return rewardItems.map((item) => (
       <div className="reward-modal__item" key={item.key} title={item.title}>
-        {item.icon ? <img src={item.icon} alt="" aria-hidden="true" /> : <Heart size={22} aria-hidden="true" />}
+        {item.icon
+          ? <img src={item.icon} alt="" aria-hidden="true" />
+          : item.glyph === 'ticket'
+            ? <Ticket size={22} aria-hidden="true" />
+            : <Heart size={22} aria-hidden="true" />}
         <span>{item.label}</span>
       </div>
     ));
@@ -1087,7 +1141,7 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
           <button
             type="button"
             className="coin-pill"
-            onClick={handleOpenShop}
+            onClick={() => handleOpenShop()}
             aria-label={`${t('ui.top.openShop')}: ${t('ui.shop.wallet', { coins: pet.coins })}`}
             title={t('ui.shop.wallet', { coins: pet.coins })}
           >
@@ -1126,7 +1180,7 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
               playAfterUnlock('open');
               setDraftName(pet.name);
               setDraftBirthday(pet.birthday);
-              setSettingsOpen(true);
+              openUtilityDialog('settings');
             }}
           >
             <Settings size={22} aria-hidden="true" />
@@ -1142,6 +1196,7 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
           onBack={handleCloseAchievements}
           onCategoryChange={setActiveAchievementCategory}
           onClaimReward={handleClaimAchievementReward}
+          onClaimAllRewards={handleClaimAllAchievementRewards}
           onOpenCg={handleOpenAchievementCg}
         />
       ) : activePage === 'garden' ? (
@@ -1158,94 +1213,60 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
           onHarvest={handleHarvestTree}
           onClear={handleRequestClearGardenSlot}
           onUpgradeTool={handleUpgradeGardenTool}
+          onOpenShop={() => handleOpenShop('garden')}
           compensationCoins={gardenCompensationCoins}
           onClaimCompensation={hasClaimedGardenCompensation ? undefined : handleClaimGardenCompensation}
         />
+      ) : activePage === 'partnerSchedule' ? (
+        <PartnerSchedulePage
+          pet={pet}
+          itemIconMap={itemIconMap}
+          neighbors={neighbors}
+          onBack={handleClosePartnerSchedule}
+          onStart={handleStartPartnerSchedule}
+          onCancel={() => setPartnerScheduleCancelConfirmOpen(true)}
+          onClaim={handleClaimPartnerSchedule}
+        />
+      ) : activePage === 'commonDreams' ? (
+        <CommonDreamsPage
+          pet={pet}
+          onBack={handleCloseCommonDreams}
+          onInvestProject={(category: PartnerScheduleCategory, coins: number) => commitEndgameAction((current) => investDreamProject(current, category, coins))}
+          onCompleteProjectStage={(category: PartnerScheduleCategory) => commitEndgameAction((current) => completeDreamProjectStage(current, category))}
+          onInvestLegacy={(coins: number) => commitEndgameAction((current) => investClassicLegacy(current, coins))}
+          onCompleteLegacy={() => commitEndgameAction((current) => completeClassicLegacyLevel(current))}
+          onExchangeGoldenApples={(apples: number) => commitEndgameAction((current) => exchangeClassicGoldenApplesForHearts(current, apples))}
+        />
       ) : (
-        <>
-          <div className="content-grid">
-            <PetDisplay
-              pet={pet}
-              onInteract={handleInteract}
-              overlay={pomodoroOverlay}
-              petStatusImages={petStatusImageMap}
-              petActivityImages={petActivityImageMap}
-              getStatusLabel={getStatusLabel}
-            />
-
-            <section className="dashboard" aria-label={t('ui.dashboard.aria')}>
-              <div className="event-panel">
-                <span>{t('ui.dashboard.event')}</span>
-                <p>{dashboardEventText}</p>
-              </div>
-
-              <div className="wish-stack">
-                {returnWelcomeView && (
-                  <section className="wish-panel wish-panel--return" aria-label={t('ui.returnWelcome.aria')}>
-                    <div className="wish-panel__copy">
-                      <span>{t('ui.returnWelcome.kicker')}</span>
-                      <h2>{returnWelcomeView.title}</h2>
-                      <p>{returnWelcomeView.description}</p>
-                      <small>{returnWelcomeView.progressText} · {returnWelcomeView.rewardText}</small>
-                    </div>
-                    <button type="button" className="primary-button wish-panel__button" onClick={handleReturnWelcomeButton}>
-                      {returnWelcomeButtonLabel}
-                    </button>
-                  </section>
-                )}
-                {!dailyWishView.claimed && (
-                  <section className="wish-panel" aria-label={t('ui.dailyWish.aria')}>
-                    <div className="wish-panel__copy">
-                      <span>{t('ui.dailyWish.kicker')}</span>
-                      <h2>{dailyWishView.title}</h2>
-                      <p>{dailyWishView.description}</p>
-                      <small>{dailyWishView.progressText} · {dailyWishView.rewardText}</small>
-                    </div>
-                    <button type="button" className="primary-button wish-panel__button" disabled={dailyWishView.claimed} onClick={handleDailyWishButton}>
-                      {dailyWishButtonLabel}
-                    </button>
-                  </section>
-                )}
-              </div>
-
-              <div className="stat-grid">
-                {stats.map((stat) => (
-                  <StatusBar key={stat.label} {...stat} />
-                ))}
-              </div>
-
-              <FeatureRow
-                pet={pet}
-                canUpgrade={canUpgrade}
-                nextUpgradeCost={nextUpgradeCost}
-                isPomodoroOpen={isPomodoroOpen}
-                pomodoroRemainingMs={pomodoroRemainingMs}
-                pomodoroStartTitle={pomodoroStartTitle}
-                gardenReminder={gardenReminder}
-                onUpgrade={handleUpgrade}
-                onOpenPomodoro={handleOpenPomodoro}
-                onOpenGarden={handleOpenGarden}
-                onOpenBoostCards={handleOpenBoostCards}
-                onShowInfo={handleShowFeatureInfo}
-              />
-
-              <div className="meta-row" aria-label={t('ui.dashboard.metaAria')}>
-                <span className="meta-row__shared-time">{t('ui.dashboard.sharedTime', { time: formatSharedTime(pet.ageSeconds) })}</span>
-                <span className="meta-row__state">{pet.isSleeping ? t('ui.dashboard.resting') : t('ui.dashboard.active')}</span>
-              </div>
-
-              <InventoryPanel
-                ownedItems={ownedItems}
-                inventory={pet.inventory}
-                itemIconMap={itemIconMap}
-                onOpenShop={handleOpenShop}
-                onUseItem={handleUseItem}
-              />
-            </section>
-          </div>
-
-          <ActionDock isSleeping={pet.isSleeping} isLowEnergy={isLowEnergy} isCriticallyHungry={isCriticallyHungry} onAction={handleAction} />
-        </>
+        <HomePage
+          pet={pet}
+          neighbors={neighbors}
+          inventoryKindCount={ownedItems.length}
+          isLowEnergy={isLowEnergy}
+          isCriticallyHungry={isCriticallyHungry}
+          canUpgrade={canUpgrade}
+          nextUpgradeCost={nextUpgradeCost}
+          isPomodoroOpen={isPomodoroOpen}
+          pomodoroRemainingMs={pomodoroRemainingMs}
+          pomodoroStartTitle={pomodoroStartTitle}
+          gardenReminder={gardenReminder}
+          pomodoroOverlay={pomodoroOverlay}
+          petStatusImages={petStatusImageMap}
+          petActivityImages={petActivityImageMap}
+          getStatusLabel={getStatusLabel}
+          onInteract={handleInteract}
+          onUpgrade={handleUpgrade}
+          onDailyWish={handleDailyWishButton}
+          onReturnWelcome={handleReturnWelcomeButton}
+          onOpenInventory={handleOpenInventory}
+          onOpenPomodoro={handleOpenPomodoro}
+          onOpenGarden={handleOpenGarden}
+          onOpenBoostCards={handleOpenBoostCards}
+          onOpenPartnerSchedule={handleOpenPartnerSchedule}
+          onOpenGacha={handleOpenGacha}
+          onOpenCommonDreams={handleOpenCommonDreams}
+          onAction={handleAction}
+        />
       )}
 
       {availableFloatingReward && (
@@ -1269,6 +1290,31 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
           </span>
         </button>
       )}
+      {isInventoryOpen && (
+        <InventoryModal
+          items={ownedItems}
+          inventory={pet.inventory}
+          petLevel={pet.level}
+          itemIconMap={itemIconMap}
+          activeCategory={inventoryController.activeCategory}
+          isPetBusy={Boolean(pet.partnerSchedule.active)}
+          onCategoryChange={inventoryController.setActiveCategory}
+          onClose={handleCloseInventory}
+          onOpenShop={handleOpenShop}
+          onOpenGarden={handleOpenGarden}
+          onUseItem={handleUseItem}
+        />
+      )}
+      {isGachaOpen && (
+        <GoldenAppleGachaModal
+          pet={pet}
+          itemIconMap={itemIconMap}
+          onClose={handleCloseGacha}
+          onDraw={handleGachaDraw}
+          onClaimStarterGift={handleClaimGachaStarterGift}
+          onPlaySfx={playAfterUnlock}
+        />
+      )}
       {activeRewardPopup && (
         <div className="modal-backdrop" role="presentation">
           <section className="reward-modal" role="dialog" aria-modal="true" aria-labelledby="reward-title">
@@ -1284,7 +1330,7 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
               className="primary-button"
               onClick={() => {
                 playAfterUnlock('tap');
-                setRewardQueue((queue) => queue.slice(1));
+                closeActiveReward();
               }}
             >
               {t('ui.rewards.confirm')}
@@ -1334,36 +1380,42 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
           pet={pet}
           onClose={handleCloseBoostCards}
           onBuyCard={handleBuyBoostCard}
-          onClaimDailyCoins={handleClaimBoostCardCoins}
+          onClaimDailyReward={handleClaimBoostCardReward}
         />
       )}
       {isSettingsOpen && (
         <SettingsModal
           activeMod={activeMod}
+          installedMods={installedMods}
           modMessage={modMessage}
           draftName={draftName}
           draftBirthday={draftBirthday}
+          metDate={pet.metDate}
           language={language}
           saveText={saveText}
           importSaveText={importSaveText}
           hasOpenedHelp={pet.hasOpenedHelp}
+          hasClaimedAuthorLinkGift={hasClaimedAuthorLinkGift}
           hasClaimedHelpPageGift={hasClaimedHelpPageGift}
           onDraftNameChange={setDraftName}
           onDraftBirthdayChange={setDraftBirthday}
           onLanguageChange={handleLanguageChange}
           onImportSaveTextChange={setImportSaveText}
           onOpenHelp={handleOpenHelp}
+          onClaimAuthorLinkGift={handleClaimAuthorLinkGift}
           onClaimHelpPageGift={handleClaimHelpPageGift}
           onClose={() => {
             playAfterUnlock('close');
-            setSettingsOpen(false);
+            closeUtilityDialog();
           }}
           onSaveProfile={handleSaveProfile}
           onReset={handleReset}
           onClearMod={handleClearMod}
+          onActivateMod={(modId) => void handleActivateMod(modId)}
+          onDeleteMod={setModDeleteConfirmId}
           onExportSave={handleExportSave}
           onDownloadSave={handleDownloadSave}
-          onImportPastedSave={() => importSaveFromText(importSaveText)}
+          onImportPastedSave={() => void importSaveFromText(importSaveText)}
           onModFileChange={handleModFileChange}
           onImportSaveFileChange={handleImportSaveFileChange}
         />
@@ -1376,6 +1428,36 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
           confirmLabel={t('ui.settings.resetDialog.confirm')}
           onCancel={handleCancelReset}
           onConfirm={handleConfirmReset}
+        />
+      )}
+      {modDeleteConfirmId && (
+        <ConfirmDialog
+          title={t('ui.settings.mod.deleteDialog.title')}
+          message={t('ui.settings.mod.deleteDialog.message', { name: modDeleteTarget?.manifest.name ?? modDeleteConfirmId })}
+          cancelLabel={t('ui.settings.mod.deleteDialog.cancel')}
+          confirmLabel={t('ui.settings.mod.deleteDialog.confirm')}
+          onCancel={() => setModDeleteConfirmId(null)}
+          onConfirm={() => void handleConfirmDeleteMod()}
+        />
+      )}
+      {isPartnerScheduleCancelConfirmOpen && (
+        <ConfirmDialog
+          title={t('ui.partnerSchedule.cancelDialog.title')}
+          message={t('ui.partnerSchedule.cancelDialog.message')}
+          cancelLabel={t('ui.partnerSchedule.cancelDialog.keep')}
+          confirmLabel={t('ui.partnerSchedule.cancelDialog.confirm')}
+          onCancel={() => setPartnerScheduleCancelConfirmOpen(false)}
+          onConfirm={handleConfirmPartnerScheduleCancel}
+        />
+      )}
+      {isGoldenAppleUseConfirmOpen && (
+        <ConfirmDialog
+          title={t('ui.gacha.appleUseConfirm.title')}
+          message={t('ui.gacha.appleUseConfirm.message')}
+          cancelLabel={t('ui.gacha.appleUseConfirm.cancel')}
+          confirmLabel={t('ui.gacha.appleUseConfirm.confirm')}
+          onCancel={() => setGoldenAppleUseConfirmOpen(false)}
+          onConfirm={handleSuppressGoldenAppleUseConfirm}
         />
       )}
       {gardenClearConfirm && (
@@ -1398,17 +1480,29 @@ const PetApp = ({ initialPet, initialActiveMod, onResetToPicker }: PetAppProps) 
 
 
 export const App = () => {
-  const [initialPet, setInitialPet] = useState<PetState | null>(() => loadPetOrNull());
-  const [installedMod, setInstalledMod] = useState<ActivePetMod | null>(null);
-  const [hasLoadedInitialMod, setHasLoadedInitialMod] = useState(false);
+  const [initialPet, setInitialPet] = useState<PetState | null | undefined>(undefined);
+  const [installedMods, setInstalledMods] = useState<readonly InstalledPetModSummary[]>([]);
+  const [activeMod, setActiveMod] = useState<ActivePetMod | null>(null);
   const [modMessage, setModMessage] = useState('');
   const [isAudioEnabled, setAudioEnabledState] = useState(() => getAudioEnabled());
 
   useEffect(() => {
-    void loadActivePetMod()
-      .then((mod) => setInstalledMod(mod))
-      .catch((error) => setModMessage(error instanceof Error ? error.message : t('ui.settings.mod.loadFailed')))
-      .finally(() => setHasLoadedInitialMod(true));
+    let cancelled = false;
+    void loadInitialAppState()
+      .then(({ mods, mod, pet }) => {
+        if (cancelled) return;
+        setInstalledMods(mods);
+        setActiveMod(mod);
+        setInitialPet(pet);
+      })
+      .catch((error) => {
+        if (cancelled) return;
+        setModMessage(error instanceof Error ? error.message : t('ui.settings.mod.loadFailed'));
+        setInitialPet(loadPetOrNull());
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleAudioToggle = () => {
@@ -1424,9 +1518,9 @@ export const App = () => {
   };
 
   const startWithMod = (mod: ActivePetMod | null) => {
-    const nextPet = createPetForMod(mod);
-    setInstalledMod(mod);
-    setInitialPet(nextPet);
+    setActivePetMod(mod?.manifest.id);
+    setActiveMod(mod);
+    setInitialPet(createPetForMod(mod));
     setModMessage(mod ? t('ui.settings.mod.active', { name: mod.manifest.name, version: mod.manifest.version }) : '');
   };
 
@@ -1439,27 +1533,42 @@ export const App = () => {
     }
   };
 
+  const handleUseInstalledMod = async (modId: string) => {
+    try {
+      const loaded = await loadPetMod(modId);
+      if (!loaded) throw new Error(t('ui.settings.mod.loadFailed'));
+      startWithMod(loaded);
+    } catch (error) {
+      setModMessage(error instanceof Error ? error.message : t('ui.settings.mod.loadFailed'));
+      playSfx('error');
+    }
+  };
+
   const handleImportMod = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = '';
     if (!file) return;
     try {
       const parsed = await parsePetModZip(file);
-      await saveActivePetMod(parsed);
-      const loaded = await loadActivePetMod();
-      if (!loaded) throw new Error(t('ui.settings.mod.loadFailed'));
-      startWithMod(loaded);
-      setModMessage(parsed.warnings.length > 0 ? t('ui.settings.mod.importedWithFallback', { name: parsed.manifest.name, count: parsed.warnings.length }) : t('ui.settings.mod.imported', { name: parsed.manifest.name }));
+      await installPetMod(parsed);
+      const mods = await listInstalledPetMods();
+      setInstalledMods(mods);
+      if (activeMod?.manifest.id === parsed.manifest.id) {
+        setActiveMod(await loadPetMod(parsed.manifest.id));
+      }
+      setModMessage(parsed.warnings.length > 0
+        ? t('ui.settings.mod.importedWithFallback', { name: parsed.manifest.name, count: parsed.warnings.length })
+        : t('ui.settings.mod.installed', { name: parsed.manifest.name }));
     } catch (error) {
       setModMessage(error instanceof Error ? error.message : t('ui.settings.mod.importFailed'));
       playSfx('error');
     }
   };
 
-  if (!hasLoadedInitialMod) {
+  if (initialPet === undefined) {
     return (
       <RolePicker
-        installedMod={null}
+        installedMods={[]}
         modMessage={modMessage}
         isAudioEnabled={isAudioEnabled}
         isLoading
@@ -1474,11 +1583,11 @@ export const App = () => {
   if (!initialPet) {
     return (
       <RolePicker
-        installedMod={installedMod}
+        installedMods={installedMods}
         modMessage={modMessage}
         isAudioEnabled={isAudioEnabled}
         onUseBuiltin={handleUseBuiltin}
-        onUseInstalledMod={() => installedMod && startWithMod(installedMod)}
+        onUseInstalledMod={(modId) => void handleUseInstalledMod(modId)}
         onImportMod={handleImportMod}
         onAudioToggle={handleAudioToggle}
       />
@@ -1487,11 +1596,13 @@ export const App = () => {
 
   return (
     <PetApp
-      key={initialPet.createdAt + ':' + (installedMod?.manifest.id ?? 'builtin')}
+      key={initialPet.createdAt + ':' + (activeMod?.manifest.id ?? 'builtin')}
       initialPet={initialPet}
-      initialActiveMod={installedMod}
-      onResetToPicker={(storedMod) => {
-        setInstalledMod(storedMod);
+      initialActiveMod={activeMod}
+      initialInstalledMods={installedMods}
+      onResetToPicker={(storedMod, storedMods) => {
+        setActiveMod(storedMod);
+        setInstalledMods(storedMods);
         setInitialPet(null);
       }}
     />

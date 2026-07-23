@@ -1,8 +1,17 @@
-import { ArrowLeft, CheckCircle2, Gift, Lock, Sparkles, Trophy } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Gift, Images, Lock, Sparkles, Sprout, Trophy } from 'lucide-react';
 import { getAchievementSummary, getAchievementViews, type AchievementCategory, type AchievementId, type AchievementView, type ItemId, type PetState } from '../core/pet';
 import { t } from '../i18n';
 
-const baseCategories: readonly ('all' | AchievementCategory)[] = ['all', 'care', 'daily', 'shop', 'inventory', 'pomodoro', 'growth', 'date'];
+export type AchievementTabId = 'all' | 'companion' | 'growth' | 'life' | 'schedule' | 'hidden';
+
+const achievementTabCategories: Record<Exclude<AchievementTabId, 'all' | 'hidden'>, readonly AchievementCategory[]> = {
+  companion: ['care', 'daily', 'date'],
+  growth: ['growth', 'pomodoro'],
+  life: ['shop', 'inventory', 'garden'],
+  schedule: ['schedule'],
+};
+
+const baseTabs: readonly AchievementTabId[] = ['all', 'companion', 'growth', 'life', 'schedule'];
 
 const labels = {
   aria: t('ui.achievements.aria'),
@@ -11,33 +20,34 @@ const labels = {
   title: t('ui.achievements.title'),
   unlocked: t('ui.achievements.unlocked'),
   claimable: t('ui.achievements.claimable'),
-  dailyStipend: t('ui.achievements.dailyStipend'),
   claim: t('ui.achievements.claim'),
-  dailyStipendAuto: t('ui.achievements.dailyStipendAuto'),
   reviewNotice: t('ui.achievements.reviewNotice'),
   tabsAria: t('ui.achievements.tabsAria'),
   locked: t('ui.achievements.locked'),
   claimed: t('ui.achievements.claimed'),
   active: t('ui.achievements.active'),
+  gardenExtraDrop: t('ui.achievements.gardenExtraDrop'),
   rarity: {
     rare: t('ui.achievements.rarity.rare'),
     hidden: t('ui.achievements.rarity.hidden'),
     normal: t('ui.achievements.rarity.normal'),
   },
-  categories: {
+  tabs: {
     all: t('ui.achievements.categories.all'),
-    care: t('ui.achievements.categories.care'),
-    daily: t('ui.achievements.categories.daily'),
-    shop: t('ui.achievements.categories.shop'),
-    inventory: t('ui.achievements.categories.inventory'),
-    pomodoro: t('ui.achievements.categories.pomodoro'),
+    companion: t('ui.achievements.categories.companion'),
     growth: t('ui.achievements.categories.growth'),
-    date: t('ui.achievements.categories.date'),
+    life: t('ui.achievements.categories.life'),
+    schedule: t('ui.achievements.categories.schedule'),
     hidden: t('ui.achievements.categories.hidden'),
   },
 } as const;
 
-const categoryLabel = (category: 'all' | AchievementCategory) => labels.categories[category];
+const tabLabel = (tab: AchievementTabId) => labels.tabs[tab];
+const achievementMatchesTab = (achievement: AchievementView, tab: AchievementTabId) => {
+  if (tab === 'all') return true;
+  if (tab === 'hidden') return achievement.category === 'hidden';
+  return achievementTabCategories[tab].includes(achievement.category);
+};
 const progressLabel = (progress: number, target: number) => t('ui.achievements.progress', { progress, target });
 
 const formatDateTime = (time?: number) => {
@@ -50,15 +60,31 @@ const getPrimaryRewardIcon = (achievement: AchievementView, itemIconMap: Partial
   return itemId ? itemIconMap[itemId] : undefined;
 };
 
-const isAchievementCategory = (category: 'all' | AchievementCategory): category is AchievementCategory => category !== 'all';
+const getAchievementStatusRank = (achievement: AchievementView) => {
+  if (achievement.claimable) return 0;
+  return achievement.unlocked ? 2 : 1;
+};
+
+const sortAchievements = (achievements: AchievementView[]) => [...achievements].sort((left, right) => {
+  const rankDifference = getAchievementStatusRank(left) - getAchievementStatusRank(right);
+  if (rankDifference !== 0) return rankDifference;
+  if (!left.unlocked && !right.unlocked) {
+    const leftProgress = left.target > 0 ? left.progressValue / left.target : 0;
+    const rightProgress = right.target > 0 ? right.progressValue / right.target : 0;
+    return rightProgress - leftProgress;
+  }
+  if (left.unlocked && right.unlocked) return (right.unlockedAt ?? 0) - (left.unlockedAt ?? 0);
+  return 0;
+});
 
 export interface AchievementsPageProps {
   pet: PetState;
-  activeCategory: 'all' | AchievementCategory;
+  activeCategory: AchievementTabId;
   itemIconMap: Partial<Record<ItemId, string>>;
   onBack: () => void;
-  onCategoryChange: (category: 'all' | AchievementCategory) => void;
+  onCategoryChange: (category: AchievementTabId) => void;
   onClaimReward: (id: AchievementId) => void;
+  onClaimAllRewards: () => void;
   onOpenCg?: (achievement: AchievementView) => void;
 }
 
@@ -69,85 +95,15 @@ export const AchievementsPage = ({
   onBack,
   onCategoryChange,
   onClaimReward,
+  onClaimAllRewards,
   onOpenCg,
 }: AchievementsPageProps) => {
   const summary = getAchievementSummary(pet);
   const allAchievements = getAchievementViews(pet);
   const hasUnlockedHiddenAchievement = allAchievements.some((achievement) => achievement.rarity === 'hidden' && achievement.unlocked);
-  const visibleCategories = hasUnlockedHiddenAchievement ? [...baseCategories, 'hidden' as const] : baseCategories;
+  const visibleCategories = hasUnlockedHiddenAchievement ? [...baseTabs, 'hidden' as const] : baseTabs;
   const safeActiveCategory = activeCategory === 'hidden' && !hasUnlockedHiddenAchievement ? 'all' : activeCategory;
-  const achievements = allAchievements.filter((achievement) => safeActiveCategory === 'all' || achievement.category === safeActiveCategory);
-  const categorySummaries = visibleCategories.filter(isAchievementCategory).map((category) => {
-    const categoryAchievements = allAchievements.filter((achievement) => achievement.category === category);
-    const unlocked = categoryAchievements.filter((achievement) => achievement.unlocked).length;
-    const claimable = categoryAchievements.filter((achievement) => achievement.claimable).length;
-    return { category, total: categoryAchievements.length, unlocked, claimable };
-  });
-  const claimableAchievements = allAchievements.filter((achievement) => achievement.claimable);
-
-  const renderAchievementCard = (achievement: AchievementView) => {
-    const percent = achievement.target > 0 ? Math.min(100, (achievement.progressValue / achievement.target) * 100) : 0;
-    const rewardIcon = getPrimaryRewardIcon(achievement, itemIconMap);
-    const canOpenCg = achievement.unlocked && Boolean(achievement.reward.cgId) && Boolean(onOpenCg);
-    const openCg = () => {
-      if (!canOpenCg || !onOpenCg) return;
-      onOpenCg(achievement);
-    };
-
-    return (
-      <article
-        className={`achievement-card${achievement.unlocked ? '' : ' achievement-card--locked'}${canOpenCg ? ' achievement-card--interactive' : ''}`}
-        key={achievement.id}
-        role={canOpenCg ? 'button' : undefined}
-        tabIndex={canOpenCg ? 0 : undefined}
-        aria-label={canOpenCg ? t('ui.achievements.cg.open', { title: achievement.title }) : undefined}
-        onClick={canOpenCg ? openCg : undefined}
-        onKeyDown={canOpenCg ? (event) => {
-          if (event.key !== 'Enter' && event.key !== ' ') return;
-          event.preventDefault();
-          openCg();
-        } : undefined}
-      >
-        <div className="achievement-card__icon" aria-hidden="true">
-          {achievement.unlocked ? <Trophy size={24} /> : <Lock size={22} />}
-        </div>
-        <div className="achievement-card__body">
-          <div className="achievement-card__topline">
-            <h3>{achievement.title}</h3>
-            {achievement.rarity !== 'normal' && <span>{labels.rarity[achievement.rarity]}</span>}
-          </div>
-          <p>{achievement.description}</p>
-          <div className="achievement-progress" aria-label={progressLabel(achievement.progressValue, achievement.target)}>
-            <span style={{ width: `${percent}%` }} />
-          </div>
-          <small>{progressLabel(achievement.progressValue, achievement.target)}</small>
-          <div className="achievement-card__reward">
-            {rewardIcon ? <img src={rewardIcon} alt="" aria-hidden="true" /> : <Sparkles size={18} aria-hidden="true" />}
-            <span>{achievement.rewardText}</span>
-          </div>
-        </div>
-        <div className="achievement-card__state">
-          {achievement.unlockedAt && <span>{formatDateTime(achievement.unlockedAt)}</span>}
-          {achievement.claimable ? (
-            <button
-              type="button"
-              className="primary-button"
-              onClick={(event) => {
-                event.stopPropagation();
-                onClaimReward(achievement.id);
-              }}
-            >
-              {labels.claim}
-            </button>
-          ) : achievement.unlocked ? (
-            <span className="achievement-card__done"><CheckCircle2 size={16} aria-hidden="true" />{achievement.effectActive ? labels.active : labels.claimed}</span>
-          ) : (
-            <span>{labels.locked}</span>
-          )}
-        </div>
-      </article>
-    );
-  };
+  const achievements = sortAchievements(allAchievements.filter((achievement) => achievementMatchesTab(achievement, safeActiveCategory)));
 
   return (
     <section className="achievements-page" aria-label={labels.aria}>
@@ -160,29 +116,33 @@ export const AchievementsPage = ({
           <h2>{labels.title}</h2>
           <p>{t('ui.achievements.unlockedProgress', { unlocked: summary.unlocked, total: summary.total })}</p>
         </div>
+        {summary.claimable > 0 ? (
+          <button type="button" className="primary-button achievements-page__claim-all" onClick={onClaimAllRewards}>
+            <Gift size={18} aria-hidden="true" />
+            {t('ui.achievements.claimAll', { count: summary.claimable })}
+          </button>
+        ) : null}
       </header>
 
-      <div className="achievements-overview">
-        <div className="achievements-overview__row">
-          <div className="achievements-overview__metric">
-            <Trophy size={22} aria-hidden="true" />
-            <span>{labels.unlocked}</span>
-            <strong>{summary.unlocked}/{summary.total}</strong>
-          </div>
-          <div className="achievements-overview__metric">
-            <Gift size={22} aria-hidden="true" />
-            <span>{labels.claimable}</span>
-            <strong>{summary.claimable}</strong>
-          </div>
+      <div className="achievements-summary" aria-label={t('ui.achievements.unlockedProgress', { unlocked: summary.unlocked, total: summary.total })}>
+        <div className="achievements-summary__item">
+          <Trophy size={20} aria-hidden="true" />
+          <span>{labels.unlocked}</span>
+          <strong>{summary.unlocked}/{summary.total}</strong>
         </div>
-        <div className="achievements-overview__stipend">
-          <span>{labels.dailyStipend}</span>
-          <strong>{t('ui.achievements.dailyStipendAmount', { coins: summary.dailyStipendCoins })}</strong>
-          <small>{labels.dailyStipendAuto}</small>
+        <div className="achievements-summary__item">
+          <Gift size={20} aria-hidden="true" />
+          <span>{labels.claimable}</span>
+          <strong>{summary.claimable}</strong>
+        </div>
+        <div className="achievements-summary__item">
+          <Sprout size={20} aria-hidden="true" />
+          <span>{labels.gardenExtraDrop}</span>
+          <strong>{t('ui.achievements.gardenExtraDropAmount', { percent: summary.gardenExtraDropChancePercent })}</strong>
         </div>
       </div>
 
-      {summary.pendingReviewNotice && <p className="achievements-review-note">{labels.reviewNotice}</p>}
+      {summary.pendingReviewNotice ? <p className="achievements-review-note">{labels.reviewNotice}</p> : null}
 
       <div className="achievement-tabs" role="tablist" aria-label={labels.tabsAria}>
         {visibleCategories.map((category) => (
@@ -194,46 +154,73 @@ export const AchievementsPage = ({
             key={category}
             onClick={() => onCategoryChange(category)}
           >
-            {categoryLabel(category)}
+            {tabLabel(category)}
           </button>
         ))}
       </div>
 
-      {safeActiveCategory === 'all' ? (
-        <>
-          {claimableAchievements.length > 0 && (
-            <section className="achievement-section">
-              <h3>{labels.claimable}</h3>
-              <div className="achievement-grid achievement-grid--claimable">
-                {claimableAchievements.map(renderAchievementCard)}
+      <div className="achievement-list">
+        {achievements.map((achievement) => {
+          const percent = achievement.target > 0 ? Math.min(100, (achievement.progressValue / achievement.target) * 100) : 0;
+          const rewardIcon = getPrimaryRewardIcon(achievement, itemIconMap);
+          const canOpenCg = achievement.unlocked && Boolean(achievement.reward.cgId) && Boolean(onOpenCg);
+          return (
+            <article
+              className={`achievement-list-item${achievement.unlocked ? ' achievement-list-item--completed' : ''}${achievement.claimable ? ' achievement-list-item--claimable' : ''}`}
+              key={achievement.id}
+            >
+              <div className="achievement-list-item__icon" aria-hidden="true">
+                {achievement.unlocked ? <Trophy size={22} /> : <Lock size={20} />}
               </div>
-            </section>
-          )}
 
-          <section className="achievement-section">
-            <h3>{labels.categories.all}</h3>
-            <div className="achievement-category-grid">
-              {categorySummaries.map(({ category, total, unlocked, claimable }) => {
-                const percent = total > 0 ? Math.min(100, (unlocked / total) * 100) : 0;
-                return (
-                  <button type="button" className="achievement-category-card" key={category} onClick={() => onCategoryChange(category)}>
-                    <span>{categoryLabel(category)}</span>
-                    <strong>{unlocked}/{total}</strong>
-                    <div className="achievement-progress" aria-hidden="true">
-                      <span style={{ width: `${percent}%` }} />
-                    </div>
-                    {claimable > 0 && <small>{labels.claimable} {claimable}</small>}
+              <div className="achievement-list-item__content">
+                <div className="achievement-list-item__title">
+                  <h3>{achievement.title}</h3>
+                  {achievement.rarity !== 'normal' ? <span>{labels.rarity[achievement.rarity]}</span> : null}
+                </div>
+                <p>{achievement.description}</p>
+                <div className="achievement-list-item__progress-row">
+                  <div
+                    className="achievement-progress"
+                    role="progressbar"
+                    aria-label={progressLabel(achievement.progressValue, achievement.target)}
+                    aria-valuemin={0}
+                    aria-valuemax={achievement.target}
+                    aria-valuenow={achievement.progressValue}
+                  >
+                    <span style={{ width: `${percent}%` }} />
+                  </div>
+                  <small>{progressLabel(achievement.progressValue, achievement.target)}</small>
+                </div>
+                <div className="achievement-list-item__reward">
+                  {rewardIcon ? <img src={rewardIcon} alt="" aria-hidden="true" /> : <Sparkles size={17} aria-hidden="true" />}
+                  <span>{achievement.rewardText}</span>
+                </div>
+              </div>
+
+              <div className="achievement-list-item__actions">
+                {achievement.unlockedAt ? <time dateTime={new Date(achievement.unlockedAt).toISOString()}>{formatDateTime(achievement.unlockedAt)}</time> : null}
+                {achievement.claimable ? (
+                  <button type="button" className="primary-button" onClick={() => onClaimReward(achievement.id)}>
+                    <Gift size={16} aria-hidden="true" />
+                    {labels.claim}
                   </button>
-                );
-              })}
-            </div>
-          </section>
-        </>
-      ) : (
-        <div className="achievement-grid">
-          {achievements.map(renderAchievementCard)}
-        </div>
-      )}
+                ) : achievement.unlocked ? (
+                  <span className="achievement-list-item__done"><CheckCircle2 size={16} aria-hidden="true" />{achievement.effectActive ? labels.active : labels.claimed}</span>
+                ) : (
+                  <span className="achievement-list-item__locked">{labels.locked}</span>
+                )}
+                {canOpenCg && onOpenCg ? (
+                  <button type="button" className="secondary-button achievement-list-item__cg" onClick={() => onOpenCg(achievement)}>
+                    <Images size={16} aria-hidden="true" />
+                    {t('ui.achievements.cg.view')}
+                  </button>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 };

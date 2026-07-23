@@ -1,0 +1,21 @@
+:root {
+  --app-bg: #edf3f7;
+  --surface: #ffffff;
+  --surface-soft: #f5f8fb;
+  --surface-blue: #eaf3ff;
+  --surface-green: #eaf7ef;
+  --surface-gold: #fff5d8;
+  --surface-pink: #fff0f5;
+  --text: #172235;
+  --text-muted: #607089;
+  --accent: #2f73c9;
+  --accent-green: #3b8c63;
+  --accent-gold: #a66e16;
+  --accent-pink: #b94f75;
+  --danger: #a84242;
+  --panel: rgba(255, 255, 255, 0.94);
+  --line: rgba(35, 52, 74, 0.13);
+  --shadow: 0 14px 34px rgba(35, 58, 83, 0.12);
+  color: var(--text);
+  background: var(--app-bg);
+}

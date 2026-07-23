@@ -1,0 +1,76 @@
+body {
+  background: var(--app-bg);
+}
+
+h1 {
+  font-size: 1.85rem;
+  line-height: 1.08;
+  letter-spacing: 0;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(47, 115, 201, 0.28);
+  outline-offset: 3px;
+}
+
+.secondary-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 12px;
+  border: 1px solid rgba(47, 115, 201, 0.18);
+  border-radius: 8px;
+  color: #245b96;
+  background: var(--surface-blue);
+  font-weight: 850;
+}
+
+.top-bar {
+  min-height: 52px;
+  margin-bottom: 14px;
+}
+
+.top-bar .eyebrow {
+  margin-bottom: 3px;
+  font-size: 0.7rem;
+}
+
+.top-actions {
+  flex-wrap: nowrap;
+  gap: 8px;
+}
+
+.icon-button,
+.coin-pill,
+.heart-pill {
+  box-shadow: 0 7px 18px rgba(35, 58, 83, 0.1);
+}
+
+@media (max-width: 520px) {
+  .top-bar {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 9px;
+  }
+
+  .top-actions {
+    overflow-x: auto;
+    justify-content: flex-start;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .top-actions::-webkit-scrollbar {
+    display: none;
+  }
+
+  h1 {
+    font-size: 1.65rem;
+  }
+}

@@ -1,8 +1,10 @@
 import { t } from '../i18n';
-import { getSixAmResetDateKey } from './dateRewards';
+import { getDailyResetDateKey } from './dailyReset';
 import { incrementDailyWishClaim, incrementReturnWelcomeClaim, recordEarnedCoins } from './achievements';
 import { addInventoryItem, allItemIds } from './items';
-import { clampCoins, clampCount } from './petStats';
+import { resolveDailyGachaTicket } from './goldenAppleGacha';
+import { getPartnerScheduleCrossSystemEffects } from './partnerScheduleEffects';
+import { clampCoins, clampCount, getPetStatThreshold } from './petStats';
 import type {
   DailyWishActionKey,
   DailyWishId,
@@ -15,7 +17,7 @@ import type {
 } from './petTypes';
 import { hashString, isNumber } from './utils';
 
-type DailyWishSnapshot = Pick<PetState, 'createdAt' | 'name' | 'energy' | 'health' | 'isSleeping'>;
+type DailyWishSnapshot = Pick<PetState, 'level' | 'createdAt' | 'name' | 'energy' | 'health' | 'isSleeping'>;
 
 type DailyWishConfig = {
   id: DailyWishId;
@@ -66,7 +68,7 @@ const isReturnWelcomeTaskId = (value: unknown): value is ReturnWelcomeTaskId =>
 const getDailyWishConfig = (id: DailyWishId) => dailyWishConfigs.find((config) => config.id === id) ?? dailyWishConfigs[0];
 
 const getAvailableDailyWishConfigs = (pet: DailyWishSnapshot) => {
-  const canSpendEnergy = !pet.isSleeping && pet.energy >= 34 && pet.health > 35;
+  const canSpendEnergy = !pet.isSleeping && pet.energy >= 34 && pet.health > getPetStatThreshold(pet, 35);
   const configs = dailyWishConfigs.filter((config) => {
     if (config.action === 'play' || config.action === 'work') return canSpendEnergy;
     return true;
@@ -75,7 +77,7 @@ const getAvailableDailyWishConfigs = (pet: DailyWishSnapshot) => {
 };
 
 export const createDailyWish = (pet: DailyWishSnapshot, now = Date.now()): DailyWishState => {
-  const dateKey = getSixAmResetDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const configs = getAvailableDailyWishConfigs(pet);
   const index = hashString(dateKey + ':' + Math.floor(pet.createdAt) + ':' + pet.name) % configs.length;
   const config = configs[index];
@@ -98,7 +100,7 @@ export const normalizeDailyWishState = (value: unknown, pet: DailyWishSnapshot, 
   if (!isDailyWishId(raw.id)) return fallback;
   const config = getDailyWishConfig(raw.id);
   const dateKey = typeof raw.dateKey === 'string' ? raw.dateKey : '';
-  if (dateKey !== getSixAmResetDateKey(now)) return fallback;
+  if (dateKey !== getDailyResetDateKey(now)) return fallback;
 
   const progress = Math.min(config.target, clampCount(isNumber(raw.progress) ? raw.progress : 0));
   const completedAt = isNumber(raw.completedAt) && progress >= config.target
@@ -128,8 +130,8 @@ const getReturnWelcomeTaskConfig = (taskId: ReturnWelcomeTaskId): ReturnWelcomeT
 };
 
 const chooseReturnWelcomeTask = (pet: PetState): ReturnWelcomeTaskConfig => {
-  if (pet.hunger <= 48) return getReturnWelcomeTaskConfig('feed_once');
-  if (pet.cleanliness <= 48) return getReturnWelcomeTaskConfig('clean_once');
+  if (pet.hunger <= getPetStatThreshold(pet, 48)) return getReturnWelcomeTaskConfig('feed_once');
+  if (pet.cleanliness <= getPetStatThreshold(pet, 48)) return getReturnWelcomeTaskConfig('clean_once');
   if (!pet.isSleeping && pet.energy <= 34) return getReturnWelcomeTaskConfig('sleep_once');
   return getReturnWelcomeTaskConfig('touch_once');
 };
@@ -240,12 +242,16 @@ export const claimDailyWishReward = (pet: PetState, now = Date.now()): PetState 
   if (wish.claimedAt) return { ...current, recentEvent: t('pet.dailyWish.alreadyClaimed') };
   if (!wish.completedAt) return { ...current, recentEvent: t('pet.dailyWish.notReady') };
 
-  return recordEarnedCoins(incrementDailyWishClaim({
+  const rewardCoins = Math.max(1, Math.round(
+    wish.rewardCoins * getPartnerScheduleCrossSystemEffects(current).dailyWishCoinMultiplier,
+  ));
+  const rewarded = recordEarnedCoins(incrementDailyWishClaim({
     ...current,
-    coins: clampCoins(current.coins + wish.rewardCoins),
+    coins: clampCoins(current.coins + rewardCoins),
     dailyWish: { ...wish, claimedAt: now },
-    recentEvent: t('pet.dailyWish.claimed', { coins: wish.rewardCoins }),
-  }), wish.rewardCoins);
+    recentEvent: t('pet.dailyWish.claimed', { coins: rewardCoins }),
+  }), rewardCoins);
+  return resolveDailyGachaTicket(rewarded, 'daily_wish', 20, now).pet;
 };
 
 export const claimReturnWelcomeReward = (pet: PetState, now = Date.now()): PetState => {
@@ -272,13 +278,16 @@ const getButtonLabel = (canClaim: boolean, claimed: boolean) => {
 
 export const getDailyWishView = (pet: PetState): WishTaskView => {
   const wish = pet.dailyWish;
+  const rewardCoins = Math.max(1, Math.round(
+    wish.rewardCoins * getPartnerScheduleCrossSystemEffects(pet).dailyWishCoinMultiplier,
+  ));
   const canClaim = Boolean(wish.completedAt && !wish.claimedAt);
   const claimed = Boolean(wish.claimedAt);
   return {
     title: t('ui.dailyWish.wishes.' + wish.id + '.title'),
     description: t('ui.dailyWish.wishes.' + wish.id + '.description'),
     progressText: t('ui.wishes.progress', { progress: wish.progress, target: wish.target }),
-    rewardText: t('ui.wishes.rewardCoins', { coins: wish.rewardCoins }),
+    rewardText: t('ui.wishes.rewardCoins', { coins: rewardCoins }),
     buttonLabel: getButtonLabel(canClaim, claimed),
     canClaim,
     claimed,

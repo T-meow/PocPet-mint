@@ -1,0 +1,10 @@
+.role-picker {
+  border-color: var(--line);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.role-card {
+  border-color: var(--line);
+  background: var(--surface-soft);
+}

@@ -1,11 +1,12 @@
 import { t } from '../i18n';
 import { applyBoostCardHeartBonus } from './boostCards';
+import { getDailyResetDate, getDailyResetDateKey, normalizeLegacyDailyDateKey } from './dailyReset';
 import { addInventoryItem, getInventoryItem, shopItems } from './items';
 import { clampCoins, clampCount } from './petStats';
-import type { AchievementCounters, AchievementId, AchievementState, CareActionKey, ItemId, PetState, YearlyCareActionKey, YearlyStats } from './petTypes';
-import { getLocalDateKey, isNumber } from './utils';
+import type { AchievementCounters, AchievementId, AchievementState, CareActionKey, GardenTreeId, ItemId, PartnerScheduleCategory, PartnerScheduleRewardChoice, PartnerScheduleSize, PetState, YearlyCareActionKey, YearlyStats } from './petTypes';
+import { isNumber } from './utils';
 
-export type AchievementCategory = 'care' | 'daily' | 'shop' | 'inventory' | 'pomodoro' | 'growth' | 'date' | 'hidden';
+export type AchievementCategory = 'care' | 'daily' | 'garden' | 'shop' | 'inventory' | 'pomodoro' | 'growth' | 'date' | 'schedule' | 'hidden';
 export type AchievementRarity = 'normal' | 'rare' | 'hidden';
 
 export interface AchievementReward {
@@ -16,6 +17,8 @@ export interface AchievementReward {
   pomodoroCoinBonus?: number;
   cleanCooldownMs?: number;
   extraHeartChancePercent?: number;
+  gardenExtraDropChancePercent?: number;
+  partnerScheduleExtraRewardChancePercent?: number;
   globalCoinFlatBonus?: number;
   globalHeartFlatBonus?: number;
   dailyStipendCoins?: number;
@@ -44,6 +47,8 @@ export interface AchievementEffects {
   cleanCooldownMs: number;
   extraHeartChancePercent: number;
   guaranteedExtraHearts: number;
+  gardenExtraDropChancePercent: number;
+  partnerScheduleExtraRewardChancePercent: number;
   globalCoinFlatBonus: number;
   globalHeartFlatBonus: number;
   dailyStipendCoins: number;
@@ -68,6 +73,11 @@ export interface AchievementEvaluationResult {
   unlocked: AchievementView[];
 }
 
+export interface AchievementClaimAllResult {
+  pet: PetState;
+  claimedIds: AchievementId[];
+}
+
 export interface AchievementSummary {
   total: number;
   unlocked: number;
@@ -76,6 +86,7 @@ export interface AchievementSummary {
   dailyStipendCoins: number;
   dailyStipendClaimed: boolean;
   dailyStipendClaimable: boolean;
+  gardenExtraDropChancePercent: number;
 }
 
 export const baseCleanCooldownMs = 30 * 1000;
@@ -88,6 +99,8 @@ const nonWatermelonFruitIds: readonly ItemId[] = ['orange', 'apple', 'banana'];
 const careKitIds: readonly ItemId[] = ['wet_wipes', 'shampoo', 'vitamin_tablet'];
 const gentleCareKeys: readonly YearlyCareActionKey[] = ['feed', 'clean', 'play', 'touch'];
 const workPlayKeys: readonly YearlyCareActionKey[] = ['work', 'play'];
+const achievementGardenTreeIds: readonly GardenTreeId[] = ['fruit_tree', 'care_tree', 'gift_tree', 'money_tree', 'golden_apple_tree'];
+const achievementPartnerScheduleCategories: readonly PartnerScheduleCategory[] = ['study', 'cooking', 'garden', 'exercise'];
 const usableShopItems = shopItems.filter((item) => item.usable !== false);
 const shopItemIds: readonly ItemId[] = usableShopItems.map((item) => item.id);
 const shopFoodItemIds: readonly ItemId[] = usableShopItems.filter((item) => item.kind === 'food').map((item) => item.id);
@@ -122,6 +135,13 @@ export const defaultAchievementCounters = (): AchievementCounters => ({
   maxCoinsHeld: 0,
   manualWakeCount: 0,
   naturalWakeCount: 0,
+  gardenPlantCount: 0,
+  gardenWaterCount: 0,
+  gardenHarvestCountsByTreeId: {},
+  partnerScheduleClaimCount: 0,
+  partnerScheduleClaimCountsByCategory: {},
+  partnerScheduleLongClaimCountsByCategory: {},
+  partnerScheduleCategoryRewardClaimCount: 0,
   companionYearActiveDateKeysByYear: {},
 });
 
@@ -134,10 +154,13 @@ export const getCompanionYear = (createdAt: number, now = Date.now()) => {
   return Math.max(1, year);
 };
 
+const getCompanionActivityYear = (createdAt: number, now = Date.now()) =>
+  getCompanionYear(createdAt, getDailyResetDate(now).getTime());
+
 export const defaultAchievementState = (now = Date.now(), createdAt = now, pendingReviewNotice = false, initialCoins = 0): AchievementState => {
   const counters = defaultAchievementCounters();
   counters.maxCoinsHeld = clampCount(initialCoins);
-  counters.companionYearActiveDateKeysByYear[String(getCompanionYear(createdAt, now))] = [getLocalDateKey(now)];
+  counters.companionYearActiveDateKeysByYear[String(getCompanionActivityYear(createdAt, now))] = [getDailyResetDateKey(now)];
   return {
     unlockedAtById: {},
     claimedOneTimeRewardIds: [],
@@ -213,16 +236,41 @@ export const normalizeAchievementState = (
   Object.entries(rawDateRewardCounts).forEach(([kind, amount]) => {
     if (isNumber(amount) && amount > 0) dateRewardClaimCountsByKind[kind.slice(0, 48)] = clampCount(amount);
   });
+  const rawGardenHarvestCounts = rawCounters.gardenHarvestCountsByTreeId && typeof rawCounters.gardenHarvestCountsByTreeId === 'object'
+    ? (rawCounters.gardenHarvestCountsByTreeId as Record<string, unknown>)
+    : {};
+  const gardenHarvestCountsByTreeId: Partial<Record<GardenTreeId, number>> = {};
+  achievementGardenTreeIds.forEach((treeId) => {
+    const amount = rawGardenHarvestCounts[treeId];
+    if (isNumber(amount) && amount > 0) gardenHarvestCountsByTreeId[treeId] = clampCount(amount);
+  });
+  const normalizePartnerScheduleCounts = (rawValue: unknown) => {
+    const rawCounts = rawValue && typeof rawValue === 'object' && !Array.isArray(rawValue)
+      ? rawValue as Record<string, unknown>
+      : {};
+    const counts: Partial<Record<PartnerScheduleCategory, number>> = {};
+    achievementPartnerScheduleCategories.forEach((category) => {
+      const amount = rawCounts[category];
+      if (isNumber(amount) && amount > 0) counts[category] = clampCount(amount);
+    });
+    return counts;
+  };
+  const partnerScheduleClaimCountsByCategory = normalizePartnerScheduleCounts(rawCounters.partnerScheduleClaimCountsByCategory);
+  const partnerScheduleLongClaimCountsByCategory = normalizePartnerScheduleCounts(rawCounters.partnerScheduleLongClaimCountsByCategory);
   const rawYears = rawCounters.companionYearActiveDateKeysByYear && typeof rawCounters.companionYearActiveDateKeysByYear === 'object'
     ? (rawCounters.companionYearActiveDateKeysByYear as Record<string, unknown>)
     : {};
   const companionYearActiveDateKeysByYear: Record<string, string[]> = {};
   Object.entries(rawYears).forEach(([year, keys]) => {
     if (!/^\d+$/.test(year)) return;
-    companionYearActiveDateKeysByYear[year] = normalizeStringArray(keys, 370).filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key));
+    companionYearActiveDateKeysByYear[year] = Array.from(new Set(
+      normalizeStringArray(keys, 370)
+        .filter((key) => /^\d{4}-\d{2}-\d{2}$/.test(key))
+        .map((key) => normalizeLegacyDailyDateKey(key, now) || key),
+    ));
   });
-  const currentYear = String(getCompanionYear(createdAt, now));
-  const today = getLocalDateKey(now);
+  const currentYear = String(getCompanionActivityYear(createdAt, now));
+  const today = getDailyResetDateKey(now);
   const currentKeys = companionYearActiveDateKeysByYear[currentYear] ?? [];
   companionYearActiveDateKeysByYear[currentYear] = currentKeys.includes(today) ? currentKeys : [...currentKeys, today].slice(-370);
   const rawUnlocked = raw.unlockedAtById && typeof raw.unlockedAtById === 'object'
@@ -235,7 +283,7 @@ export const normalizeAchievementState = (
   return {
     unlockedAtById,
     claimedOneTimeRewardIds: normalizeStringArray(raw.claimedOneTimeRewardIds),
-    dailyStipendClaimDateKey: typeof raw.dailyStipendClaimDateKey === 'string' ? raw.dailyStipendClaimDateKey.slice(0, 16) : '',
+    dailyStipendClaimDateKey: normalizeLegacyDailyDateKey(raw.dailyStipendClaimDateKey, now),
     completedGoodEndingYears: normalizeNumberArray(raw.completedGoodEndingYears),
     unlockedCgIds: normalizeStringArray(raw.unlockedCgIds),
     pendingReviewNotice: Boolean(raw.pendingReviewNotice),
@@ -256,6 +304,13 @@ export const normalizeAchievementState = (
       maxCoinsHeld: Math.max(clampCount(isNumber(rawCounters.maxCoinsHeld) ? rawCounters.maxCoinsHeld : 0), clampCount(currentCoins)),
       manualWakeCount: clampCount(isNumber(rawCounters.manualWakeCount) ? rawCounters.manualWakeCount : 0),
       naturalWakeCount: clampCount(isNumber(rawCounters.naturalWakeCount) ? rawCounters.naturalWakeCount : 0),
+      gardenPlantCount: clampCount(isNumber(rawCounters.gardenPlantCount) ? rawCounters.gardenPlantCount : 0),
+      gardenWaterCount: clampCount(isNumber(rawCounters.gardenWaterCount) ? rawCounters.gardenWaterCount : 0),
+      gardenHarvestCountsByTreeId,
+      partnerScheduleClaimCount: clampCount(isNumber(rawCounters.partnerScheduleClaimCount) ? rawCounters.partnerScheduleClaimCount : 0),
+      partnerScheduleClaimCountsByCategory,
+      partnerScheduleLongClaimCountsByCategory,
+      partnerScheduleCategoryRewardClaimCount: clampCount(isNumber(rawCounters.partnerScheduleCategoryRewardClaimCount) ? rawCounters.partnerScheduleCategoryRewardClaimCount : 0),
       companionYearActiveDateKeysByYear,
     },
   };
@@ -276,6 +331,15 @@ const getActiveDaysTotal = (pet: PetState) => {
   });
   return keys.size;
 };
+const getCompanionMarkCount = (pet: PetState) => pet.achievements.counters.returnWelcomeClaimCount + Math.floor(getActiveDaysTotal(pet) / 30);
+const getHarvestedGardenTreeKindCount = (pet: PetState) => achievementGardenTreeIds.filter((treeId) => (pet.achievements.counters.gardenHarvestCountsByTreeId[treeId] ?? 0) > 0).length;
+const getUnlockedGardenSlotCount = (pet: PetState) => pet.garden.slots.filter((slot) => slot.unlocked).length;
+const getMaxedGardenToolCount = (pet: PetState) => [pet.garden.tools.wateringCanLevel, pet.garden.tools.shovelLevel, pet.garden.tools.fertilizerBoxLevel].filter((level) => level >= 3).length;
+const getPartnerScheduleCategoryCount = (pet: PetState) => achievementPartnerScheduleCategories.filter((category) => (pet.achievements.counters.partnerScheduleClaimCountsByCategory[category] ?? 0) > 0).length;
+const getPartnerScheduleLongCount = (pet: PetState) => achievementPartnerScheduleCategories.reduce((sum, category) => sum + (pet.achievements.counters.partnerScheduleLongClaimCountsByCategory[category] ?? 0), 0);
+const getPartnerScheduleLongCategoryCount = (pet: PetState) => achievementPartnerScheduleCategories.filter((category) => (pet.achievements.counters.partnerScheduleLongClaimCountsByCategory[category] ?? 0) > 0).length;
+const getPartnerScheduleMinimumSkillLevel = (pet: PetState) => Math.min(...achievementPartnerScheduleCategories.map((category) => pet.partnerSchedule.skills[category].level));
+const getPartnerScheduleMinimumMasterCompletionCount = (pet: PetState) => Math.min(...achievementPartnerScheduleCategories.map((category) => pet.partnerSchedule.skills[category].masterCompletions));
 const getInventoryItemTotal = (pet: PetState) =>
   Object.values(pet.inventory).reduce((sum, amount) => sum + Math.max(0, Math.floor(amount ?? 0)), 0);
 
@@ -302,13 +366,36 @@ const baseAchievementDefinitionConfigs: readonly Omit<AchievementDefinition, 'ti
   { id: 'daily_wish_7', category: 'daily', rarity: 'normal', target: 7, progress: (pet) => pet.achievements.counters.dailyWishClaimCount, reward: { coins: 45 } },
   { id: 'daily_wish_30', category: 'daily', rarity: 'normal', target: 30, progress: (pet) => pet.achievements.counters.dailyWishClaimCount, reward: { coins: 80 } },
   { id: 'daily_wish_100', category: 'daily', rarity: 'rare', target: 100, progress: (pet) => pet.achievements.counters.dailyWishClaimCount, reward: { dailyStipendCoins: 2 } },
-  { id: 'return_welcome_1', category: 'daily', rarity: 'normal', target: 1, progress: (pet) => pet.achievements.counters.returnWelcomeClaimCount, reward: { coins: 24 } },
+  { id: 'return_welcome_1', category: 'daily', rarity: 'normal', target: 1, progress: getCompanionMarkCount, reward: { coins: 24 } },
   { id: 'daily_login_7', category: 'daily', rarity: 'normal', target: 7, progress: (pet) => getDateRewardCount(pet, 'daily_login'), reward: { coins: 45 } },
+  { id: 'daily_login_30', category: 'daily', rarity: 'rare', target: 30, progress: (pet) => getDateRewardCount(pet, 'daily_login'), reward: { coins: 300, items: [{ itemId: 'golden_apple', amount: 1 }] } },
   { id: 'companion_100', category: 'daily', rarity: 'rare', target: 60, progress: getActiveDaysTotal, isComplete: (pet: PetState) => getCompanionDays(pet) >= 100 && getActiveDaysTotal(pet) >= 60, reward: { dailyStipendCoins: 3, items: [{ itemId: 'golden_apple', amount: 1 }] } },
+  { id: 'garden_first_plant', category: 'garden', rarity: 'normal', target: 1, progress: (pet) => pet.achievements.counters.gardenPlantCount, reward: { coins: 50 } },
+  { id: 'garden_first_harvest', category: 'garden', rarity: 'normal', target: 1, progress: (pet) => pet.garden.lifetimeHarvestCount, reward: { coins: 80 } },
+  { id: 'garden_water_20', category: 'garden', rarity: 'normal', target: 20, progress: (pet) => pet.achievements.counters.gardenWaterCount, reward: { coins: 100, items: [{ itemId: 'heart_fertilizer', amount: 1 }] } },
+  { id: 'garden_harvest_30', category: 'garden', rarity: 'normal', target: 30, progress: (pet) => pet.garden.lifetimeHarvestCount, reward: { coins: 200, items: [{ itemId: 'heart_fertilizer', amount: 1 }] } },
+  { id: 'garden_harvest_100', category: 'garden', rarity: 'rare', target: 100, progress: (pet) => pet.garden.lifetimeHarvestCount, reward: { coins: 500, items: [{ itemId: 'heart_fertilizer', amount: 2 }], gardenExtraDropChancePercent: 10 } },
+  { id: 'garden_tree_catalogue', category: 'garden', rarity: 'rare', target: achievementGardenTreeIds.length, progress: getHarvestedGardenTreeKindCount, reward: { coins: 300, items: [{ itemId: 'heart_fertilizer', amount: 2 }], gardenExtraDropChancePercent: 10 } },
+  { id: 'garden_all_slots', category: 'garden', rarity: 'rare', target: 5, progress: getUnlockedGardenSlotCount, reward: { coins: 500, gardenExtraDropChancePercent: 20 } },
+  { id: 'garden_tools_max', category: 'garden', rarity: 'rare', target: 3, progress: getMaxedGardenToolCount, reward: { coins: 300, gardenExtraDropChancePercent: 10 } },
+  { id: 'schedule_first', category: 'schedule', rarity: 'normal', target: 1, progress: (pet) => pet.achievements.counters.partnerScheduleClaimCount, reward: { coins: 80 } },
+  { id: 'schedule_10', category: 'schedule', rarity: 'normal', target: 10, progress: (pet) => pet.achievements.counters.partnerScheduleClaimCount, reward: { coins: 200 } },
+  { id: 'schedule_50', category: 'schedule', rarity: 'rare', target: 50, progress: (pet) => pet.achievements.counters.partnerScheduleClaimCount, reward: { coins: 500, items: [{ itemId: 'golden_apple', amount: 1 }] } },
+  { id: 'schedule_all_categories', category: 'schedule', rarity: 'normal', target: achievementPartnerScheduleCategories.length, progress: getPartnerScheduleCategoryCount, reward: { coins: 300 } },
+  { id: 'schedule_long_5', category: 'schedule', rarity: 'normal', target: 5, progress: getPartnerScheduleLongCount, reward: { coins: 300 } },
+  { id: 'schedule_long_all_categories', category: 'schedule', rarity: 'rare', target: achievementPartnerScheduleCategories.length, progress: getPartnerScheduleLongCategoryCount, reward: { coins: 500, items: [{ itemId: 'heart_fertilizer', amount: 2 }] } },
+  { id: 'schedule_category_reward_10', category: 'schedule', rarity: 'normal', target: 10, progress: (pet) => pet.achievements.counters.partnerScheduleCategoryRewardClaimCount, reward: { coins: 250 } },
+  { id: 'schedule_daily_three', category: 'hidden', rarity: 'hidden', target: 3, progress: (pet) => pet.partnerSchedule.completedOfferIds.length, reward: { coins: 500, partnerScheduleExtraRewardChancePercent: 10 }, hiddenUntilUnlocked: true },
+  { id: 'schedule_all_skills_3', category: 'schedule', rarity: 'rare', target: 3, progress: getPartnerScheduleMinimumSkillLevel, reward: { coins: 500, items: [{ itemId: 'golden_apple', amount: 1 }] } },
+  { id: 'schedule_all_skills_6', category: 'schedule', rarity: 'rare', target: 6, progress: getPartnerScheduleMinimumSkillLevel, reward: { coins: 800, items: [{ itemId: 'golden_apple', amount: 1 }] } },
+  { id: 'schedule_all_skills_max', category: 'hidden', rarity: 'hidden', target: 10, progress: getPartnerScheduleMinimumSkillLevel, reward: { coins: 1000, items: [{ itemId: 'golden_apple', amount: 2 }], partnerScheduleExtraRewardChancePercent: 20 }, hiddenUntilUnlocked: true },
+  { id: 'schedule_all_master_10', category: 'schedule', rarity: 'rare', target: 10, progress: getPartnerScheduleMinimumMasterCompletionCount, reward: { coins: 1500, items: [{ itemId: 'golden_apple', amount: 2 }] } },
   { id: 'first_purchase', category: 'shop', rarity: 'normal', target: 1, progress: (pet) => pet.achievements.counters.paidPurchaseCount, reward: { coins: 20 } },
   { id: 'purchase_20', category: 'shop', rarity: 'normal', target: 20, progress: (pet) => pet.achievements.counters.purchaseCount, reward: { coins: 55 } },
+  { id: 'paid_purchase_100', category: 'shop', rarity: 'rare', target: 100, progress: (pet) => pet.achievements.counters.paidPurchaseCount, reward: { coins: 500 } },
   { id: 'shop_item_collector', category: 'shop', rarity: 'rare', target: shopItemIds.length, progress: (pet) => usedItemKinds(pet, shopItemIds), reward: { extraHeartChancePercent: 10 } },
   { id: 'item_use_20', category: 'inventory', rarity: 'normal', target: 20, progress: (pet) => pet.achievements.counters.totalItemUseCount, reward: { coins: 50 } },
+  { id: 'item_use_100', category: 'inventory', rarity: 'rare', target: 100, progress: (pet) => pet.achievements.counters.totalItemUseCount, reward: { coins: 300, extraHeartChancePercent: 10 } },
   { id: 'fruit_taster', category: 'inventory', rarity: 'normal', target: 1, progress: (pet) => minItemUses(pet, fruitIds), reward: { coins: 20, items: [{ itemId: 'watermelon', amount: 1 }] } },
   { id: 'watermelon_first', category: 'inventory', rarity: 'normal', target: 1, progress: (pet) => getItemUseCount(pet, 'watermelon'), reward: { coins: 20 } },
   { id: 'care_kit', category: 'inventory', rarity: 'normal', target: 1, progress: (pet) => minItemUses(pet, careKitIds), reward: { coins: 30 } },
@@ -318,6 +405,7 @@ const baseAchievementDefinitionConfigs: readonly Omit<AchievementDefinition, 'ti
   { id: 'pomodoro_10', category: 'pomodoro', rarity: 'normal', target: 10, progress: (pet) => pet.achievements.counters.pomodoroFocusCount, reward: { pomodoroCoinBonus: 1 } },
   { id: 'pomodoro_50', category: 'pomodoro', rarity: 'rare', target: 50, progress: (pet) => pet.achievements.counters.pomodoroFocusCount, reward: { pomodoroCoinBonus: 1 } },
   { id: 'pomodoro_100', category: 'pomodoro', rarity: 'rare', target: 100, progress: (pet) => pet.achievements.counters.pomodoroFocusCount, reward: { pomodoroCoinBonus: 1 } },
+  { id: 'pomodoro_250', category: 'pomodoro', rarity: 'rare', target: 250, progress: (pet) => pet.achievements.counters.pomodoroFocusCount, reward: { coins: 500, items: [{ itemId: 'golden_apple', amount: 1 }] } },
   { id: 'pomodoro_day_4', category: 'pomodoro', rarity: 'normal', target: 4, progress: (pet) => pet.achievements.counters.bestDailyPomodoroFocusCount, reward: { coins: 45 } },
   { id: 'level_2', category: 'growth', rarity: 'normal', target: 2, progress: (pet) => pet.level, reward: { coins: 30 } },
   { id: 'level_5', category: 'growth', rarity: 'normal', target: 5, progress: (pet) => pet.level, reward: { coins: 80 } },
@@ -342,9 +430,10 @@ const baseAchievementDefinitionConfigs: readonly Omit<AchievementDefinition, 'ti
   { id: 'rare_fruit_collector', category: 'inventory', rarity: 'rare', target: 3, progress: (pet) => minItemUses(pet, fruitIds), reward: { dailyStipendCoins: 3, items: [{ itemId: 'golden_apple', amount: 1 }] } },
   { id: 'rare_gentle_caretaker', category: 'care', rarity: 'rare', target: 50, progress: (pet) => minCareUses(pet, gentleCareKeys), reward: { careStatBonus: 1 } },
   { id: 'rare_level_10', category: 'growth', rarity: 'rare', target: 10, progress: (pet) => pet.level, reward: { dailyStipendCoins: 5 } },
+  { id: 'rare_level_20', category: 'growth', rarity: 'rare', target: 20, progress: (pet) => pet.level, reward: { coins: 1500, items: [{ itemId: 'golden_apple', amount: 2 }], extraHeartChancePercent: 20, gardenExtraDropChancePercent: 20 } },
   { id: 'hidden_good_ending_year_1', category: 'hidden', rarity: 'hidden', target: 1, progress: (pet) => pet.achievements.completedGoodEndingYears.includes(1) ? 1 : 0, reward: { globalCoinFlatBonus: 1, globalHeartFlatBonus: 1, cgId: goodEndingCgId }, hiddenUntilUnlocked: true },
-  { id: 'hidden_never_give_you_up', category: 'hidden', rarity: 'hidden', target: 3, progress: (pet) => pet.achievements.counters.returnWelcomeClaimCount, reward: { coins: 100, items: [{ itemId: 'golden_apple', amount: 1 }] }, hiddenUntilUnlocked: true },
-  { id: 'hidden_never_let_you_down', category: 'hidden', rarity: 'hidden', target: 10, progress: (pet) => pet.achievements.counters.returnWelcomeClaimCount, reward: { coins: 100, hearts: 10 }, hiddenUntilUnlocked: true },
+  { id: 'hidden_never_give_you_up', category: 'hidden', rarity: 'hidden', target: 3, progress: getCompanionMarkCount, reward: { coins: 100, items: [{ itemId: 'golden_apple', amount: 1 }] }, hiddenUntilUnlocked: true },
+  { id: 'hidden_never_let_you_down', category: 'hidden', rarity: 'hidden', target: 10, progress: getCompanionMarkCount, reward: { coins: 100, hearts: 10 }, hiddenUntilUnlocked: true },
   { id: 'hidden_quiet_companion', category: 'hidden', rarity: 'hidden', target: 100, progress: getActiveDaysTotal, reward: { dailyStipendCoins: 2 }, hiddenUntilUnlocked: true },
   { id: 'hidden_prepared_bag', category: 'hidden', rarity: 'hidden', target: 11, progress: getInventoryItemTotal, reward: { coins: 100 }, hiddenUntilUnlocked: true },
   { id: 'hidden_hoarder', category: 'hidden', rarity: 'hidden', target: 51, progress: getInventoryItemTotal, reward: { dailyLoginItemBonus: 1 }, hiddenUntilUnlocked: true },
@@ -356,6 +445,8 @@ const baseAchievementDefinitionConfigs: readonly Omit<AchievementDefinition, 'ti
 const normalAchievementIds = baseAchievementDefinitionConfigs
   .filter((definition) => definition.rarity === 'normal')
   .map((definition) => definition.id);
+export const taskMasterCompletionRatio = 0.8;
+const taskMasterTarget = Math.ceil(normalAchievementIds.length * taskMasterCompletionRatio);
 const getUnlockedNormalAchievementCount = (pet: PetState) =>
   normalAchievementIds.filter((id) => pet.achievements.unlockedAtById[id]).length;
 
@@ -365,7 +456,7 @@ const achievementDefinitionConfigs: readonly Omit<AchievementDefinition, 'title'
     id: 'hidden_full_catalogue',
     category: 'hidden',
     rarity: 'hidden',
-    target: 36,
+    target: taskMasterTarget,
     progress: getUnlockedNormalAchievementCount,
     reward: { revealsHiddenAchievements: true },
     hiddenUntilUnlocked: true,
@@ -379,8 +470,8 @@ export const achievementDefinitions: readonly AchievementDefinition[] = achievem
 }));
 
 export const recordCompanionYearActivity = (pet: PetState, now = Date.now()): PetState => {
-  const year = String(getCompanionYear(pet.createdAt, now));
-  const dateKey = getLocalDateKey(now);
+  const year = String(getCompanionActivityYear(pet.createdAt, now));
+  const dateKey = getDailyResetDateKey(now);
   const keys = pet.achievements.counters.companionYearActiveDateKeysByYear[year] ?? [];
   if (keys.includes(dateKey)) return pet;
   return {
@@ -404,6 +495,8 @@ const sumUnlockedReward = (pet: PetState, pick: (reward: AchievementReward) => n
 
 export const getAchievementEffects = (pet: PetState): AchievementEffects => {
   const extraHeartChancePercent = Math.max(0, sumUnlockedReward(pet, (reward) => reward.extraHeartChancePercent));
+  const gardenExtraDropChancePercent = Math.max(0, sumUnlockedReward(pet, (reward) => reward.gardenExtraDropChancePercent));
+  const partnerScheduleExtraRewardChancePercent = Math.max(0, sumUnlockedReward(pet, (reward) => reward.partnerScheduleExtraRewardChancePercent));
   const goodEndingCount = pet.achievements.completedGoodEndingYears.length;
   return {
     workCoinBonus: Math.min(3, sumUnlockedReward(pet, (reward) => reward.workCoinBonus)),
@@ -411,6 +504,8 @@ export const getAchievementEffects = (pet: PetState): AchievementEffects => {
     cleanCooldownMs: baseCleanCooldownMs,
     extraHeartChancePercent,
     guaranteedExtraHearts: Math.floor(extraHeartChancePercent / 100),
+    gardenExtraDropChancePercent,
+    partnerScheduleExtraRewardChancePercent,
     globalCoinFlatBonus: goodEndingCount,
     globalHeartFlatBonus: goodEndingCount,
     dailyStipendCoins: Math.max(0, sumUnlockedReward(pet, (reward) => reward.dailyStipendCoins)),
@@ -444,9 +539,10 @@ export const rollExtraHearts = (pet: PetState) => {
   return effects.guaranteedExtraHearts + (chance > 0 && Math.random() * 100 < chance ? 1 : 0);
 };
 
-export const incrementAchievementCareAction = (pet: PetState, action: CareActionKey): PetState => {
+export const incrementAchievementCareAction = (pet: PetState, action: CareActionKey, amount = 1): PetState => {
   if (!careKeys.includes(action as YearlyCareActionKey)) return pet;
   const key = action as YearlyCareActionKey;
+  const increment = Math.max(0, Math.floor(amount));
   return {
     ...pet,
     achievements: {
@@ -455,14 +551,14 @@ export const incrementAchievementCareAction = (pet: PetState, action: CareAction
         ...pet.achievements.counters,
         careActionCounts: {
           ...pet.achievements.counters.careActionCounts,
-          [key]: (pet.achievements.counters.careActionCounts[key] ?? 0) + 1,
+          [key]: (pet.achievements.counters.careActionCounts[key] ?? 0) + increment,
         },
       },
     },
   };
 };
 
-export const incrementAchievementItemUse = (pet: PetState, itemId: ItemId): PetState => ({
+export const incrementAchievementItemUse = (pet: PetState, itemId: ItemId, amount = 1): PetState => ({
   ...pet,
   achievements: {
     ...pet.achievements,
@@ -470,14 +566,18 @@ export const incrementAchievementItemUse = (pet: PetState, itemId: ItemId): PetS
       ...pet.achievements.counters,
       itemUseCountsById: {
         ...pet.achievements.counters.itemUseCountsById,
-        [itemId]: (pet.achievements.counters.itemUseCountsById[itemId] ?? 0) + 1,
+        [itemId]: (pet.achievements.counters.itemUseCountsById[itemId] ?? 0) + Math.max(0, Math.floor(amount)),
       },
-      totalItemUseCount: pet.achievements.counters.totalItemUseCount + 1,
+      totalItemUseCount: pet.achievements.counters.totalItemUseCount + Math.max(0, Math.floor(amount)),
     },
   },
 });
 
-export const incrementAchievementPomodoroFocus = (pet: PetState, count: number): PetState =>
+export const incrementAchievementPomodoroFocus = (
+  pet: PetState,
+  count: number,
+  completedDailyFocusCount = pet.pomodoro.dailyCompletedFocusCount,
+): PetState =>
   count <= 0
     ? pet
     : {
@@ -489,21 +589,21 @@ export const incrementAchievementPomodoroFocus = (pet: PetState, count: number):
             pomodoroFocusCount: pet.achievements.counters.pomodoroFocusCount + Math.floor(count),
             bestDailyPomodoroFocusCount: Math.max(
               pet.achievements.counters.bestDailyPomodoroFocusCount,
-              pet.pomodoro.dailyCompletedFocusCount,
+              completedDailyFocusCount,
             ),
           },
         },
       };
 
 
-export const incrementAchievementPurchase = (pet: PetState, paid = true): PetState => ({
+export const incrementAchievementPurchase = (pet: PetState, paid = true, amount = 1): PetState => ({
   ...pet,
   achievements: {
     ...pet.achievements,
     counters: {
       ...pet.achievements.counters,
-      purchaseCount: pet.achievements.counters.purchaseCount + 1,
-      paidPurchaseCount: pet.achievements.counters.paidPurchaseCount + (paid ? 1 : 0),
+      purchaseCount: pet.achievements.counters.purchaseCount + Math.max(0, Math.floor(amount)),
+      paidPurchaseCount: pet.achievements.counters.paidPurchaseCount + (paid ? Math.max(0, Math.floor(amount)) : 0),
     },
   },
 });
@@ -590,6 +690,63 @@ export const incrementNaturalWake = (pet: PetState): PetState => ({
   achievements: { ...pet.achievements, counters: { ...pet.achievements.counters, naturalWakeCount: pet.achievements.counters.naturalWakeCount + 1 } },
 });
 
+export const incrementAchievementGardenPlant = (pet: PetState): PetState => ({
+  ...pet,
+  achievements: {
+    ...pet.achievements,
+    counters: { ...pet.achievements.counters, gardenPlantCount: pet.achievements.counters.gardenPlantCount + 1 },
+  },
+});
+
+export const incrementAchievementGardenWater = (pet: PetState): PetState => ({
+  ...pet,
+  achievements: {
+    ...pet.achievements,
+    counters: { ...pet.achievements.counters, gardenWaterCount: pet.achievements.counters.gardenWaterCount + 1 },
+  },
+});
+
+export const incrementAchievementGardenHarvest = (pet: PetState, treeId: GardenTreeId): PetState => ({
+  ...pet,
+  achievements: {
+    ...pet.achievements,
+    counters: {
+      ...pet.achievements.counters,
+      gardenHarvestCountsByTreeId: {
+        ...pet.achievements.counters.gardenHarvestCountsByTreeId,
+        [treeId]: (pet.achievements.counters.gardenHarvestCountsByTreeId[treeId] ?? 0) + 1,
+      },
+    },
+  },
+});
+
+export const incrementAchievementPartnerScheduleClaim = (
+  pet: PetState,
+  category: PartnerScheduleCategory,
+  size: PartnerScheduleSize,
+  choice: PartnerScheduleRewardChoice,
+): PetState => ({
+  ...pet,
+  achievements: {
+    ...pet.achievements,
+    counters: {
+      ...pet.achievements.counters,
+      partnerScheduleClaimCount: pet.achievements.counters.partnerScheduleClaimCount + 1,
+      partnerScheduleClaimCountsByCategory: {
+        ...pet.achievements.counters.partnerScheduleClaimCountsByCategory,
+        [category]: (pet.achievements.counters.partnerScheduleClaimCountsByCategory[category] ?? 0) + 1,
+      },
+      partnerScheduleLongClaimCountsByCategory: size === 'long'
+        ? {
+            ...pet.achievements.counters.partnerScheduleLongClaimCountsByCategory,
+            [category]: (pet.achievements.counters.partnerScheduleLongClaimCountsByCategory[category] ?? 0) + 1,
+          }
+        : pet.achievements.counters.partnerScheduleLongClaimCountsByCategory,
+      partnerScheduleCategoryRewardClaimCount: pet.achievements.counters.partnerScheduleCategoryRewardClaimCount + (choice === 'category' ? 1 : 0),
+    },
+  },
+});
+
 const applyOneTimeAchievementReward = (pet: PetState, definition: AchievementDefinition, now: number): PetState => {
   if (!definition.reward.coins && !definition.reward.hearts && !definition.reward.items?.length) return pet;
   if (pet.achievements.claimedOneTimeRewardIds.includes(definition.id)) return pet;
@@ -669,6 +826,8 @@ export const formatAchievementReward = (reward: AchievementReward) => {
   if (reward.pomodoroCoinBonus) parts.push(t('pet.achievements.rewards.pomodoroCoinBonus', { amount: reward.pomodoroCoinBonus }));
   if (reward.cleanCooldownMs) parts.push(t('pet.achievements.rewards.cleanCooldown', { seconds: Math.round(reward.cleanCooldownMs / 1000) }));
   if (reward.extraHeartChancePercent) parts.push(t('pet.achievements.rewards.extraHeartChance', { percent: reward.extraHeartChancePercent }));
+  if (reward.gardenExtraDropChancePercent) parts.push(t('pet.achievements.rewards.gardenExtraDropChance', { percent: reward.gardenExtraDropChancePercent }));
+  if (reward.partnerScheduleExtraRewardChancePercent) parts.push(t('pet.achievements.rewards.partnerScheduleExtraRewardChance', { percent: reward.partnerScheduleExtraRewardChancePercent }));
   if (reward.globalCoinFlatBonus || reward.globalHeartFlatBonus) parts.push(t('pet.achievements.rewards.globalFlatBonus', { amount: reward.globalCoinFlatBonus ?? reward.globalHeartFlatBonus ?? 1 }));
   if (reward.dailyStipendCoins) parts.push(t('pet.achievements.rewards.dailyStipend', { coins: reward.dailyStipendCoins }));
   if (reward.dailyLoginItemBonus) parts.push(t('pet.achievements.rewards.dailyLoginItemBonus', { amount: reward.dailyLoginItemBonus }));
@@ -688,7 +847,7 @@ export const getAchievementViews = (pet: PetState): AchievementView[] => {
       const unlocked = Boolean(unlockedAt);
       const hasReward = Boolean(definition.reward.coins || definition.reward.hearts || definition.reward.items?.length);
       const claimed = !hasReward || pet.achievements.claimedOneTimeRewardIds.includes(definition.id);
-      const effectActive = unlocked && Boolean(definition.reward.workCoinBonus || definition.reward.pomodoroCoinBonus || definition.reward.cleanCooldownMs || definition.reward.extraHeartChancePercent || definition.reward.globalCoinFlatBonus || definition.reward.globalHeartFlatBonus || definition.reward.dailyStipendCoins || definition.reward.dailyLoginItemBonus || definition.reward.careStatBonus || definition.reward.cgId || definition.reward.revealsHiddenAchievements);
+      const effectActive = unlocked && Boolean(definition.reward.workCoinBonus || definition.reward.pomodoroCoinBonus || definition.reward.cleanCooldownMs || definition.reward.extraHeartChancePercent || definition.reward.gardenExtraDropChancePercent || definition.reward.partnerScheduleExtraRewardChancePercent || definition.reward.globalCoinFlatBonus || definition.reward.globalHeartFlatBonus || definition.reward.dailyStipendCoins || definition.reward.dailyLoginItemBonus || definition.reward.careStatBonus || definition.reward.cgId || definition.reward.revealsHiddenAchievements);
       return { ...definition, progressValue, unlocked, unlockedAt, rewardText: formatAchievementReward(definition.reward), claimed, claimable: unlocked && hasReward && !claimed, effectActive };
     });
   const extraYears = pet.achievements.completedGoodEndingYears.filter((year) => year > 1);
@@ -725,7 +884,25 @@ export const claimAchievementReward = (pet: PetState, id: AchievementId, now = D
   return applyOneTimeAchievementReward(pet, definition, now);
 };
 
-export const claimAchievementDailyStipendWithResult = (pet: PetState, now = Date.now(), dateKey = getLocalDateKey(now)): { pet: PetState; coins: number } => {
+export const claimAllAchievementRewards = (pet: PetState, now = Date.now()): AchievementClaimAllResult => {
+  const claimedIds = getAchievementViews(pet).filter((view) => view.claimable).map((view) => view.id);
+  if (claimedIds.length === 0) return { pet, claimedIds };
+  const definitionsById = new Map(achievementDefinitions.map((definition) => [definition.id, definition]));
+  const claimedPet = claimedIds.reduce((next, id) => {
+    const definition = definitionsById.get(id);
+    return definition ? applyOneTimeAchievementReward(next, definition, now) : next;
+  }, pet);
+  return {
+    pet: {
+      ...claimedPet,
+      recentEvent: t('pet.achievements.events.rewardsClaimed', { count: claimedIds.length }),
+      lastInteractionAt: now,
+    },
+    claimedIds,
+  };
+};
+
+export const claimAchievementDailyStipendWithResult = (pet: PetState, now = Date.now(), dateKey = getDailyResetDateKey(now)): { pet: PetState; coins: number } => {
   const coins = getAchievementEffects(pet).dailyStipendCoins;
   if (coins <= 0 || pet.achievements.dailyStipendClaimDateKey === dateKey) return { pet, coins: 0 };
   const gain = applyCoinGain(pet, coins);
@@ -746,8 +923,9 @@ export const claimAchievementDailyStipend = (pet: PetState, now = Date.now()): P
 
 export const getAchievementSummary = (pet: PetState, now = Date.now()): AchievementSummary => {
   const views = getAchievementViews(pet);
-  const dailyStipendCoins = getAchievementEffects(pet).dailyStipendCoins;
-  const dateKey = getLocalDateKey(now);
+  const effects = getAchievementEffects(pet);
+  const dailyStipendCoins = effects.dailyStipendCoins;
+  const dateKey = getDailyResetDateKey(now);
   return {
     total: views.length,
     unlocked: views.filter((view) => view.unlocked).length,
@@ -756,6 +934,7 @@ export const getAchievementSummary = (pet: PetState, now = Date.now()): Achievem
     dailyStipendCoins,
     dailyStipendClaimed: pet.achievements.dailyStipendClaimDateKey === dateKey,
     dailyStipendClaimable: dailyStipendCoins > 0 && pet.achievements.dailyStipendClaimDateKey !== dateKey,
+    gardenExtraDropChancePercent: effects.gardenExtraDropChancePercent,
   };
 };
 

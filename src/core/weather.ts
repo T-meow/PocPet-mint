@@ -1,6 +1,7 @@
 import { t } from '../i18n';
+import { getDailyResetDateKey } from './dailyReset';
 import type { WeatherType } from './petTypes';
-import { getLocalDateKey, hashString } from './utils';
+import { hashString } from './utils';
 
 export const weatherTypes: readonly WeatherType[] = ['sunny', 'cloudy', 'rainy', 'breezy'];
 
@@ -26,6 +27,6 @@ export const weatherInfo: Record<WeatherType, { label: string; summary: string }
 export const weatherTypeSet = new Set<WeatherType>(weatherTypes);
 
 export const getWeatherForDate = (time: number): WeatherType => {
-  const dateKey = getLocalDateKey(time);
+  const dateKey = getDailyResetDateKey(time);
   return weatherTypes[hashString(`weather-${dateKey}`) % weatherTypes.length];
 };

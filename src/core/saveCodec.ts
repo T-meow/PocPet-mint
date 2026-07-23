@@ -1,4 +1,4 @@
-import { advancePet, createDefaultPet, normalizePet, type PetState } from './pet';
+import { advancePet, createDefaultPet, normalizePet, type NeighborEventContext, type PetState } from './pet';
 import type { PetModManifest } from './mod';
 
 export const saveFileSchemaVersion = 1;
@@ -195,10 +195,10 @@ export const parseSaveFileText = (text: string, now = Date.now()): PocPetImporte
   return { pet: resetImportedTimeBaseline(normalizePet(parsed, now), now) };
 };
 
-export const loadStoredPetJson = (raw: string | null, now = Date.now()) => {
+export const loadStoredPetJson = (raw: string | null, now = Date.now(), eventContext?: NeighborEventContext) => {
   if (!raw) return createDefaultPet(now);
   try {
-    return advancePet(normalizePet(JSON.parse(raw), now), now);
+    return advancePet(JSON.parse(raw) as PetState, now, eventContext);
   } catch {
     return createDefaultPet(now);
   }

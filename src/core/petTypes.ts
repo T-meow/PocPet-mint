@@ -45,6 +45,18 @@ export type GardenTreeId = 'fruit_tree' | 'care_tree' | 'gift_tree' | 'money_tre
 
 export type GardenFertilizerId = 'normal' | 'heart';
 
+export type GardenCareActionId = 'water' | GardenFertilizerId;
+
+export type GardenCareBlockedReason = 'minimum_remaining' | 'round_limit';
+
+export interface GardenCarePreview {
+  percent: number;
+  nominalReductionMs: number;
+  actualReductionMs: number;
+  remainingAfterMs: number;
+  blockedReason?: GardenCareBlockedReason;
+}
+
 export type GardenToolId = 'watering_can' | 'shovel' | 'fertilizer_box';
 
 export type GardenSlotState = 'empty' | 'growing' | 'ready' | 'withered';
@@ -63,6 +75,8 @@ export interface GardenSlot {
   lastWateredAt: number;
   lastFertilizedAt: number;
   lastBoostedAt: number;
+  naturalReadyAt: number;
+  careReductionMs: number;
   nextReadyAt: number;
   harvestsUsed: number;
   maxHarvests: number;
@@ -81,7 +95,7 @@ export interface GardenTools {
 }
 
 export interface GardenState {
-  schemaVersion: 1;
+  schemaVersion: 3;
   activeSlotIndex: number;
   slots: GardenSlot[];
   dailyCareDateKey: string;
@@ -96,15 +110,65 @@ export interface GardenState {
 export type BoostCardId = 'friend_pass' | 'best_friend_pass';
 
 export interface BoostCardState {
-  schemaVersion: 1;
+  schemaVersion: 2;
   friendPassExpiresAt: number;
   bestFriendPassExpiresAt: number;
   bestFriendPassPurchasedDays: number;
   dailyDateKey: string;
-  dailyCoinsClaimedCardId?: BoostCardId;
+  dailyRewardClaimed: boolean;
   dailyWorkBonusCoinsUsed: number;
-  dailyExtraHeartCount: number;
   dailyGardenExtraDrops: number;
+}
+
+export type GachaTicketSource = 'partner_schedule' | 'daily_wish' | 'daily_encounter';
+
+export type GachaPaymentMethod = 'coins' | 'tickets';
+
+export type GachaRewardRarity = 'common' | 'uncommon' | 'rare' | 'legendary' | 'jackpot';
+
+export interface GachaResult {
+  id: string;
+  rewardId: string;
+  kind: 'coins' | 'item';
+  amount: number;
+  itemId?: BuiltinItemId;
+  rarity: GachaRewardRarity;
+  guaranteed: boolean;
+  pityGuaranteed: boolean;
+  drawnAt: number;
+}
+
+export interface GoldenAppleGachaState {
+  schemaVersion: 3;
+  tickets: number;
+  totalDraws: number;
+  coinsSpent: number;
+  ticketsSpent: number;
+  rngSeed: string;
+  rngCounter: number;
+  dailyDateKey: string;
+  dailyProcessedSources: GachaTicketSource[];
+  dailyGrantedSources: GachaTicketSource[];
+  dailyTicketsGranted: number;
+  jackpotCount: number;
+  jackpotPityMisses: number;
+  jackpotPityUsed: boolean;
+  recentResults: GachaResult[];
+}
+
+export interface DreamProjectProgress {
+  completedStages: number;
+  currentStageCoins: number;
+  completedAt?: number;
+}
+
+export interface ClassicEndgameState {
+  schemaVersion: 2;
+  projects: Record<PartnerScheduleCategory, DreamProjectProgress>;
+  completedAt?: number;
+  legacyLevel: number;
+  legacyCoinsInvested: number;
+  lifetimeCoinsInvested: number;
 }
 
 export type ShopCategory = 'food' | 'item' | 'care' | 'garden';
@@ -170,6 +234,10 @@ export interface PetBirthday {
   day: number;
 }
 
+export interface PetCalendarDate extends PetBirthday {
+  year: number;
+}
+
 export type YearlyCareActionKey = Extract<CareActionKey, 'play' | 'clean' | 'work' | 'feed' | 'gift' | 'touch'>;
 
 export interface YearlyStats {
@@ -221,6 +289,85 @@ export interface ReturnWelcomeState {
   completedAt?: number;
   claimedAt?: number;
 }
+
+export type PartnerScheduleCategory = 'study' | 'cooking' | 'garden' | 'exercise';
+
+export type PartnerScheduleSize = 'short' | 'standard' | 'long';
+
+export type PartnerScheduleRewardChoice = 'coins' | 'category';
+
+export interface PartnerScheduleOffer {
+  id: string;
+  templateId: string;
+  dateKey: string;
+}
+
+export type NeighborReference =
+  | { kind: 'generic' }
+  | { kind: 'mod'; modId: string };
+
+export interface NeighborIdentity {
+  modId: string;
+  name: string;
+}
+
+export interface NeighborGiftCandidate {
+  itemId: ItemId;
+  displayName: string;
+  price: number;
+}
+
+export interface NeighborEventContext {
+  neighbors: readonly NeighborIdentity[];
+  giftCandidates: readonly NeighborGiftCandidate[];
+  random?: () => number;
+}
+
+export interface PartnerScheduleSkill {
+  level: number;
+  xp: number;
+  masterCompletions: number;
+}
+
+export interface ActivePartnerSchedule {
+  offerId: string;
+  templateId: string;
+  category: PartnerScheduleCategory;
+  size: PartnerScheduleSize;
+  startedAt: number;
+  endsAt: number;
+  coinReward: number;
+  skillXp: number;
+  trophyRewardMultiplier: number;
+  grantsMasterCompletion: boolean;
+  neighbor?: NeighborReference;
+}
+
+export interface PartnerScheduleResult {
+  offerId: string;
+  templateId: string;
+  category: PartnerScheduleCategory;
+  size: PartnerScheduleSize;
+  completedAt: number;
+  coinReward: number;
+  skillXp: number;
+  trophyRewardMultiplier: number;
+  grantsMasterCompletion: boolean;
+  neighbor?: NeighborReference;
+}
+
+export interface PartnerScheduleState {
+  schemaVersion: 5;
+  boardDateKey: string;
+  boardOfferCount: number;
+  offers: PartnerScheduleOffer[];
+  neighborOfferId?: string;
+  completedOfferIds: string[];
+  active?: ActivePartnerSchedule;
+  pendingResult?: PartnerScheduleResult;
+  skills: Record<PartnerScheduleCategory, PartnerScheduleSkill>;
+}
+
 export type AchievementId = string;
 
 export interface AchievementCounters {
@@ -240,6 +387,13 @@ export interface AchievementCounters {
   maxCoinsHeld: number;
   manualWakeCount: number;
   naturalWakeCount: number;
+  gardenPlantCount: number;
+  gardenWaterCount: number;
+  gardenHarvestCountsByTreeId: Partial<Record<GardenTreeId, number>>;
+  partnerScheduleClaimCount: number;
+  partnerScheduleClaimCountsByCategory: Partial<Record<PartnerScheduleCategory, number>>;
+  partnerScheduleLongClaimCountsByCategory: Partial<Record<PartnerScheduleCategory, number>>;
+  partnerScheduleCategoryRewardClaimCount: number;
   companionYearActiveDateKeysByYear: Record<string, string[]>;
 }
 
@@ -261,6 +415,7 @@ export interface PetState {
   energy: number;
   health: number;
   createdAt: number;
+  metDate: PetCalendarDate;
   ageSeconds: number;
   lastUpdatedAt: number;
   isSleeping: boolean;
@@ -272,6 +427,8 @@ export interface PetState {
   inventory: Inventory;
   lastDailyRewardAt: number;
   lastDailyEncounterAt: number;
+  neighborGiftDateKey: string;
+  neighborGiftCount: number;
   dailyBiscuitClaimDate: string;
   dailyBiscuitClaims: number;
   dailyDiscountDate: string;
@@ -294,13 +451,11 @@ export interface PetState {
   lastPetInteractionAt: number;
   pomodoro: PomodoroState;
   hasOpenedHelp: boolean;
+  suppressGoldenAppleUseConfirm: boolean;
   claimedRewardIds: string[];
   birthday?: PetBirthday;
-  lastBirthdayRewardYear?: number;
-  lastAnniversaryRewardYear?: number;
+  claimedDateRewardKeys: string[];
   dailyLoginRewardDateKey?: string;
-  monthlyGiftDateKey?: string;
-  claimedFestivalRewardKeys: string[];
   yearlyStats: YearlyStats;
   pendingYearReview?: YearReview;
   lastYearReviewYear?: number;
@@ -310,6 +465,9 @@ export interface PetState {
   lastCleanActionAt: number;
   garden: GardenState;
   boostCards: BoostCardState;
+  partnerSchedule: PartnerScheduleState;
+  goldenAppleGacha: GoldenAppleGachaState;
+  classicEndgame: ClassicEndgameState;
 }
 
 export type PetAction = 'play' | 'clean' | 'sleep' | 'work';
@@ -359,10 +517,12 @@ export interface UseInventoryItemOptions {
   favoriteText?: (amount: number) => string | undefined;
   itemName?: string;
   item?: ItemDefinition;
+  quantity?: number;
 }
 
 export interface BuyItemOptions {
   item?: ItemDefinition;
+  quantity?: number;
 }
 
 

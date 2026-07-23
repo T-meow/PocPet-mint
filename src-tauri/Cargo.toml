@@ -1,6 +1,6 @@
 [package]
 name = "app"
-version = "1.0.1"
+version = "1.1.0"
 description = "Pocpet-Mint"
 authors = ["FrostForge Studio"]
 license = "GPL-3.0-or-later"
@@ -24,3 +24,5 @@ log = "0.4"
 tauri = { version = "2.11.3", features = [] }
 tauri-plugin-log = "2"
 tauri-plugin-opener = "2"
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"

@@ -9,8 +9,15 @@
   --panel: rgba(255, 255, 255, 0.88);
   --line: rgba(41, 56, 77, 0.12);
   --shadow: 0 20px 50px rgba(36, 62, 96, 0.16);
-  --safe-top: env(safe-area-inset-top, 0px);
-  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-top: 0px;
+  --safe-bottom: 0px;
+}
+
+@supports (padding-top: env(safe-area-inset-top)) {
+  :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }
 
 * {
@@ -1131,6 +1138,10 @@ h1 {
 
 .modal-backdrop {
   position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   inset: 0;
   z-index: 20;
   display: grid;
@@ -1449,10 +1460,19 @@ h1 {
   word-break: break-word;
 }
 
-.shop-item button {
+.shop-item > .shop-item__actions {
+  display: flex;
+  width: 112px;
   align-self: center;
-  min-width: 88px;
-  max-width: 128px;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.shop-item__actions > button[data-buy-item] {
+  align-self: center;
+  width: 100%;
+  min-width: 0;
+  max-width: none;
   min-height: 40px;
   overflow: hidden;
   border: 0;
@@ -1465,7 +1485,7 @@ h1 {
   white-space: nowrap;
 }
 
-.shop-item button:disabled {
+.shop-item__actions > button[data-buy-item]:disabled {
   cursor: not-allowed;
   color: #7a8799;
   background: #e5eaf1;
@@ -1584,6 +1604,111 @@ h1 {
   font-weight: 800;
   white-space: nowrap;
 }
+
+.quantity-stepper {
+  display: flex;
+  width: 112px;
+  height: 34px;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid #c8d3e1;
+  border-radius: 8px;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.quantity-stepper .quantity-stepper__button {
+  display: inline-flex;
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  color: #2b527f;
+  background: #edf4fc;
+  box-sizing: border-box;
+}
+
+.quantity-stepper .quantity-stepper__button:disabled {
+  color: #9aa7b7;
+  background: #f2f5f8;
+}
+
+.quantity-stepper__input {
+  width: 42px;
+  min-width: 42px;
+  height: 32px;
+  padding: 0 2px;
+  border: 0;
+  border-right: 1px solid #d6dee9;
+  border-left: 1px solid #d6dee9;
+  border-radius: 0;
+  outline: 0;
+  color: #172034;
+  background: #fff;
+  box-sizing: border-box;
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 850;
+  text-align: center;
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.quantity-stepper__input::-webkit-inner-spin-button,
+.quantity-stepper__input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
+.settings-anniversary-field {
+  display: grid;
+  gap: 4px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(44, 58, 78, 0.12);
+  border-bottom: 1px solid rgba(44, 58, 78, 0.12);
+}
+
+.settings-anniversary-field > div {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.settings-anniversary-field span,
+.settings-anniversary-field strong {
+  color: #172034;
+  font-weight: 800;
+}
+
+.settings-anniversary-field strong {
+  text-align: right;
+}
+
+.settings-anniversary-field small {
+  color: #64728a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+@media (max-width: 420px) {
+  .settings-anniversary-field > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .settings-anniversary-field strong {
+    text-align: left;
+  }
+}
 .modal-actions {
   display: flex;
   flex-wrap: wrap;
@@ -1672,10 +1797,6 @@ h1 {
   .top-actions {
     width: 100%;
     justify-content: flex-start;
-  }
-
-  .inventory-effect-badges {
-    display: none;
   }
 }
 
@@ -1896,10 +2017,23 @@ h1 {
     font-size: 0.84rem;
   }
 
-  .shop-item button {
+  .shop-item__actions {
     grid-column: 1 / -1;
     width: 100%;
-    max-width: none;
+    align-items: stretch;
+  }
+
+  .shop-item__actions .quantity-stepper {
+    width: 100%;
+  }
+
+  .shop-item__actions .quantity-stepper__input {
+    width: auto;
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .shop-item__actions > button[data-buy-item] {
     padding: 8px 10px;
     overflow-wrap: anywhere;
     text-overflow: clip;
@@ -1949,6 +2083,30 @@ h1 {
 
 .file-input {
   display: none;
+}
+
+.settings-file-picker {
+  position: relative;
+  display: inline-flex;
+  overflow: hidden;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.settings-file-picker .file-input {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.settings-file-picker:focus-within {
+  outline: 2px solid rgba(45, 111, 211, 0.45);
+  outline-offset: 2px;
 }
 
 .save-textarea,

@@ -2,6 +2,14 @@
 
 Pocpet-Mint mods are imported as zip files. `schemaVersion: 1` can replace pet images, built-in item images, display text, the default pet name, favorite foods, and the pet's default birthday. `schemaVersion: 2` keeps those capabilities and can also override built-in item names, summaries, and images, plus register safe custom items for the shop and inventory.
 
+## Mod Library and Neighbors
+
+- Pocpet-Mint can keep up to 12 complete mods. Importing installs or updates a mod without switching the current pet; use the Mod Library in settings to activate or delete one explicitly.
+- The active mod supplies the current appearance, text, and custom items. The `defaultPetName` values from other installed mods may appear as local neighbors in partner schedules, daily encounters, and offline events.
+- Neighbor activities store only the mod ID. Updating a mod uses its new default pet name; deleting or missing mods fall back to a generic “neighbor” label.
+- Neighbor gifts use only purchasable built-in items and purchasable items from the active mod. Custom items from inactive neighbor mods are never granted directly. At most three neighbor gift events can settle per local day.
+- Save exports do not contain the mod library or image assets. Import the required mod zip files separately on another device.
+
 ## Open Source and Asset Licensing
 
 Pocpet-Mint built-in image assets are AI-generated or AI-assisted, then selected and integrated by FrostForge Studio. They are distributed with the main project under GPL-3.0-or-later unless a specific file or later notice says otherwise. You can fork the project for your own pet app, or distribute a standalone Mod zip.
@@ -141,9 +149,10 @@ Custom item limits:
 
 - `kind` must be `food`, `item`, `care`, or `garden`.
 - `effect` may only contain `hunger`, `mood`, `cleanliness`, `energy`, and `health`, each from `-100..100`.
+- `effect` is a fixed per-item point value. It does not scale with pet level or stat cap; batch use after level 20 applies it once per consumed item.
 - `price` must be an integer from `0..99999`.
 - If `image` is set, it must point to `items/*.png` at the zip root. Missing referenced images import with a placeholder; unreferenced custom image files are rejected.
-- Custom items do not count toward fixed built-in collection achievements, but total purchase/use counters can still increase.
+- Custom items do not count toward fixed built-in collection achievements, but total purchase/use counters can still increase. After level 20, shop and inventory actions can process 1-99 items at once, with coins, inventory, and counters settled by the actual quantity.
 
 ## Image Guidelines
 

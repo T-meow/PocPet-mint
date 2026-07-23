@@ -1,0 +1,45 @@
+{
+  "activeManifestStorageKey": "pocpet-mint.mod.active.v1",
+  "libraryStorageKey": "pocpet-mint.mod.library.v1",
+  "databaseName": "pocpet-mint-mods",
+  "databaseVersion": 1,
+  "imageStoreName": "images",
+  "manifest": {
+    "schemaVersion": 2,
+    "id": "official.mint",
+    "name": "mod-mint",
+    "author": "FrostForge Studio",
+    "version": "1.0.0",
+    "defaultPetName": "mint",
+    "description": "Mint pet pack.",
+    "favoriteFoodIds": [
+      "emergency_biscuit",
+      "strawberry_cake"
+    ],
+    "birthday": {
+      "month": 6,
+      "day": 1
+    },
+    "texts": {
+      "recentEvent": "mint 来到你身边了。",
+      "favoriteFood": "这是喜欢的味道，心情变得更好了",
+      "status": {
+        "content": "状态不错",
+        "hungry": "饿了",
+        "sad": "有点低落",
+        "dirty": "需要清洁",
+        "tired": "累了",
+        "sick": "不舒服",
+        "sleeping": "睡觉中"
+      }
+    }
+  },
+  "imageRecord": {
+    "key": "official.mint:pet:content",
+    "modId": "official.mint",
+    "scope": "pet",
+    "imageKey": "content",
+    "blobBase64": "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M/wHwAF/gL+X2d0WQAAAABJRU5ErkJggg==",
+    "mimeType": "image/png"
+  }
+}

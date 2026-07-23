@@ -1,7 +1,8 @@
 import { t } from '../i18n';
+import { getDailyResetDateKey } from './dailyReset';
 import type { ActivePetMod, PetModCustomItem, PetModItemOverride } from './mod';
 import type { BuiltinItemId, Inventory, InventoryItemDefinition, ItemDefinition, ItemId, ItemRegistry, PetState, ShopCategory, ShopItem } from './petTypes';
-import { getLocalDateKey, hashString } from './utils';
+import { hashString } from './utils';
 
 export const dailyBiscuitClaimLimit = 3;
 
@@ -299,7 +300,7 @@ export const specialItems: readonly ShopItem[] = [
     id: 'golden_apple',
     name: t('pet.shop.items.golden_apple.name'),
     kind: 'food',
-    price: 0,
+    price: 888,
     effect: { hunger: 30, mood: 30, cleanliness: 30, energy: 30, health: 30 },
     summary: t('pet.shop.items.golden_apple.summary'),
   },
@@ -427,14 +428,15 @@ export const addInventoryItem = (inventory: Inventory, id: ItemId | string, amou
   [id]: Math.max(0, getInventoryCount(inventory, id) + amount),
 });
 
-export const removeInventoryItem = (inventory: Inventory, id: ItemId | string): Inventory => {
+export const removeInventoryItem = (inventory: Inventory, id: ItemId | string, amount = 1): Inventory => {
   const count = getInventoryCount(inventory, id);
-  if (count <= 1) {
+  const removed = Math.max(1, Math.floor(amount));
+  if (count <= removed) {
     const next = { ...inventory };
     delete next[id];
     return next;
   }
-  return { ...inventory, [id]: count - 1 };
+  return { ...inventory, [id]: count - removed };
 };
 
 const getDailyDiscountPrice = (price: number) => Math.max(1, Math.ceil(price * 0.7));
@@ -447,7 +449,7 @@ const getGeneratedDailyDiscountItems = (now: number) => {
   const pool = [...getEligibleDailyDiscountItems()];
   if (pool.length === 0) return [];
 
-  const dateKey = getLocalDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const picks: ShopItem[] = [];
   for (let index = 0; index < dailyShopDiscountCount && pool.length > 0; index += 1) {
     const hashKey = index === 0 ? dateKey : dateKey + ':' + index;
@@ -459,7 +461,7 @@ const getGeneratedDailyDiscountItems = (now: number) => {
 };
 
 const getStoredDailyDiscountItems = (pet: PetState, now: number) => {
-  const dateKey = getLocalDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const eligibleItems = getEligibleDailyDiscountItems();
   const eligibleById = new Map(eligibleItems.map((item) => [item.id, item]));
   const stored = pet.dailyDiscountDate === dateKey
@@ -469,7 +471,7 @@ const getStoredDailyDiscountItems = (pet: PetState, now: number) => {
 };
 
 export const getDailyHeartExchangeInfo = (pet: PetState, now = Date.now()) => {
-  const dateKey = getLocalDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const count =
     pet.dailyHeartExchangeDate === dateKey
       ? Math.min(dailyHeartExchangeLimit, Math.max(0, Math.floor(pet.dailyHeartExchangeCount)))
@@ -485,7 +487,7 @@ export const getDailyHeartExchangeInfo = (pet: PetState, now = Date.now()) => {
 };
 
 export const getDailyShopDiscountInfo = (pet: PetState, now = Date.now()) => {
-  const dateKey = getLocalDateKey(now);
+  const dateKey = getDailyResetDateKey(now);
   const items = getStoredDailyDiscountItems(pet, now);
   if (items.length === 0) return undefined;
 

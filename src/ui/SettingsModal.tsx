@@ -1,31 +1,39 @@
 ﻿import { ArrowLeft, CircleHelp, Download, FileText, RotateCcw, Upload } from 'lucide-react';
 import { useRef, useState, type ChangeEvent, type MouseEvent } from 'react';
+import { Check, Trash2 } from 'lucide-react';
 import { openUrl } from '@tauri-apps/plugin-opener';
-import { defaultPetBirthday, getPetBirthdayMaxDay, type PetBirthday } from '../core/pet';
-import type { ActivePetMod } from '../core/mod';
+import { authorLinkGiftTickets, defaultPetBirthday, getPetBirthdayMaxDay, type PetBirthday, type PetCalendarDate } from '../core/pet';
+import type { ActivePetMod, InstalledPetModSummary } from '../core/mod';
 import { giftBoxIcon } from '../assets';
 import { languages, list, t, type LanguageCode } from '../i18n';
+import { DialogShell } from './DialogShell';
 
 interface SettingsModalProps {
   activeMod: ActivePetMod | null;
+  installedMods: readonly InstalledPetModSummary[];
   modMessage: string;
   draftName: string;
   draftBirthday?: PetBirthday;
+  metDate: PetCalendarDate;
   language: LanguageCode;
   saveText: string;
   importSaveText: string;
   hasOpenedHelp: boolean;
+  hasClaimedAuthorLinkGift: boolean;
   hasClaimedHelpPageGift: boolean;
   onDraftNameChange: (value: string) => void;
   onDraftBirthdayChange: (value: PetBirthday) => void;
   onLanguageChange: (value: LanguageCode) => void;
   onImportSaveTextChange: (value: string) => void;
   onOpenHelp: () => void;
+  onClaimAuthorLinkGift: () => void;
   onClaimHelpPageGift: () => void;
   onClose: () => void;
   onSaveProfile: () => void;
   onReset: () => void;
   onClearMod: () => void;
+  onActivateMod: (modId: string) => void;
+  onDeleteMod: (modId: string) => void;
   onExportSave: () => void;
   onDownloadSave: () => void;
   onImportPastedSave: () => void;
@@ -40,24 +48,30 @@ const authorUrl = 'https://space.bilibili.com/37393114';
 
 export const SettingsModal = ({
   activeMod,
+  installedMods,
   modMessage,
   draftName,
   draftBirthday,
+  metDate,
   language,
   saveText,
   importSaveText,
   hasOpenedHelp,
+  hasClaimedAuthorLinkGift,
   hasClaimedHelpPageGift,
   onDraftNameChange,
   onDraftBirthdayChange,
   onLanguageChange,
   onImportSaveTextChange,
   onOpenHelp,
+  onClaimAuthorLinkGift,
   onClaimHelpPageGift,
   onClose,
   onSaveProfile,
   onReset,
   onClearMod,
+  onActivateMod,
+  onDeleteMod,
   onExportSave,
   onDownloadSave,
   onImportPastedSave,
@@ -65,7 +79,6 @@ export const SettingsModal = ({
   onImportSaveFileChange,
 }: SettingsModalProps) => {
   const modFileInputRef = useRef<HTMLInputElement>(null);
-  const saveFileInputRef = useRef<HTMLInputElement>(null);
   const [isHelpOpen, setHelpOpen] = useState(false);
   const [page, setPage] = useState<SettingsPage>('main');
   const helpSections = [
@@ -98,14 +111,15 @@ export const SettingsModal = ({
   };
 
   const handleAuthorLinkClick = (event: MouseEvent<HTMLAnchorElement>) => {
+    onClaimAuthorLinkGift();
     if (!('__TAURI_INTERNALS__' in window)) return;
     event.preventDefault();
     void openUrl(authorUrl);
   };
 
   return (
-    <div className="modal-backdrop" role="presentation">
-      <section className="settings-modal" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+    <>
+      <DialogShell className="settings-modal" labelId="settings-title" onClose={onClose} closeOnEscape={!isHelpOpen}>
         <header>
           <div className="settings-title-row">
             {page !== 'main' && (
@@ -180,6 +194,14 @@ export const SettingsModal = ({
                 </div>
               </div>
 
+              <div className="settings-anniversary-field">
+                <div>
+                  <span>{t('ui.settings.petAnniversary')}</span>
+                  <strong>{t('ui.settings.anniversaryValue', { month: metDate.month, day: metDate.day })}</strong>
+                </div>
+                <small>{t('ui.settings.metDateValue', { year: metDate.year, month: metDate.month, day: metDate.day })}</small>
+              </div>
+
               <label className="field settings-inline-field settings-language-field" title={t('ui.settings.languageHint')}>
                 <span>{t('ui.settings.language')}</span>
                 <select value={language} onChange={(event) => onLanguageChange(event.target.value as LanguageCode)}>
@@ -215,13 +237,48 @@ export const SettingsModal = ({
               </div>
               {modMessage && <p className="settings-message">{modMessage}</p>}
               <input ref={modFileInputRef} className="file-input" type="file" accept=".zip,application/zip" onChange={onModFileChange} />
+              <div className="settings-mod-list" aria-label={t('ui.settings.mod.libraryAria')}>
+                {installedMods.map((mod) => {
+                  const isActive = activeMod?.manifest.id === mod.manifest.id;
+                  return (
+                    <div className="settings-mod-row" key={mod.manifest.id}>
+                      {mod.contentImageUrl
+                        ? <img src={mod.contentImageUrl} alt="" aria-hidden="true" />
+                        : <span className="settings-mod-row__placeholder" aria-hidden="true" />}
+                      <span>
+                        <strong>{mod.manifest.name}</strong>
+                        <small>{mod.manifest.defaultPetName} · v{mod.manifest.version}</small>
+                      </span>
+                      {isActive ? (
+                        <span className="settings-mod-row__active"><Check size={15} aria-hidden="true" />{t('ui.settings.mod.currentShort')}</span>
+                      ) : (
+                        <button type="button" className="secondary-button" onClick={() => onActivateMod(mod.manifest.id)}>
+                          {t('ui.settings.mod.activate')}
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="icon-button"
+                        onClick={() => onDeleteMod(mod.manifest.id)}
+                        aria-label={t('ui.settings.mod.delete', { name: mod.manifest.name })}
+                        title={t('ui.settings.mod.delete', { name: mod.manifest.name })}
+                      >
+                        <Trash2 size={17} aria-hidden="true" />
+                      </button>
+                    </div>
+                  );
+                })}
+                {installedMods.length === 0
+                  ? <p className="settings-mod-list__empty">{t('ui.settings.mod.libraryEmpty')}</p>
+                  : null}
+              </div>
               <div className="modal-actions">
                 <button type="button" className="primary-button" onClick={() => modFileInputRef.current?.click()}>
                   <Upload size={18} aria-hidden="true" />
                   {t('ui.settings.mod.import')}
                 </button>
                 <button type="button" className="text-button settings-action" onClick={onClearMod}>
-                  {t('ui.settings.mod.restoreDefault')}
+                  {t('ui.settings.mod.useBuiltin')}
                 </button>
               </div>
             </section>
@@ -233,6 +290,7 @@ export const SettingsModal = ({
                 <strong>{t('ui.settings.save.title')}</strong>
                 <span>{t('ui.settings.save.summary')}</span>
               </div>
+              {modMessage && <p className="settings-message">{modMessage}</p>}
               <div className="modal-actions">
                 <button type="button" className="primary-button" onClick={onExportSave}>
                   <FileText size={18} aria-hidden="true" />
@@ -242,11 +300,11 @@ export const SettingsModal = ({
                   <Download size={18} aria-hidden="true" />
                   {t('ui.settings.save.download')}
                 </button>
-                <button type="button" className="text-button settings-action" onClick={() => saveFileInputRef.current?.click()}>
+                <label className="text-button settings-action settings-file-picker">
                   {t('ui.settings.save.importFile')}
-                </button>
+                  <input className="file-input" type="file" onChange={onImportSaveFileChange} />
+                </label>
               </div>
-              <input ref={saveFileInputRef} className="file-input" type="file" accept=".pocpet,.json,.txt,application/json,text/plain" onChange={onImportSaveFileChange} />
               {saveText && <textarea className="save-textarea" readOnly value={saveText} aria-label={t('ui.settings.save.exportedAria')} />}
               <label className="field">
                 <span>{t('ui.settings.save.pasteText')}</span>
@@ -268,9 +326,9 @@ export const SettingsModal = ({
             </button>
           </div>
         )}
-      </section>
+      </DialogShell>
       {isHelpOpen && (
-        <section className={hasClaimedHelpPageGift ? 'help-modal' : 'help-modal help-modal--gift'} role="dialog" aria-modal="true" aria-labelledby="settings-help-title">
+        <DialogShell className={hasClaimedHelpPageGift ? 'help-modal' : 'help-modal help-modal--gift'} labelId="settings-help-title" onClose={() => setHelpOpen(false)}>
           <header>
             <h2 id="settings-help-title">{t('ui.settings.help.title')}</h2>
             <button type="button" className="text-button" onClick={() => setHelpOpen(false)}>
@@ -279,7 +337,12 @@ export const SettingsModal = ({
           </header>
           <p className="help-author-link">
             <a href={authorUrl} target="_blank" rel="noopener noreferrer" onClick={handleAuthorLinkClick}>
-              {t('ui.settings.help.authorLink')}
+              {t(
+                hasClaimedAuthorLinkGift
+                  ? 'ui.settings.help.authorLinkClaimed'
+                  : 'ui.settings.help.authorLinkAvailable',
+                { count: authorLinkGiftTickets },
+              )}
             </a>
           </p>
           <div className="help-content">
@@ -305,8 +368,8 @@ export const SettingsModal = ({
               <img src={giftBoxIcon} alt="" aria-hidden="true" />
             </button>
           )}
-        </section>
+        </DialogShell>
       )}
-    </div>
+    </>
   );
 };

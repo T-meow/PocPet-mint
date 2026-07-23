@@ -1,51 +1,41 @@
-import { BadgeCheck, CalendarDays, Cloud, CloudRain, Sparkles, Sprout, Sun, Timer, Wind, type LucideIcon } from 'lucide-react';
-import { canClaimBoostCardDailyCoins, getActiveBoostCard, getSeasonInfo, weatherInfo, type PetState, type WeatherType } from '../core/pet';
+import { BadgeCheck, CalendarClock, Dices, Flag, PackageOpen, Sprout, Timer } from 'lucide-react';
+import { canClaimBoostCardDailyReward, classicEndgameUnlockLevel, classicEndgameUnlockSkillLevel, getActiveBoostCard, isClassicEndgameComplete, isClassicEndgameUnlocked, partnerScheduleUnlockLevel, type PetState } from '../core/pet';
 import { t } from '../i18n';
-import { formatCompactNumber } from './numberFormat';
 import { formatPomodoroTime } from './time';
-
-const weatherIcons: Record<WeatherType, LucideIcon> = {
-  sunny: Sun,
-  cloudy: Cloud,
-  rainy: CloudRain,
-  breezy: Wind,
-};
 
 interface FeatureRowProps {
   pet: PetState;
-  canUpgrade: boolean;
-  nextUpgradeCost: number;
+  inventoryKindCount: number;
   isPomodoroOpen: boolean;
   pomodoroRemainingMs: number;
   pomodoroStartTitle?: string;
   gardenReminder?: 'ready' | 'withered';
-  onUpgrade: () => void;
+  onOpenInventory: () => void;
   onOpenPomodoro: () => void;
   onOpenGarden: () => void;
   onOpenBoostCards: () => void;
-  onShowInfo: (message: string) => void;
+  onOpenPartnerSchedule: () => void;
+  onOpenGacha: () => void;
+  onOpenCommonDreams: () => void;
 }
 
 export const FeatureRow = ({
   pet,
-  canUpgrade,
-  nextUpgradeCost,
+  inventoryKindCount,
   isPomodoroOpen,
   pomodoroRemainingMs,
   pomodoroStartTitle,
   gardenReminder,
-  onUpgrade,
+  onOpenInventory,
   onOpenPomodoro,
   onOpenGarden,
   onOpenBoostCards,
-  onShowInfo,
+  onOpenPartnerSchedule,
+  onOpenGacha,
+  onOpenCommonDreams,
 }: FeatureRowProps) => {
-  const WeatherIcon = weatherIcons[pet.weather];
-  const currentWeather = weatherInfo[pet.weather];
-  const seasonInfo = getSeasonInfo(pet.lastUpdatedAt);
   const activeBoostCardId = getActiveBoostCard(pet);
-  const canClaimBoostCoins = canClaimBoostCardDailyCoins(pet);
-  const upgradeCostText = nextUpgradeCost > 0 ? formatCompactNumber(nextUpgradeCost) : '';
+  const canClaimBoostReward = canClaimBoostCardDailyReward(pet);
   const boostCardHint = activeBoostCardId
     ? t('ui.features.boostCardsActive', { card: t(`ui.boostCards.cards.${activeBoostCardId}.name`) })
     : t('ui.features.boostCardsHint');
@@ -54,19 +44,32 @@ export const FeatureRow = ({
     : gardenReminder === 'withered'
       ? t('ui.features.gardenWithered')
       : t('ui.features.gardenHint');
+  const isPartnerScheduleUnlocked = pet.level >= partnerScheduleUnlockLevel;
+  const partnerScheduleHint = !isPartnerScheduleUnlocked
+    ? t('ui.features.partnerScheduleLocked', { level: partnerScheduleUnlockLevel })
+    : pet.partnerSchedule.pendingResult
+      ? t('ui.features.partnerScheduleReady')
+      : pet.partnerSchedule.active
+        ? t('ui.features.partnerScheduleActive')
+        : t('ui.features.partnerScheduleHint');
+  const endgameUnlocked = isClassicEndgameUnlocked(pet);
+  const endgameHint = isClassicEndgameComplete(pet)
+    ? t('ui.features.commonDreamsComplete', { level: pet.classicEndgame.legacyLevel })
+    : endgameUnlocked
+      ? t('ui.features.commonDreamsReady')
+      : t('ui.features.commonDreamsLocked', {
+        level: classicEndgameUnlockLevel,
+        skill: classicEndgameUnlockSkillLevel,
+        currentSkill: Math.min(...Object.values(pet.partnerSchedule.skills).map((skill) => skill.level)),
+      });
 
   return (
     <div className="feature-row" aria-label={t('ui.features.aria')}>
-      <button
-        type="button"
-        className={canUpgrade ? 'feature-button feature-button--upgrade' : 'feature-button feature-button--upgrade feature-button--muted'}
-        onClick={onUpgrade}
-        title={nextUpgradeCost > 0 ? t('ui.features.upgradeTitle', { cost: nextUpgradeCost }) : t('ui.features.maxLevel')}
-      >
-        <Sparkles size={20} aria-hidden="true" />
+      <button type="button" className="feature-button feature-button--inventory" onClick={onOpenInventory}>
+        <PackageOpen size={20} aria-hidden="true" />
         <span>
-          {t('ui.features.upgrade')}
-          <small>{t('ui.features.level', { level: pet.level })} - {nextUpgradeCost > 0 ? t('ui.features.cost', { cost: upgradeCostText }) : t('ui.features.maxLevel')}</small>
+          {t('ui.features.inventory')}
+          <small>{t('ui.features.inventoryKinds', { count: inventoryKindCount })}</small>
         </span>
       </button>
 
@@ -87,7 +90,7 @@ export const FeatureRow = ({
 
       <button
         type="button"
-        className={canClaimBoostCoins ? 'feature-button feature-button--boost-card feature-button--active' : 'feature-button feature-button--boost-card'}
+        className={canClaimBoostReward ? 'feature-button feature-button--boost-card feature-button--active' : 'feature-button feature-button--boost-card'}
         onClick={onOpenBoostCards}
         title={t('ui.top.openBoostCards')}
       >
@@ -96,7 +99,7 @@ export const FeatureRow = ({
           {t('ui.features.boostCards')}
           <small>{boostCardHint}</small>
         </span>
-        {canClaimBoostCoins && <i aria-hidden="true" />}
+        {canClaimBoostReward && <i aria-hidden="true" />}
       </button>
 
       <button
@@ -114,24 +117,39 @@ export const FeatureRow = ({
 
       <button
         type="button"
-        className="feature-button feature-button--weather"
-        title={currentWeather.summary}
-        aria-label={t('ui.features.weatherAria', { weather: currentWeather.label })}
-        onClick={() => onShowInfo(currentWeather.summary)}
+        className={pet.partnerSchedule.active || pet.partnerSchedule.pendingResult ? 'feature-button feature-button--partner-schedule feature-button--active' : 'feature-button feature-button--partner-schedule'}
+        disabled={!isPartnerScheduleUnlocked}
+        onClick={onOpenPartnerSchedule}
+        title={partnerScheduleHint}
       >
-        <WeatherIcon size={20} aria-hidden="true" />
-        <span>{currentWeather.label}</span>
+        <CalendarClock size={20} aria-hidden="true" />
+        <span>
+          {t('ui.features.partnerSchedule')}
+          <small>{partnerScheduleHint}</small>
+        </span>
+        {pet.partnerSchedule.pendingResult ? <i aria-hidden="true" /> : null}
+      </button>
+
+      <button type="button" className="feature-button feature-button--gacha" onClick={onOpenGacha} title={t('ui.features.gachaHint')}>
+        <Dices size={20} aria-hidden="true" />
+        <span>
+          {t('ui.features.gacha')}
+          <small>{t('ui.features.gachaTickets', { count: pet.goldenAppleGacha.tickets })}</small>
+        </span>
       </button>
 
       <button
         type="button"
-        className="feature-button feature-button--season"
-        title={seasonInfo.summary}
-        aria-label={t('ui.dashboard.season', { season: seasonInfo.label })}
-        onClick={() => onShowInfo(seasonInfo.summary)}
+        className={endgameUnlocked ? 'feature-button feature-button--common-dreams feature-button--active' : 'feature-button feature-button--common-dreams'}
+        onClick={onOpenCommonDreams}
+        title={endgameHint}
       >
-        <CalendarDays size={20} aria-hidden="true" />
-        <span>{seasonInfo.label}</span>
+        <Flag size={20} aria-hidden="true" />
+        <span>
+          {t('ui.features.commonDreams')}
+          <small>{endgameHint}</small>
+        </span>
+        {endgameUnlocked && <i aria-hidden="true" />}
       </button>
     </div>
   );

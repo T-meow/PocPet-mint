@@ -147,6 +147,21 @@ export interface ActivePetMod {
   cgImageUrls: Partial<Record<ModCgImageKey, string>>;
 }
 
+export interface InstalledPetModSummary {
+  manifest: PetModManifest;
+  importedAt: number;
+  contentImageUrl?: string;
+}
+
+export interface PetModLibraryState {
+  schemaVersion: 1;
+  activeModId?: string;
+  mods: Array<{
+    manifest: PetModManifest;
+    importedAt: number;
+  }>;
+}
+
 export type ItemDisplay = ShopItem & {
   displayName: string;
   displaySummary: string;

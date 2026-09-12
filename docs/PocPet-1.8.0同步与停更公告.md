@@ -44,5 +44,11 @@
 - 代码、公告和检查已完成；合并冲突按上述 Mint 定制解决。
 - 远端构建使用 `release.yml` 的 `workflow_dispatch`（`full_build=true`），按 1.3.0 规则构建全套产物；本次不创建 Release tag。
 - Pages 使用 `pages.yml` 的 `main` 推送触发部署；目标为 `https://t-meow.github.io/PocPet-mint/`。公告链接仍指向原版 `https://t-meow.github.io/PocPet/`。
-- 待完成：提交/推送、记录 Actions 运行、跟进构建与 Pages 部署、核对线上版本与公告。
+- 已提交并推送合并提交 `f284fa12dfca58712edebeda21c875ca552cb38c`；Git HTTPS 连接重置后使用同仓库 SSH URL 正常推送，未改动 origin 配置、未强推。
+- [Pages 部署 34679033029](https://github.com/T-meow/PocPet-mint/actions/runs/34679033029) 成功；HTTP 验证 `build-info.json` 为 `1.3.0 / standard / f284fa1`，入口脚本 `assets/index-CRCA1nH_.js` 含独立每日公告键、停更文案和原版页面链接。
+- [推送 CI 34679033032](https://github.com/T-meow/PocPet-mint/actions/runs/34679033032) 成功；[全量构建 34679074271](https://github.com/T-meow/PocPet-mint/actions/runs/34679074271) 已通过 `workflow_dispatch` 启动。
+- 待完成：跟进全平台构建结果、核对远端产物、提交交付记录。
+- 全量构建中 Windows x64/x86、macOS、Linux、Web 已成功；Android arm64 在原生库复制步骤失败。日志显示 Tauri 已建立指向源库的符号链接，旧脚本重复复制同一文件导致 `Copy-Item` 占用错误。
+- 已补入原版对绝对/相对符号链接的处理；Android 签名规则保持原样。为补齐 APK，手动构建新增 `android_only` 选项，仅重建两种 Android 架构。
+- Android 修复已通过 PowerShell 语法解析，以及绝对链接、相对链接、缺失目标、普通文件四种场景检查；脚本级修改不改变已部署网页及已成功桌面/Web 包的应用代码。
 - 浏览器完全禁用持久存储时，公告使用会话内日期记录；重新启动后可能再次提醒，游戏不会因此阻塞。

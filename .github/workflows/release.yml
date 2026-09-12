@@ -16,6 +16,11 @@ on:
         required: false
         default: false
         type: boolean
+      android_only:
+        description: "Build only Android arm64/ARMv7, keeping existing desktop and web artifacts"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -96,7 +101,7 @@ jobs:
   windows:
     name: Windows x64 portable
     needs: metadata
-    if: needs.metadata.outputs.release_build == 'true'
+    if: needs.metadata.outputs.release_build == 'true' && inputs.android_only != true
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -128,7 +133,7 @@ jobs:
   windows_x86:
     name: Windows 32-bit portable
     needs: metadata
-    if: needs.metadata.outputs.release_build == 'true' && needs.metadata.outputs.full_build == 'true'
+    if: needs.metadata.outputs.release_build == 'true' && needs.metadata.outputs.full_build == 'true' && inputs.android_only != true
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -264,7 +269,7 @@ jobs:
   web:
     name: Web package
     needs: metadata
-    if: needs.metadata.outputs.release_build == 'true' && needs.metadata.outputs.full_build == 'true'
+    if: needs.metadata.outputs.release_build == 'true' && needs.metadata.outputs.full_build == 'true' && inputs.android_only != true
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -293,7 +298,7 @@ jobs:
   linux:
     name: Linux bundles
     needs: metadata
-    if: needs.metadata.outputs.release_build == 'true' && needs.metadata.outputs.full_build == 'true'
+    if: needs.metadata.outputs.release_build == 'true' && needs.metadata.outputs.full_build == 'true' && inputs.android_only != true
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout
@@ -346,7 +351,7 @@ jobs:
   macos:
     name: macOS dmg
     needs: metadata
-    if: needs.metadata.outputs.release_build == 'true' && needs.metadata.outputs.full_build == 'true'
+    if: needs.metadata.outputs.release_build == 'true' && needs.metadata.outputs.full_build == 'true' && inputs.android_only != true
     runs-on: macos-latest
     steps:
       - name: Checkout

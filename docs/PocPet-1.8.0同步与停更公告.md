@@ -29,7 +29,8 @@
 - 已统一默认 Mint 的小游戏/料理回忆 actor id 与邻居身份，防止迁移到原版后把回忆归入 Furo，或让 Mint 将自己视作邻居。
 - 最终 `npm run build -- --logLevel warn`、16 个 TypeScript 回归检查及 `cargo check --offline --manifest-path src-tauri/Cargo.toml` 均通过；`check:release -- --dist dist` 通过（包含锁定的 Cargo 元数据核对）。
 - 检查覆盖：每日公告同日重启、跨日、连续多日、存储满/禁用/损坏、中英文渲染及链接；Mint 1.0.1 存档、保护格式、Mod 数据库、导入备份、升级备份、时间与日程；厨房、三种小游戏、扭蛋及奖励。
-- Vite 仅保留上游现有的大 chunk 和静态/动态混用导入提示，无构建错误。未进行真实浏览器/客户端点击验证，未打包或部署。
+- Vite 仅保留上游现有的大 chunk 和静态/动态混用导入提示，无构建错误。未进行真实浏览器/客户端点击验证；后续远端构建与部署结果见交付状态。
+- 浏览器完全禁用持久存储时，公告使用会话内日期记录；重新启动后可能再次提醒，游戏不会因此阻塞。
 
 ## 依赖与产物校验
 
@@ -46,9 +47,24 @@
 - Pages 使用 `pages.yml` 的 `main` 推送触发部署；目标为 `https://t-meow.github.io/PocPet-mint/`。公告链接仍指向原版 `https://t-meow.github.io/PocPet/`。
 - 已提交并推送合并提交 `f284fa12dfca58712edebeda21c875ca552cb38c`；Git HTTPS 连接重置后使用同仓库 SSH URL 正常推送，未改动 origin 配置、未强推。
 - [Pages 部署 34679033029](https://github.com/T-meow/PocPet-mint/actions/runs/34679033029) 成功；HTTP 验证 `build-info.json` 为 `1.3.0 / standard / f284fa1`，入口脚本 `assets/index-CRCA1nH_.js` 含独立每日公告键、停更文案和原版页面链接。
-- [推送 CI 34679033032](https://github.com/T-meow/PocPet-mint/actions/runs/34679033032) 成功；[全量构建 34679074271](https://github.com/T-meow/PocPet-mint/actions/runs/34679074271) 已通过 `workflow_dispatch` 启动。
-- 待完成：跟进全平台构建结果、核对远端产物、提交交付记录。
-- 全量构建中 Windows x64/x86、macOS、Linux、Web 已成功；Android arm64 在原生库复制步骤失败。日志显示 Tauri 已建立指向源库的符号链接，旧脚本重复复制同一文件导致 `Copy-Item` 占用错误。
+- [推送 CI 34679033032](https://github.com/T-meow/PocPet-mint/actions/runs/34679033032) 成功；[全量构建 34679074271](https://github.com/T-meow/PocPet-mint/actions/runs/34679074271) 的 Windows x64/x86、macOS、Linux、Web 作业均成功并上传产物。首轮整体失败源于两种 Android 架构，已由后续补跑完成。
+- 首轮 Android 在原生库复制步骤失败：Tauri 已建立指向源库的符号链接，旧脚本重复复制同一文件导致 `Copy-Item` 占用错误。
 - 已补入原版对绝对/相对符号链接的处理；Android 签名规则保持原样。为补齐 APK，手动构建新增 `android_only` 选项，仅重建两种 Android 架构。
 - Android 修复已通过 PowerShell 语法解析，以及绝对链接、相对链接、缺失目标、普通文件四种场景检查；脚本级修改不改变已部署网页及已成功桌面/Web 包的应用代码。
-- 浏览器完全禁用持久存储时，公告使用会话内日期记录；重新启动后可能再次提醒，游戏不会因此阻塞。
+- 修复提交 `53a1a05` 已推送；[Android 补跑 34679869677](https://github.com/T-meow/PocPet-mint/actions/runs/34679869677) 整体成功，前端检查、arm64 和 ARMv7 打包及上传均通过。远端日志确认跳过同源库复制，APK 签名验证通过。
+- `git diff f284fa1 53a1a05` 确认应用代码、版本和依赖无变化；7 组归档均已上传且未过期。交付记录使用 `[skip ci]` 提交，避免为文档再次构建相同应用。
+- 交付完成：原版 1.8.0 同步、每日停更公告、全平台远端构建与 Mint Pages 发布；产物位于以下 Actions 链接。
+
+## 远端产物
+
+以下为 GitHub Actions 产物归档大小及 GitHub 返回的 SHA-256（并非归档内安装包的单文件哈希）；未下载到本地。
+
+| 产物归档 | bytes | SHA-256 |
+| --- | ---: | --- |
+| [pp-Mint-windows-x86-1.3.0](https://github.com/T-meow/PocPet-mint/actions/runs/34679074271/artifacts/10293746671) | 16,514,322 | `cfbdb2c58626b75d9e4f6ea53e8ac617023d35a745743c43ac719609c39e06c6` |
+| [pp-Mint-windows-x64-1.3.0](https://github.com/T-meow/PocPet-mint/actions/runs/34679074271/artifacts/10293641599) | 17,263,026 | `eb92d39bba3a6bdce0b388e0940db6bd95346d84f6997f237a4c1da2415ec70b` |
+| [pp-Mint-linux-1.3.0](https://github.com/T-meow/PocPet-mint/actions/runs/34679074271/artifacts/10293626882) | 113,858,655 | `d8b390b2cd91ac6bfc38990f623e4b9bc05876053ca24079657fc70dd58a0960` |
+| [pp-Mint-macos-1.3.0](https://github.com/T-meow/PocPet-mint/actions/runs/34679074271/artifacts/10293222159) | 19,783,876 | `c8578c87896519b78972ff33d6790c31d474bb1dd09dfe2d4edede17e3cc1a66` |
+| [pp-Mint-web-1.3.0](https://github.com/T-meow/PocPet-mint/actions/runs/34679074271/artifacts/10293036641) | 12,874,794 | `34e3268ca4007ec2da8934323b1ffdb9c8d1157875ea8a3ed81721f0061abcb0` |
+| [pp-Mint-android-arm64-1.3.0](https://github.com/T-meow/PocPet-mint/actions/runs/34679869677/artifacts/10293918323) | 19,391,423 | `14cfa35000f7c04afde7680ed4674486109fc6ea0a435755b8bd55c3a03867ab` |
+| [pp-Mint-android-armv7-1.3.0](https://github.com/T-meow/PocPet-mint/actions/runs/34679869677/artifacts/10293808368) | 18,772,718 | `43268afe9824e3ec18ec9c0aff359e86e71e82629d271f34f9e763041c9f24e6` |

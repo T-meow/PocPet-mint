@@ -1,5 +1,5 @@
 import { BadgeCheck, CalendarClock, Dices, Flag, PackageOpen, Sprout, Timer } from 'lucide-react';
-import { canClaimBoostCardDailyReward, classicEndgameUnlockLevel, classicEndgameUnlockSkillLevel, getActiveBoostCard, isClassicEndgameComplete, isClassicEndgameUnlocked, partnerScheduleUnlockLevel, type PetState } from '../core/pet';
+import { canClaimBoostCardDailyReward, classicEndgameUnlockLevel, classicEndgameUnlockSkillLevel, getActiveBoostCard, hasClassicEndgameUnlockNotice, isClassicEndgameComplete, isClassicEndgameUnlocked, partnerScheduleUnlockLevel, type PetState } from '../core/pet';
 import { t } from '../i18n';
 import { formatPomodoroTime } from './time';
 
@@ -38,7 +38,7 @@ export const FeatureRow = ({
   const canClaimBoostReward = canClaimBoostCardDailyReward(pet);
   const boostCardHint = activeBoostCardId
     ? t('ui.features.boostCardsActive', { card: t(`ui.boostCards.cards.${activeBoostCardId}.name`) })
-    : t('ui.features.boostCardsHint');
+    : undefined;
   const gardenHint = gardenReminder === 'ready'
     ? t('ui.features.gardenReady')
     : gardenReminder === 'withered'
@@ -51,8 +51,9 @@ export const FeatureRow = ({
       ? t('ui.features.partnerScheduleReady')
       : pet.partnerSchedule.active
         ? t('ui.features.partnerScheduleActive')
-        : t('ui.features.partnerScheduleHint');
+        : undefined;
   const endgameUnlocked = isClassicEndgameUnlocked(pet);
+  const hasEndgameUnlockNotice = hasClassicEndgameUnlockNotice(pet);
   const endgameHint = isClassicEndgameComplete(pet)
     ? t('ui.features.commonDreamsComplete', { level: pet.classicEndgame.legacyLevel })
     : endgameUnlocked
@@ -97,7 +98,7 @@ export const FeatureRow = ({
         <BadgeCheck size={20} aria-hidden="true" />
         <span>
           {t('ui.features.boostCards')}
-          <small>{boostCardHint}</small>
+          {boostCardHint ? <small>{boostCardHint}</small> : null}
         </span>
         {canClaimBoostReward && <i aria-hidden="true" />}
       </button>
@@ -125,7 +126,7 @@ export const FeatureRow = ({
         <CalendarClock size={20} aria-hidden="true" />
         <span>
           {t('ui.features.partnerSchedule')}
-          <small>{partnerScheduleHint}</small>
+          {partnerScheduleHint ? <small>{partnerScheduleHint}</small> : null}
         </span>
         {pet.partnerSchedule.pendingResult ? <i aria-hidden="true" /> : null}
       </button>
@@ -140,7 +141,7 @@ export const FeatureRow = ({
 
       <button
         type="button"
-        className={endgameUnlocked ? 'feature-button feature-button--common-dreams feature-button--active' : 'feature-button feature-button--common-dreams'}
+        className={hasEndgameUnlockNotice ? 'feature-button feature-button--common-dreams feature-button--active' : 'feature-button feature-button--common-dreams'}
         onClick={onOpenCommonDreams}
         title={endgameHint}
       >
@@ -149,7 +150,7 @@ export const FeatureRow = ({
           {t('ui.features.commonDreams')}
           <small>{endgameHint}</small>
         </span>
-        {endgameUnlocked && <i aria-hidden="true" />}
+        {hasEndgameUnlockNotice && <i aria-hidden="true" />}
       </button>
     </div>
   );

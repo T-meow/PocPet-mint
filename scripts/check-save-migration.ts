@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { Buffer } from 'node:buffer';
 import 'fake-indexeddb/auto';
 import type { PetModManifest } from '../src/core/mod';
-import { getPetModLibraryState, loadActivePetMod } from '../src/core/modStorage';
+import { getPetModLibraryState, getStoredPetModManifest, loadActivePetMod } from '../src/core/modStorage';
 import { createSaveFileText, loadStoredPetJson, parseSaveFileText } from '../src/core/saveCodec';
 import { hasStoredPet, loadPet } from '../src/core/storage';
 import { normalizePet } from '../src/core/petState';
@@ -93,8 +93,11 @@ assert.equal(loadedLegacy.pet.inventory.emergency_biscuit, 12);
 assert.equal(loadedLegacy.pet.inventory.strawberry_cake, 3);
 assert.deepEqual(loadedLegacy.pet.birthday, { month: 6, day: 1 });
 assert(loadedLegacy.pet.claimedRewardIds.includes('mint_legacy_fixture_reward'));
-assert.equal(loadedLegacy.pet.partnerSchedule.schemaVersion, 5);
-assert.equal(loadedLegacy.pet.goldenAppleGacha.schemaVersion, 3);
+assert.equal(loadedLegacy.pet.partnerSchedule.schemaVersion, 6);
+assert.equal(loadedLegacy.pet.kitchen.schemaVersion, 1);
+assert.equal(loadedLegacy.pet.miniGames.schemaVersion, 1);
+assert.equal(loadedLegacy.pet.companionMemories.schemaVersion, 1);
+assert.equal(loadedLegacy.pet.goldenAppleGacha.schemaVersion, 4);
 assert.equal(loadedLegacy.pet.classicEndgame.schemaVersion, 2);
 assert.equal(loadedLegacy.pet.timeGuard.schemaVersion, 1);
 
@@ -135,11 +138,20 @@ assert.throws(
   () => parseSaveFileText(JSON.stringify({ schemaVersion: 2, app: 'Pocpet-Mint', pet: legacyPet }), fixtureNow),
   /newer Pocpet-Mint version/,
 );
-assert.throws(
-  () => parseSaveFileText(JSON.stringify({ schemaVersion: 1, app: 'PocPet', pet: legacyPet }), fixtureNow),
-  /not a Pocpet-Mint save file/,
-);
+const originalSave = parseSaveFileText(JSON.stringify({ schemaVersion: 1, app: 'PocPet', exportedAt: new Date(fixtureNow).toISOString(), pet: legacyPet }), fixtureNow);
+assert.equal(originalSave.sourceApp, 'PocPet', 'the merged format also accepts original-edition saves');
 
+localStorage.clear();
+localStorage.setItem(modFixture.activeManifestStorageKey, JSON.stringify(modFixture.manifest));
+assert.equal(getStoredPetModManifest()?.id, modFixture.manifest.id, 'legacy Mint identity is available before migration writes');
+const builtinLibrary = getPetModLibraryState();
+assert.equal(builtinLibrary.activeModId, modFixture.manifest.id, 'a legacy Mint selection becomes the built-in Mint');
+assert.equal(builtinLibrary.mods.length, 0, 'built-in Mint must not be duplicated in installed Mods');
+
+// Reuse the legacy database layout to exercise custom Mod images independently of built-ins.
+modFixture.manifest.id = 'legacy.custom-mint';
+modFixture.imageRecord.modId = modFixture.manifest.id;
+modFixture.imageRecord.key = `${modFixture.manifest.id}:pet:content`;
 localStorage.clear();
 localStorage.setItem(modFixture.activeManifestStorageKey, JSON.stringify(modFixture.manifest));
 

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "id": "official.mint",
-  "name": "mod-mint",
+  "name": "Mint",
   "author": "FrostForge Studio",
   "version": "1.0.0",
   "defaultPetName": "mint",
@@ -25,6 +25,15 @@
       "tired": "累了",
       "sick": "不舒服",
       "sleeping": "睡觉中"
+    }
+  },
+  "items": {
+    "overrides": {
+      "emergency_biscuit": {
+        "name": "咕比脆",
+        "summary": "香脆轻巧的小点心",
+        "image": "items/emergency_biscuit.png"
+      }
     }
   }
 }

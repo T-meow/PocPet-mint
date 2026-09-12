@@ -1,5 +1,9 @@
 # Pocpet-Mint
 
+**The standalone Mint edition has merged with the original PocPet and will receive no further updates.** The original now includes Mint. Continue at [PocPet GitHub Pages](https://t-meow.github.io/PocPet/).
+
+The final Mint version, `1.3.0`, includes the committed PocPet `1.8.0` changes and a daily migration notice. Export a save file from Mint's Settings > Save, then import it in the original edition. Import any custom Mod zip separately. Keep the old data and backup until migration is confirmed; saves do not sync automatically between editions.
+
 [Chinese](README.md)
 
 Pocpet-Mint is a desktop and mobile virtual pet app built around companionship, daily care, Pomodoro sessions, gardening, partner schedules, and replaceable pet mods. The project is built with Tauri, React, TypeScript, and Rust, and aims to provide a lightweight, customizable, cross-platform personal desktop pet experience.
